@@ -1,7 +1,9 @@
+import AppRouter from "./routes/AppRouter";
+
 function App() {
   return (
     <>
-      <h1>Base React</h1>
+      <AppRouter />
     </>
   );
 }
