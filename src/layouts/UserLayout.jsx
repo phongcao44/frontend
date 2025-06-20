@@ -6,7 +6,7 @@ function UserLayout() {
   return (
     <>
       <MainHeader />
-      <main style={{ minHeight: "80vh", paddingTop: 64 }}>
+      <main style={{ minHeight: "80vh" }}>
         <Outlet />
       </main>
       <Footer />
