@@ -1,0 +1,25 @@
+
+
+[
+  {
+    "id": 1,
+    "name": "HAVIT HV-G92 Gamepad",
+    "image": "https://example.com/gamepad.jpg",
+    "price": 120,
+    "originalPrice": 160,
+    "discount": 40,
+    "rating": 4.8,
+    "reviews": 88
+  },
+  {
+    "id": 2,
+    "name": "AK-900 Wired Keyboard",
+    "image": "https://example.com/keyboard.jpg",
+    "price": 960,
+    "originalPrice": 1160,
+    "discount": 35,
+    "rating": 4.5,
+    "reviews": 75
+  }
+
+]

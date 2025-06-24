@@ -1,0 +1,141 @@
+import { Row, Col, Typography, Button } from "antd";
+import { FaChevronRight } from "react-icons/fa";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import { categoryList, bannerImages } from "./data";
+
+const { Title, Paragraph } = Typography;
+
+const CategoryBanner = () => {
+  return (
+    <Row gutter={[24, 24]}>
+      {/* Category List  */}
+      <Col
+        xs={24}
+        md={5}
+        style={{
+          borderRight: "1px solid #d9d9d9",
+          minHeight: "300px",
+        }}
+      >
+        <ul
+          style={{
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+          }}
+        >
+          {categoryList.map((cat, index) => (
+            <li
+              key={index}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "6px 12px",
+                fontSize: "14px",
+                color: "#333",
+                cursor: "pointer",
+                transition: "background 0.3s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "#f5f5f5")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "transparent")
+              }
+            >
+              <span>{cat}</span>
+              <FaChevronRight style={{ fontSize: "12px", color: "#999" }} />
+            </li>
+          ))}
+        </ul>
+      </Col>
+
+      {/* Banner */}
+      <Col xs={24} md={19}>
+        <Swiper
+          spaceBetween={20}
+          slidesPerView={1}
+          loop
+          pagination={{ clickable: true }}
+          modules={[Pagination]}
+          style={{ overflow: "hidden", padding: "16px 0px 16px 16px" }}
+        >
+          {bannerImages.map((item, index) => (
+            <SwiperSlide key={index}>
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: 300,
+                  overflow: "hidden",
+                }}
+              >
+                <img
+                  src={item.src}
+                  alt={`Banner ${index + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    opacity: 0.75,
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "0",
+                    left: "0",
+                    height: "100%",
+                    width: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "flex-start",
+                    padding: "0 40px",
+                  }}
+                >
+                  <Title
+                    level={2}
+                    style={{
+                      color: "#fff",
+                      fontSize: "32px",
+                      fontWeight: "bold",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {item.title}
+                  </Title>
+                  <Paragraph
+                    style={{
+                      color: "#fff",
+                      fontSize: "16px",
+                      marginBottom: 16,
+                    }}
+                  >
+                    {item.subtitle}
+                  </Paragraph>
+                  <Button
+                    type="primary"
+                    size="middle"
+                    style={{
+                      backgroundColor: "#ff4d4f",
+                      border: "none",
+                    }}
+                  >
+                    {item.buttonText}
+                  </Button>
+                </div>
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </Col>
+    </Row>
+  );
+};
+
+export default CategoryBanner;
