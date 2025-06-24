@@ -2,7 +2,7 @@ import { Row, Col, Button, Typography, Space } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ProductCard from "./ProductCard";
 import FlashCountdown from "./FlashCountdown";
-import { products } from "./data";
+import { flashSaleProducts } from "./data";
 
 const { Title, Text } = Typography;
 
@@ -80,7 +80,7 @@ const FlashSale = () => {
 
         {/* Product Cards */}
         <Row gutter={[16, 16]}>
-          {products.map((product) => (
+          {flashSaleProducts.map((product) => (
             <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
               <ProductCard product={product} showDiscountLabel />
             </Col>

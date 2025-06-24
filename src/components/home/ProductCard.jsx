@@ -1,19 +1,50 @@
 import PropTypes from "prop-types";
 import { Card, Button, Typography, Rate } from "antd";
 import { HeartOutlined, EyeOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
 const ProductCard = ({ product, showDiscountLabel = false }) => {
+  const [hovered, setHovered] = useState(false);
+  const navigate = useNavigate();
+
   if (!product) return null;
 
-  const { name, image, salePrice, originalPrice, discount, rating, reviews } =
-    product;
+  const {
+    id,
+    name,
+    images,
+    price,
+    originalPrice,
+    discount,
+    averageRating,
+    totalReviews,
+  } = product;
+
+  const image =
+    images?.find((img) => img.is_main)?.image_url ||
+    images?.[0]?.image_url ||
+    "/placeholder.png";
+
+  const salePrice = price;
+  const rating = averageRating || 0;
+  const reviews = totalReviews || 0;
+
+  const handleNavigate = () => {
+    navigate(`/product/${id}`);
+  };
 
   return (
-    <div style={{ padding: "0 8px" }}>
+    <div
+      style={{ padding: "0 8px" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <Card
         hoverable
+        onClick={handleNavigate}
         style={{
           borderRadius: "4px",
           overflow: "hidden",
@@ -45,7 +76,8 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
               }}
             />
 
-            {showDiscountLabel && (
+            {/* Discount */}
+            {showDiscountLabel && discount && (
               <div
                 style={{
                   position: "absolute",
@@ -72,6 +104,7 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
                 flexDirection: "column",
                 gap: "8px",
               }}
+              onClick={(e) => e.stopPropagation()}
             >
               <Button
                 type="text"
@@ -102,6 +135,29 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
                 }}
               />
             </div>
+
+            {hovered && (
+              <Button
+                type="primary"
+                style={{
+                  position: "absolute",
+                  bottom: "10px",
+                  left: "10px",
+                  right: "10px",
+                  backgroundColor: "#000",
+                  borderColor: "#000",
+                  color: "#fff",
+                  fontWeight: 600,
+                  height: "40px",
+                  fontSize: "14px",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                Add To Cart
+              </Button>
+            )}
           </div>
         }
       >
@@ -118,14 +174,28 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
               marginBottom: "8px",
             }}
           >
-            <Text
-              style={{ fontSize: "16px", fontWeight: "600", color: "#ff4d4f" }}
-            >
-              ${salePrice || 0}
-            </Text>
-            <Text delete style={{ fontSize: "14px", color: "#999" }}>
-              ${originalPrice}
-            </Text>
+            {discount ? (
+              <>
+                <Text
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    color: "#ff4d4f",
+                  }}
+                >
+                  ${salePrice}
+                </Text>
+                <Text delete style={{ fontSize: "14px", color: "#999" }}>
+                  ${originalPrice}
+                </Text>
+              </>
+            ) : (
+              <Text
+                style={{ fontSize: "16px", fontWeight: "600", color: "#000" }}
+              >
+                ${originalPrice || salePrice}
+              </Text>
+            )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -140,13 +210,19 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
 
 ProductCard.propTypes = {
   product: PropTypes.shape({
+    id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
-    image: PropTypes.string.isRequired,
-    salePrice: PropTypes.number,
+    images: PropTypes.arrayOf(
+      PropTypes.shape({
+        image_url: PropTypes.string.isRequired,
+        is_main: PropTypes.bool,
+      })
+    ).isRequired,
+    price: PropTypes.number.isRequired,
     originalPrice: PropTypes.number,
     discount: PropTypes.number,
-    rating: PropTypes.number.isRequired,
-    reviews: PropTypes.number.isRequired,
+    averageRating: PropTypes.number,
+    totalReviews: PropTypes.number,
   }),
   showDiscountLabel: PropTypes.bool,
 };
