@@ -2,10 +2,7 @@ import { Divider } from "antd";
 import "swiper/css";
 import "swiper/css/pagination";
 
-import {
-  categories,
-  bestSellingProducts,
-} from "../components/home/data";
+import { categories, bestSellingProducts } from "../components/home/data";
 
 import BestSelling from "../components/home/BestSelling";
 import Promo from "../components/home/Promo";

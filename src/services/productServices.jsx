@@ -1,14 +1,66 @@
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance";
+
+export const fetchAllProducts = async () => {
+  const res = await axiosInstance.get("/product");
+  return res.data;
+};
+
+export const fetchProductById = async (id) => {
+  const res = await axiosInstance.get(`/product/${id}`);
+  return res.data;
+};
+
+export const fetchProductsPaginate = async ({
+  page = 0,
+  limit = 10,
+  sortBy = "price",
+  orderBy = "asc",
+}) => {
+  const res = await axiosInstance.get("/product/paginate", {
+    params: { page, limit, sortBy, orderBy },
+  });
+  return res.data;
+};
+
+export const createProduct = async (productData) => {
+  const res = await axiosInstance.post("/product/admin/add", productData);
+  return res.data;
+};
+
+export const updateProduct = async (id, productData) => {
+  const res = await axiosInstance.put(
+    `/product/admin/update/${id}`,
+    productData
+  );
+  return res.data;
+};
+
+export const changeProductStatus = async (id) => {
+  const res = await axiosInstance.put(`/product/admin/change-status/${id}`);
+  return res.data;
+};
+
+export const searchProducts = async (keyword) => {
+  const res = await axiosInstance.get("/product/search", {
+    params: { keyword },
+  });
+  return res.data;
+};
+
+export const deleteProduct = async (id) => {
+  const res = await axiosInstance.delete(`/product/admin/delete/${id}`);
+  return res.data;
+};
 
 export const fetchMergedProducts = async (page = 0, limit = 10) => {
   try {
     const [productsRes, variantsRes, colorsRes, sizesRes] = await Promise.all([
-      axios.get(
-        `http://localhost:8080/api/v1/product/paginate?page=${page}&limit=${limit}&sortBy=price&orderBy=asc`
+      axiosInstance.get(
+        `/product/paginate?page=${page}&limit=${limit}&sortBy=price&orderBy=asc`
       ),
-      axios.get("http://localhost:8080/api/v1/product-variants"),
-      axios.get("http://localhost:8080/api/v1/color/list"),
-      axios.get("http://localhost:8080/api/v1/size/list"),
+      axiosInstance.get("/product-variants"),
+      axiosInstance.get("/color/list"),
+      axiosInstance.get("/size/list"),
     ]);
 
     const products = productsRes.data.content;
@@ -116,10 +168,10 @@ export const fetchProductDetailById = async (productId) => {
       // imageRes,
       // reviewRes
     ] = await Promise.all([
-      axios.get(`http://localhost:8080/api/v1/product/${productId}`),
-      axios.get(`http://localhost:8080/api/v1/product-variants/${productId}`),
-      axios.get("http://localhost:8080/api/v1/color/list"),
-      axios.get("http://localhost:8080/api/v1/size/list"),
+      axiosInstance.get(`/product/${productId}`),
+      axiosInstance.get(`/product-variants/${productId}`),
+      axiosInstance.get("/color/list"),
+      axiosInstance.get("/size/list"),
     ]);
 
     const product = productRes.data;
@@ -150,7 +202,7 @@ export const fetchProductDetailById = async (productId) => {
     });
 
     const mappedVariants = variants.map((v) => ({
-      id: `var-${v.id}`,
+      id: `${v.id}`,
       color: colorMap[v.colorName.toLowerCase()] || {
         id: null,
         name: v.colorName,
