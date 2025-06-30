@@ -1,12 +1,12 @@
 import { Routes } from "react-router-dom";
 import UserRoutes from "./UserRoutes";
-// import AdminRoutes from "./AdminRoutes";
+import AdminRoutes from "./AdminRoutes";
 
 const AppRouter = () => {
   return (
     <Routes>
       {UserRoutes()}
-      {/* {AdminRoutes()} */}
+      {AdminRoutes()}
     </Routes>
   );
 };
