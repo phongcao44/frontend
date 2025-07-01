@@ -12,17 +12,19 @@ import StockManagement from "../pages/admin/StockManagement";
 import BannerManagement from "../pages/admin/BannerManagement";
 import ReviewManagement from "../pages/admin/ReviewManagement";
 import Support from "../pages/admin/Support";
-import ProductCreationForm from "../components/product/ProductCreationForm";
-import ProductDetailPage from "../components/product/ProductDetailPage";
-
+import ProductForm from "../components/product/ProductForm";
+import ProductVariantDetail from "../components/product/ProductVariantDetail";
 
 function AdminRoutes() {
   return (
     <Route path="/admin" element={<AdminLayout />}>
       <Route path="dashboard" element={<Dashboard />} />
       <Route path="products" element={<ProductManagement />} />
-      <Route path="products/:id" element={<ProductDetailPage />} />
-      <Route path="products/add" element={<ProductCreationForm />} />
+      <Route path="products/:id" element={<ProductForm />} />
+
+      <Route path="products/:id/variant" element={<ProductVariantDetail />} />
+
+      <Route path="products/add" element={<ProductForm />} />
       {/* <Route path="products/new" element={<ProductForm />} /> */}
       <Route path="products/stock" element={<StockManagement />} />
       <Route path="orders" element={<OrderManagement />} />
@@ -35,7 +37,6 @@ function AdminRoutes() {
 
       <Route path="support" element={<Support />} />
       <Route path="*" element={<ErrorPage />} />
-
     </Route>
   );
 }

@@ -7,18 +7,6 @@ import {
 } from "@ant-design/icons";
 import { FaGamepad } from "react-icons/fa";
 
-export const categoryList = [
-  "Woman's Fashion",
-  "Men's Fashion",
-  "Electronics",
-  "Home & Lifestyle",
-  "Medicine",
-  "Sports & Outdoor",
-  "Baby's & Toys",
-  "Groceries & Pets",
-  "Health & Beauty",
-];
-
 export const categories = [
   { icon: <MobileOutlined />, name: "Phones", active: false },
   { icon: <DesktopOutlined />, name: "Computers", active: false },

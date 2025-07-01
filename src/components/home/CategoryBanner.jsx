@@ -4,14 +4,27 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import { categoryList, bannerImages } from "./data";
+import { bannerImages } from "./data";
+
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { loadParentCategories } from "../../redux/slices/categorySlice";
 
 const { Title, Paragraph } = Typography;
 
 const CategoryBanner = () => {
+  const dispatch = useDispatch();
+  const parentCategories = useSelector((state) => state.category.parentList);
+
+  useEffect(() => {
+    if (parentCategories.length === 0) {
+      dispatch(loadParentCategories());
+    }
+  }, [dispatch, parentCategories.length]);
+
   return (
     <Row gutter={[24, 24]}>
-      {/* Category List  */}
+      {/* Category List */}
       <Col
         xs={24}
         md={5}
@@ -27,9 +40,9 @@ const CategoryBanner = () => {
             listStyle: "none",
           }}
         >
-          {categoryList.map((cat, index) => (
+          {parentCategories.map((cat) => (
             <li
-              key={index}
+              key={cat.id}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -47,7 +60,7 @@ const CategoryBanner = () => {
                 (e.currentTarget.style.background = "transparent")
               }
             >
-              <span>{cat}</span>
+              <span>{cat.name}</span>
               <FaChevronRight style={{ fontSize: "12px", color: "#999" }} />
             </li>
           ))}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Input,
   Upload,
@@ -11,27 +11,63 @@ import {
   message,
   Checkbox,
   Form,
+  Popconfirm,
+  Space,
 } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
-import { useDispatch } from "react-redux";
-import { addProduct } from "../../redux/slices/productSlice";
-import { addProductVariant } from "../../redux/slices/productVariantSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  addProduct,
+  editProduct,
+  removeProduct,
+  loadProductDetail,
+} from "../../redux/slices/productSlice";
+import {
+  addProductVariant,
+  removeProductVariant,
+} from "../../redux/slices/productVariantSlice";
 import VariantSection from "./VariantSection";
 import CategorySelector from "./CategorySelector";
+import VariantEditor from "./VariantEditor";
 
 const { Title } = Typography;
 const { TextArea } = Input;
 const { Dragger } = Upload;
 
-const ProductCreationForm = () => {
+const ProductForm = () => {
   const [fileList, setFileList] = useState([]);
   const [shippingEnabled, setShippingEnabled] = useState(true);
   const [form] = Form.useForm();
-  const [formData, setFormData] = useState({
-    variants: [],
-  });
+  const [formData, setFormData] = useState({ variants: [] });
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { id: productId } = useParams();
+  const product = useSelector((state) => state.products.productDetail);
+
+  console.log(product);
+  const variants = product?.variants || [];
+
+  useEffect(() => {
+    if (productId) {
+      dispatch(loadProductDetail(productId));
+    }
+  }, [dispatch, productId]);
+
+  useEffect(() => {
+    if (product && productId) {
+      form.setFieldsValue({
+        productName: product.name,
+        description: product.description,
+        sellingPrice: product.price,
+        brand: product.brand,
+        category_id: product.category?.id,
+      });
+      setShippingEnabled(product.status === "IN_STOCK");
+      setFormData((prev) => ({ ...prev, variants: product.variants || [] }));
+    }
+  }, [product, productId, form]);
 
   const handleUpload = {
     name: "file",
@@ -62,33 +98,77 @@ const ProductCreationForm = () => {
 
     try {
       const productResponse = await dispatch(addProduct(productData)).unwrap();
-
-      const productId = productResponse.data.id;
-      console.log("Product created with ID:", productId);
+      const newProductId = productResponse.data.id;
 
       for (const variant of formData.variants) {
         const productVariant = {
-          productId: productId,
+          productId: newProductId,
           colorId: variant.colorId,
           sizeId: variant.sizeId,
           stockQuantity: variant.stockQuantity,
           priceOverride: variant.priceOverride,
         };
-
-        // console.log("Product Variant gửi BE:", productVariant);
         await dispatch(addProductVariant(productVariant)).unwrap();
       }
+
       message.success("Thêm sản phẩm thành công");
+      navigate(`/admin/products/${newProductId}`);
     } catch (err) {
+      console.error(err);
       message.error("Thêm sản phẩm thất bại");
+    }
+  };
+
+  const handleUpdate = async () => {
+    const values = await form.validateFields();
+    const updatedProduct = {
+      name: values.productName,
+      description: values.description || "",
+      price: values.sellingPrice || 0,
+      brand: values.brand || "",
+      status: shippingEnabled ? "IN_STOCK" : "OUT_OF_STOCK",
+      categoryId: values.category_id,
+    };
+
+    console.log(updatedProduct);
+
+    try {
+      await dispatch(
+        editProduct({ id: productId, productData: updatedProduct })
+      ).unwrap();
+      message.success("Cập nhật sản phẩm thành công");
+      dispatch(loadProductDetail(productId));
+    } catch (err) {
+      console.error(err);
+      message.error("Cập nhật sản phẩm thất bại");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const variants = product.variants || [];
+
+      if (variants.length > 0) {
+        for (const variant of variants) {
+          await dispatch(removeProductVariant(variant.id)).unwrap();
+        }
+      }
+      await dispatch(removeProduct(productId)).unwrap();
+      message.success("Xóa sản phẩm thành công");
+      navigate("/admin/products");
+    } catch (err) {
+      console.error(err);
+      message.error("Xóa sản phẩm thất bại");
     }
   };
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
-      <Title level={2} style={{ marginBottom: 24 }}>
-        Tạo sản phẩm
-      </Title>
+      <Row justify="space-between" align="middle">
+        <Title level={2} style={{ marginBottom: 24 }}>
+          {productId ? "Chỉnh sửa sản phẩm" : "Tạo sản phẩm"}
+        </Title>
+      </Row>
 
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Card title="Thông tin chung" style={{ marginBottom: 24 }}>
@@ -134,10 +214,7 @@ const ProductCreationForm = () => {
                 label="Giá bán"
                 name="sellingPrice"
                 rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập giá bán sản phẩm",
-                  },
+                  { required: true, message: "Vui lòng nhập giá bán sản phẩm" },
                 ]}
               >
                 <InputNumber
@@ -160,19 +237,47 @@ const ProductCreationForm = () => {
               checked={shippingEnabled}
               onChange={(e) => setShippingEnabled(e.target.checked)}
             >
-              Chọn để cho phép giao hàng với sản phẩm này
+              Cho phép giao hàng với sản phẩm này
             </Checkbox>
           </div>
         </Card>
 
-        <VariantSection onChange={handleVariantsChange} />
+        {!productId && (
+          <VariantSection
+            onChange={handleVariantsChange}
+            defaultVariants={formData.variants}
+          />
+        )}
 
-        <Button type="primary" size="large" htmlType="submit">
-          Lưu sản phẩm
-        </Button>
+        {productId && (
+          <VariantEditor variants={variants} productId={productId} />
+        )}
+
+        {!productId && (
+          <Button type="primary" size="large" htmlType="submit">
+            Lưu sản phẩm
+          </Button>
+        )}
+
+        {productId && (
+          <Space>
+            <Popconfirm
+              title="Xóa sản phẩm?"
+              okText="Xóa"
+              cancelText="Hủy"
+              onConfirm={handleDelete}
+            >
+              <Button danger>Xóa sản phẩm</Button>
+            </Popconfirm>
+
+            <Button type="primary" onClick={handleUpdate}>
+              Cập nhật sản phẩm
+            </Button>
+          </Space>
+        )}
       </Form>
     </div>
   );
 };
 
-export default ProductCreationForm;
+export default ProductForm;

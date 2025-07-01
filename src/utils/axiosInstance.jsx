@@ -7,12 +7,11 @@ const axiosInstance = axios.create({
   },
 });
 
-
 axiosInstance.interceptors.request.use(
   (config) => {
     // const token = localStorage.getItem("token");
     const token =
-      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBzaG9wLnZuIiwiaWF0IjoxNzUwODY1Njc1LCJleHAiOjE3NTA4NjY1Mzl9.Pi-nM2d3OdK8Q4ntCZPKlQ6xtO7Nza_8_x-IO7HPVEU";
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBnbWFpbC5jb20iLCJpYXQiOjE3NTEzMzU5MDQsImV4cCI6MTc1MTMzNjc2OH0.VKGOg2bL_nWn2rEoXXrvo4U62BoBuh02l8IRb4Xg4eQ";
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }

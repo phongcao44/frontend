@@ -1,12 +1,12 @@
 import axiosInstance from "../utils/axiosInstance";
 
 export const fetchAllProducts = async () => {
-  const res = await axiosInstance.get("/product");
+  const res = await axiosInstance.get("/"); 
   return res.data;
 };
 
 export const fetchProductById = async (id) => {
-  const res = await axiosInstance.get(`/product/${id}`);
+  const res = await axiosInstance.get(`/${id}`); 
   return res.data;
 };
 
@@ -16,27 +16,24 @@ export const fetchProductsPaginate = async ({
   sortBy = "price",
   orderBy = "asc",
 }) => {
-  const res = await axiosInstance.get("/product/paginate", {
+  const res = await axiosInstance.get("/paginate", {
     params: { page, limit, sortBy, orderBy },
   });
   return res.data;
 };
 
 export const createProduct = async (productData) => {
-  const res = await axiosInstance.post("/product/admin/add", productData);
+  const res = await axiosInstance.post("/admin/product/add", productData);
   return res.data;
 };
 
 export const updateProduct = async (id, productData) => {
-  const res = await axiosInstance.put(
-    `/product/admin/update/${id}`,
-    productData
-  );
+  const res = await axiosInstance.put(`/admin/product/update/${id}`, productData);
   return res.data;
 };
 
 export const changeProductStatus = async (id) => {
-  const res = await axiosInstance.put(`/product/admin/change-status/${id}`);
+  const res = await axiosInstance.put(`/admin/product/change-status/${id}`);
   return res.data;
 };
 
@@ -48,17 +45,52 @@ export const searchProducts = async (keyword) => {
 };
 
 export const deleteProduct = async (id) => {
-  const res = await axiosInstance.delete(`/product/admin/delete/${id}`);
+  const res = await axiosInstance.delete(`/admin/product/delete/${id}`);
   return res.data;
 };
+
+export const fetchProductsByCategory = async (categoryId) => {
+  const res = await axiosInstance.get(`/user/products/by-category/${categoryId}`);
+  return res.data;
+};
+
+export const fetchTopBestSellingProducts = async () => {
+  const res = await axiosInstance.get("/admin/products/bestSell");
+  return res.data;
+};
+
+export const fetchTopLeastSellingProducts = async () => {
+  const res = await axiosInstance.get("/admin/products/topLeastSell");
+  return res.data;
+};
+
+export const trackProductView = async (id) => {
+  const res = await axiosInstance.post(`/${id}/view`);
+  return res.data;
+};
+
+export const fetchTopViewedProducts = async (limit = 10) => {
+  const res = await axiosInstance.get("/top-viewed", {
+    params: { limit },
+  });
+  return res.data;
+};
+
+export const fetchLeastViewedProducts = async (limit = 10) => {
+  const res = await axiosInstance.get("/least-viewed", {
+    params: { limit },
+  });
+  return res.data;
+};
+
 
 export const fetchMergedProducts = async (page = 0, limit = 10) => {
   try {
     const [productsRes, variantsRes, colorsRes, sizesRes] = await Promise.all([
       axiosInstance.get(
-        `/product/paginate?page=${page}&limit=${limit}&sortBy=price&orderBy=asc`
+        `/paginate?page=${page}&limit=${limit}&sortBy=price&orderBy=asc`
       ),
-      axiosInstance.get("/product-variants"),
+      axiosInstance.get("/product-variants/list"),
       axiosInstance.get("/color/list"),
       axiosInstance.get("/size/list"),
     ]);
@@ -157,64 +189,69 @@ export const fetchMergedProducts = async (page = 0, limit = 10) => {
     return [];
   }
 };
-
 export const fetchProductDetailById = async (productId) => {
   try {
-    const [
-      productRes,
-      variantsRes,
-      colorsRes,
-      sizesRes,
-      // imageRes,
-      // reviewRes
-    ] = await Promise.all([
-      axiosInstance.get(`/product/${productId}`),
-      axiosInstance.get(`/product-variants/${productId}`),
+    const [productRes, colorsRes, sizesRes] = await Promise.all([
+      axiosInstance.get(`/${productId}`),
       axiosInstance.get("/color/list"),
       axiosInstance.get("/size/list"),
     ]);
 
     const product = productRes.data;
-    const variants = variantsRes.data.data || [];
-    const colors = colorsRes.data;
-    const sizes = sizesRes.data;
-    // const images = []; // Tạm thời không có API
-    // const reviews = []; // Tạm thời không có API
+    let variantsRaw = [];
+    try {
+      const variantsRes = await axiosInstance.get(
+        `/product-variants/${productId}`
+      );
+      variantsRaw = variantsRes.data?.data;
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        console.warn(`Không tìm thấy biến thể cho productId ${productId}`);
+        variantsRaw = [];
+      } else {
+        throw err; // lỗi khác vẫn quăng ra
+      }
+    }
 
-    // màu
+    const variants = Array.isArray(variantsRaw) ? variantsRaw : [];
+
+    const colors = Array.isArray(colorsRes.data) ? colorsRes.data : [];
+    const sizes = Array.isArray(sizesRes.data) ? sizesRes.data : [];
+
+    // Màu
     const colorMap = {};
     colors.forEach((c) => {
       colorMap[c.name.toLowerCase()] = {
         id: c.id,
         name: c.name,
-        hex_code: c.hexCode,
+        hex_code: c.hexCode || "#CCCCCC",
       };
     });
 
-    // size
+    // Size
     const sizeMap = {};
     sizes.forEach((s) => {
       sizeMap[s.sizeName.toUpperCase()] = {
         id: s.id,
         name: s.sizeName,
-        description: s.description,
+        description: s.description || "",
       };
     });
 
     const mappedVariants = variants.map((v) => ({
       id: `${v.id}`,
-      color: colorMap[v.colorName.toLowerCase()] || {
+      color: colorMap[v.colorName?.toLowerCase()] || {
         id: null,
-        name: v.colorName,
+        name: v.colorName || "N/A",
         hex_code: "#CCCCCC",
       },
-      size: sizeMap[v.sizeName.toUpperCase()] || {
+      size: sizeMap[v.sizeName?.toUpperCase()] || {
         id: null,
-        name: v.sizeName,
+        name: v.sizeName || "N/A",
         description: "",
       },
-      stock_quantity: v.stockQuantity,
-      price_override: v.priceOverride,
+      stock_quantity: v.stockQuantity ?? 0,
+      price_override: v.priceOverride ?? null,
     }));
 
     const minPrice =
@@ -226,7 +263,7 @@ export const fetchProductDetailById = async (productId) => {
           )
         : product.price;
 
-    const discount = product.price - minPrice;
+    const discount = Math.max(product.price - minPrice, 0);
 
     return {
       id: `${product.id}`,
@@ -235,8 +272,10 @@ export const fetchProductDetailById = async (productId) => {
       brand: product.brand,
       price: minPrice,
       originalPrice: product.price,
-      discount: discount > 0 ? discount : 0,
-      category_id: product.categoryName.toLowerCase().replace(/\s+/g, "-"),
+      discount,
+      category_id: product.categoryName
+        ? product.categoryName.toLowerCase().replace(/\s+/g, "-")
+        : "uncategorized",
       status: product.status,
       variants: mappedVariants,
       images: Array.from({ length: 5 }, (_, index) => ({

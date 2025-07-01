@@ -1,9 +1,8 @@
-import { Layout, Button, Table, Input, Select, Space, Typography } from "antd";
+import { Layout, Button, Table, Input, Space, Typography } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
   FilterOutlined,
-  DownOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -12,7 +11,6 @@ import { loadMergedProducts } from "../../redux/slices/productSlice";
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
-const { Option } = Select;
 
 const ProductManagement = () => {
   const navigate = useNavigate();
@@ -21,10 +19,8 @@ const ProductManagement = () => {
   const allProducts = useSelector((state) => state.products.mergedProducts);
 
   useEffect(() => {
-    if (!allProducts || allProducts.length === 0) {
-      dispatch(loadMergedProducts({ page: 0, limit: 100 }));
-    }
-  }, [dispatch, allProducts]);
+    dispatch(loadMergedProducts({ page: 0, limit: 100 }));
+  }, [dispatch]);
 
   const columns = [
     {
@@ -125,28 +121,6 @@ const ProductManagement = () => {
           Danh sách sản phẩm
         </Title>
         <Space>
-          <Select
-            defaultValue="import"
-            style={{ width: 150 }}
-            suffixIcon={<DownOutlined />}
-          >
-            <Option value="import">Nhập dữ liệu</Option>
-          </Select>
-          <Select
-            defaultValue="export"
-            style={{ width: 150 }}
-            suffixIcon={<DownOutlined />}
-          >
-            <Option value="export">Xuất dữ liệu</Option>
-          </Select>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            style={{ backgroundColor: "#4096ff" }}
-            onClick={() => navigate("/admin/products/add")}
-          >
-            Tạo combo
-          </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
