@@ -2,7 +2,7 @@ import axiosInstance from "../utils/axiosInstance";
 
 export const fetchParentCategories = async (
   page = 0,
-  limit = 100,
+  limit = 3,
   sortBy = "id",
   orderBy = "asc"
 ) => {
@@ -17,6 +17,11 @@ export const fetchSubCategories = async (parentId) => {
   return response.data;
 };
 
+export const fetchParentLine = async (sonId) => {
+  const response = await axiosInstance.get(`/list/son_of_parent/${sonId}`);
+  return response.data;
+};
+
 export const searchCategories = async (keyword) => {
   const response = await axiosInstance.get(`/categories/search`, {
     params: { keyword },
@@ -25,13 +30,13 @@ export const searchCategories = async (keyword) => {
 };
 
 export const addCategory = async (categoryData) => {
-  const response = await axiosInstance.post(`/categories/add`, categoryData);
+  const response = await axiosInstance.post(`/add`, categoryData);
   return response.data;
 };
 
 export const addParentCategory = async (categoryData) => {
   const response = await axiosInstance.post(
-    `/categories/add/parent`,
+    `/admin/categories/add/parent`,
     categoryData
   );
   return response.data;
@@ -39,7 +44,7 @@ export const addParentCategory = async (categoryData) => {
 
 export const addSubCategory = async (parentId, categoryData) => {
   const response = await axiosInstance.post(
-    `/categories/add/son/${parentId}`,
+    `/admin/categories/add/son/${parentId}`,
     categoryData
   );
   return response.data;
@@ -47,25 +52,40 @@ export const addSubCategory = async (parentId, categoryData) => {
 
 export const updateParentCategory = async (id, data) => {
   const response = await axiosInstance.put(
-    `/categories/edit/parent/${id}`,
+    `/admin/categories/edit/parent/${id}`,
     data
   );
   return response.data;
 };
 
 export const updateSubCategory = async (id, data) => {
-  const response = await axiosInstance.put(`/categories/edit/son/${id}`, data);
+  const response = await axiosInstance.put(
+    `/admin/categories/edit/son/${id}`,
+    data
+  );
   return response.data;
 };
 
 export const deleteParentCategory = async (id) => {
   const response = await axiosInstance.delete(
-    `/categories/delete/parent/${id}`
+    `/admin/categories/delete/parent/${id}`
   );
   return response.data;
 };
 
 export const deleteSubCategory = async (id) => {
-  const response = await axiosInstance.delete(`/categories/delete/son/${id}`);
+  const response = await axiosInstance.delete(
+    `/admin/categories/delete/son/${id}`
+  );
+  return response.data;
+};
+
+export const fetchCategoryTree = async () => {
+  const response = await axiosInstance.get(`/categories/tree`);
+  return response.data;
+};
+
+export const fetchFlatCategoryList = async () => {
+  const response = await axiosInstance.get(`/categories/flat`);
   return response.data;
 };

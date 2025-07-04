@@ -1,12 +1,12 @@
 import axiosInstance from "../utils/axiosInstance";
 
 export const fetchAllProducts = async () => {
-  const res = await axiosInstance.get("/"); 
+  const res = await axiosInstance.get("/");
   return res.data;
 };
 
 export const fetchProductById = async (id) => {
-  const res = await axiosInstance.get(`/${id}`); 
+  const res = await axiosInstance.get(`/${id}`);
   return res.data;
 };
 
@@ -28,7 +28,10 @@ export const createProduct = async (productData) => {
 };
 
 export const updateProduct = async (id, productData) => {
-  const res = await axiosInstance.put(`/admin/product/update/${id}`, productData);
+  const res = await axiosInstance.put(
+    `/admin/product/update/${id}`,
+    productData
+  );
   return res.data;
 };
 
@@ -50,7 +53,9 @@ export const deleteProduct = async (id) => {
 };
 
 export const fetchProductsByCategory = async (categoryId) => {
-  const res = await axiosInstance.get(`/user/products/by-category/${categoryId}`);
+  const res = await axiosInstance.get(
+    `/user/products/by-category/${categoryId}`
+  );
   return res.data;
 };
 
@@ -83,7 +88,6 @@ export const fetchLeastViewedProducts = async (limit = 10) => {
   return res.data;
 };
 
-
 export const fetchMergedProducts = async (page = 0, limit = 10) => {
   try {
     const [productsRes, variantsRes, colorsRes, sizesRes] = await Promise.all([
@@ -92,7 +96,7 @@ export const fetchMergedProducts = async (page = 0, limit = 10) => {
       ),
       axiosInstance.get("/product-variants/list"),
       axiosInstance.get("/color/list"),
-      axiosInstance.get("/size/list"),
+      axiosInstance.get("/list"),
     ]);
 
     const products = productsRes.data.content;
@@ -194,7 +198,7 @@ export const fetchProductDetailById = async (productId) => {
     const [productRes, colorsRes, sizesRes] = await Promise.all([
       axiosInstance.get(`/${productId}`),
       axiosInstance.get("/color/list"),
-      axiosInstance.get("/size/list"),
+      axiosInstance.get("/list"),
     ]);
 
     const product = productRes.data;

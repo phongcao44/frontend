@@ -16,32 +16,6 @@ export const categories = [
   { icon: <FaGamepad />, name: "Gaming", active: false },
 ];
 // Banner carousel
-export const bannerImages = [
-  {
-    src: "https://www.xtsmart.vn/vnt_upload/product/09_2023/banner_iphone_15_pro_max_1_1_2.jpg",
-    title: "Up to 10% off Voucher",
-    subtitle: "Special offer on iPhone 14 Series",
-    buttonText: "Shop Now",
-  },
-  {
-    src: "https://www.xtsmart.vn/vnt_upload/product/09_2023/banner_iphone_15_pro_max_1_1_2.jpg",
-    title: "Enhance Your Music Experience",
-    subtitle: "Special offer on JBL Speaker",
-    buttonText: "Buy Now",
-  },
-  {
-    src: "https://picsum.photos/800/600",
-    title: "Flash Deals",
-    subtitle: "Limited Time Offers",
-    buttonText: "Shop Now",
-  },
-  {
-    src: "https://picsum.photos/800/600",
-    title: "Flash Deals",
-    subtitle: "Limited Time Offers",
-    buttonText: "Shop Now",
-  },
-];
 
 // New Arrival Products
 export const productCards = [

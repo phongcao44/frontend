@@ -4,6 +4,8 @@ import sizeReducer from "./slices/sizeSlice";
 import colorReducer from "./slices/colorSlice";
 import productVariantReducer from "./slices/productVariantSlice";
 import categoryReducer from "./slices/categorySlice";
+import orderReducer from "./slices/orderSlice";
+import bannerReducer from "./slices/bannerSlice";
 
 export const store = configureStore({
   reducer: {
@@ -12,5 +14,7 @@ export const store = configureStore({
     size: sizeReducer,
     colors: colorReducer,
     productVariants: productVariantReducer,
+    order: orderReducer,
+    banner: bannerReducer,
   },
 });

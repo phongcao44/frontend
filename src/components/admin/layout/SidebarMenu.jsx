@@ -28,7 +28,7 @@ const SidebarMenu = () => {
           icon: <DashboardOutlined />,
           label: "Bảng điều khiển",
         },
-        { 
+        {
           icon: <AppstoreOutlined />,
           label: "Sản phẩm",
           children: [
@@ -56,9 +56,18 @@ const SidebarMenu = () => {
           label: "Danh mục",
         },
         {
-          key: "/admin/orders",
           icon: <ShoppingCartOutlined />,
           label: "Đơn hàng",
+          children: [
+            {
+              key: "/admin/orders",
+              label: "Tất cả đơn hàng",
+            },
+            {
+              key: "/admin/orders/groups",
+              label: "Chưa hoàn tất",
+            },
+          ],
         },
         {
           key: "/admin/users",
@@ -71,7 +80,7 @@ const SidebarMenu = () => {
           label: "Thanh toán",
         },
         {
-          key: "/admin/banners",
+          key: "/admin/banner",
           icon: <PictureOutlined />,
           label: "Banner quảng cáo",
         },

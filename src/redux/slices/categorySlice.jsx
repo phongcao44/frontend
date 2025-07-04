@@ -2,6 +2,8 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   fetchParentCategories,
   fetchSubCategories,
+  fetchParentLine,
+  fetchFlatCategoryList,
   addCategory,
   addParentCategory,
   addSubCategory,
@@ -10,13 +12,17 @@ import {
   deleteParentCategory,
   deleteSubCategory,
   searchCategories,
+  fetchCategoryTree,
 } from "../../services/categoryService";
 
 export const loadParentCategories = createAsyncThunk(
   "category/loadParent",
-  async (_, thunkAPI) => {
+  async (
+    { page = 0, limit = 100, sortBy = "id", orderBy = "asc" } = {},
+    thunkAPI
+  ) => {
     try {
-      const data = await fetchParentCategories();
+      const data = await fetchParentCategories(page, limit, sortBy, orderBy);
       return data.content || [];
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
@@ -30,6 +36,42 @@ export const loadSubCategories = createAsyncThunk(
     try {
       const data = await fetchSubCategories(parentId);
       return { parentId, data };
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+export const loadParentLine = createAsyncThunk(
+  "category/loadParentLine",
+  async (sonId, thunkAPI) => {
+    try {
+      const data = await fetchParentLine(sonId);
+      return data;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+export const loadFlatCategoryList = createAsyncThunk(
+  "category/loadFlatList",
+  async (_, thunkAPI) => {
+    try {
+      const data = await fetchFlatCategoryList();
+      return data;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+export const createCategory = createAsyncThunk(
+  "category/add",
+  async (categoryData, thunkAPI) => {
+    try {
+      const data = await addCategory(categoryData);
+      return data;
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
@@ -120,18 +162,52 @@ export const searchCategoryList = createAsyncThunk(
   }
 );
 
+export const loadCategoryTree = createAsyncThunk(
+  "category/loadTree",
+  async (_, thunkAPI) => {
+    try {
+      const data = await fetchCategoryTree();
+      return data;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
 const categorySlice = createSlice({
   name: "category",
   initialState: {
     parentList: [],
     subCategoryMap: {},
+    parentLine: [],
+    flatCategoryList: [],
     searchResults: [],
     loading: false,
     error: null,
+    categoryTree: [],
+    loadingTree: false,
+    errorTree: null,
+    loadingParentLine: false,
+    errorParentLine: null,
+    loadingFlatList: false,
+    errorFlatList: null,
   },
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(loadCategoryTree.pending, (state) => {
+        state.loadingTree = true;
+        state.errorTree = null;
+      })
+      .addCase(loadCategoryTree.fulfilled, (state, action) => {
+        state.categoryTree = action.payload;
+        state.loadingTree = false;
+      })
+      .addCase(loadCategoryTree.rejected, (state, action) => {
+        state.loadingTree = false;
+        state.errorTree = action.payload;
+      })
+
       .addCase(loadParentCategories.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -150,8 +226,40 @@ const categorySlice = createSlice({
         state.subCategoryMap[parentId] = data;
       })
 
+      .addCase(loadParentLine.pending, (state) => {
+        state.loadingParentLine = true;
+        state.errorParentLine = null;
+      })
+      .addCase(loadParentLine.fulfilled, (state, action) => {
+        state.parentLine = action.payload;
+        state.loadingParentLine = false;
+      })
+      .addCase(loadParentLine.rejected, (state, action) => {
+        state.loadingParentLine = false;
+        state.errorParentLine = action.payload;
+      })
+
+      .addCase(loadFlatCategoryList.pending, (state) => {
+        state.loadingFlatList = true;
+        state.errorFlatList = null;
+      })
+      .addCase(loadFlatCategoryList.fulfilled, (state, action) => {
+        state.flatCategoryList = action.payload;
+        state.loadingFlatList = false;
+      })
+      .addCase(loadFlatCategoryList.rejected, (state, action) => {
+        state.loadingFlatList = false;
+        state.errorFlatList = action.payload;
+      })
+
+      .addCase(createCategory.fulfilled, (state, action) => {
+        state.parentList.push(action.payload);
+        state.flatCategoryList.push(action.payload);
+      })
+
       .addCase(createParentCategory.fulfilled, (state, action) => {
         state.parentList.push(action.payload);
+        state.flatCategoryList.push(action.payload);
       })
 
       .addCase(createSubCategory.fulfilled, (state, action) => {
@@ -161,6 +269,7 @@ const categorySlice = createSlice({
           state.subCategoryMap[parentId] = [];
         }
         state.subCategoryMap[parentId].push(newSub);
+        state.flatCategoryList.push(newSub);
       })
 
       .addCase(editParentCategory.fulfilled, (state, action) => {
@@ -169,6 +278,12 @@ const categorySlice = createSlice({
         );
         if (index !== -1) {
           state.parentList[index] = action.payload;
+        }
+        const flatIndex = state.flatCategoryList.findIndex(
+          (cat) => cat.id === action.payload.id
+        );
+        if (flatIndex !== -1) {
+          state.flatCategoryList[flatIndex] = action.payload;
         }
       })
 
@@ -180,10 +295,19 @@ const categorySlice = createSlice({
         if (index !== -1) {
           list[index] = updated;
         }
+        const flatIndex = state.flatCategoryList.findIndex(
+          (cat) => cat.id === updated.id
+        );
+        if (flatIndex !== -1) {
+          state.flatCategoryList[flatIndex] = updated;
+        }
       })
 
       .addCase(removeParentCategory.fulfilled, (state, action) => {
         state.parentList = state.parentList.filter(
+          (cat) => cat.id !== action.payload
+        );
+        state.flatCategoryList = state.flatCategoryList.filter(
           (cat) => cat.id !== action.payload
         );
         delete state.subCategoryMap[action.payload];
@@ -196,6 +320,9 @@ const categorySlice = createSlice({
             parentId
           ].filter((cat) => cat.id !== id);
         });
+        state.flatCategoryList = state.flatCategoryList.filter(
+          (cat) => cat.id !== action.payload
+        );
       })
 
       .addCase(searchCategoryList.fulfilled, (state, action) => {
