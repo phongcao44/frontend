@@ -16,6 +16,7 @@ const VariantPreview = ({
   const [priceInput, setPriceInput] = useState(null);
   const [quantityInput, setQuantityInput] = useState(null);
   const [variantsData, setVariantsData] = useState([]);
+  const [draftVariantsData, setDraftVariantsData] = useState([]);
 
   const colorMap = Object.fromEntries(colors.map((c) => [c.name, c.id]));
   const sizeMap = Object.fromEntries(sizes.map((s) => [s.sizeName, s.id]));
@@ -23,8 +24,15 @@ const VariantPreview = ({
   useEffect(() => {
     setSelectedVariants(variants.map((_, idx) => idx));
     setCheckAll(true);
-    const enriched = variants.map((v) => ({ ...v, price: 0, quantity: 0 }));
-    setVariantsData(enriched);
+
+    setVariantsData((prev) =>
+      variants.map((v) => {
+        const exist = prev.find(
+          (item) => item.color === v.color && item.size === v.size
+        );
+        return exist || { ...v, price: 0, quantity: 0 };
+      })
+    );
   }, [variants]);
 
   const handleSelectVariant = (index) => {
@@ -43,28 +51,31 @@ const VariantPreview = ({
   };
 
   const openPriceModal = () => {
+    setDraftVariantsData([...variantsData]);
     setPriceModalVisible(true);
   };
 
   const applyPriceToAll = () => {
     if (priceInput === null) return;
-    const updated = variantsData.map((v, idx) =>
+    const updated = draftVariantsData.map((v, idx) =>
       selectedVariants.includes(idx) ? { ...v, price: priceInput } : v
     );
-    setVariantsData(updated);
+    setDraftVariantsData(updated);
   };
 
   const applyQuantityToAll = () => {
     if (quantityInput === null) return;
-    const updated = variantsData.map((v, idx) =>
+    const updated = draftVariantsData.map((v, idx) =>
       selectedVariants.includes(idx) ? { ...v, quantity: quantityInput } : v
     );
-    setVariantsData(updated);
+    setDraftVariantsData(updated);
   };
 
   const handleConfirm = () => {
+    setVariantsData(draftVariantsData);
+
     const output = selectedVariants.map((index) => {
-      const v = variantsData[index];
+      const v = draftVariantsData[index];
       return {
         productId: 0,
         colorId: colorMap[v.color] || 0,
@@ -155,7 +166,12 @@ const VariantPreview = ({
 
           <div style={{ display: "flex", gap: 16 }}>
             <Tag color="green">Không chịu thuế</Tag>
-            <span style={{ fontWeight: 500 }}>0 ₫</span>
+            <span style={{ fontWeight: 500 }}>
+              {variantsData[idx]
+                ? Number(variantsData[idx].price || 0).toLocaleString()
+                : 0}{" "}
+              VNĐ
+            </span>
           </div>
         </div>
       ))}
@@ -194,28 +210,28 @@ const VariantPreview = ({
             style={{ marginBottom: 12, borderBottom: "1px solid #eee" }}
           >
             <div style={{ fontWeight: 500, marginBottom: 4 }}>
-              {Object.entries(variantsData[index])
+              {Object.entries(draftVariantsData[index] || {})
                 .filter(([k]) => k !== "price" && k !== "quantity")
                 .map(([, val]) => val)
                 .join(" - ")}
             </div>
             <InputNumber
               addonAfter="VND"
-              value={variantsData[index].price}
+              value={draftVariantsData[index]?.price}
               onChange={(val) => {
-                const copy = [...variantsData];
+                const copy = [...draftVariantsData];
                 copy[index].price = val;
-                setVariantsData(copy);
+                setDraftVariantsData(copy);
               }}
               style={{ width: "100%", marginBottom: 4 }}
             />
             <InputNumber
               placeholder="Số lượng"
-              value={variantsData[index].quantity}
+              value={draftVariantsData[index]?.quantity}
               onChange={(val) => {
-                const copy = [...variantsData];
+                const copy = [...draftVariantsData];
                 copy[index].quantity = val;
-                setVariantsData(copy);
+                setDraftVariantsData(copy);
               }}
               style={{ width: "100%" }}
             />

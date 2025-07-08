@@ -4,14 +4,37 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import { categoryList, bannerImages } from "./data";
+
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { loadParentCategories } from "../../redux/slices/categorySlice";
+import { getBanners } from "../../redux/slices/bannerSlice";
 
 const { Title, Paragraph } = Typography;
 
 const CategoryBanner = () => {
+  const dispatch = useDispatch();
+  const parentCategories = useSelector((state) => state.category.parentList);
+  const { banners } = useSelector((state) => state.banner);
+
+  useEffect(() => {
+    dispatch(getBanners());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (parentCategories.length === 0) {
+      dispatch(loadParentCategories());
+    }
+  }, [dispatch, parentCategories.length]);
+
+  const now = new Date();
+  const activeBanners = banners.filter(
+    (b) => b.status && new Date(b.startAt) <= now && new Date(b.endAt) >= now
+  );
+
   return (
     <Row gutter={[24, 24]}>
-      {/* Category List  */}
+      {/* Category List */}
       <Col
         xs={24}
         md={5}
@@ -27,9 +50,9 @@ const CategoryBanner = () => {
             listStyle: "none",
           }}
         >
-          {categoryList.map((cat, index) => (
+          {parentCategories.map((cat) => (
             <li
-              key={index}
+              key={cat.id}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -47,7 +70,7 @@ const CategoryBanner = () => {
                 (e.currentTarget.style.background = "transparent")
               }
             >
-              <span>{cat}</span>
+              <span>{cat.name}</span>
               <FaChevronRight style={{ fontSize: "12px", color: "#999" }} />
             </li>
           ))}
@@ -64,8 +87,8 @@ const CategoryBanner = () => {
           modules={[Pagination]}
           style={{ overflow: "hidden", padding: "16px 0px 16px 16px" }}
         >
-          {bannerImages.map((item, index) => (
-            <SwiperSlide key={index}>
+          {activeBanners.map((item) => (
+            <SwiperSlide key={item.id}>
               <div
                 style={{
                   position: "relative",
@@ -75,8 +98,8 @@ const CategoryBanner = () => {
                 }}
               >
                 <img
-                  src={item.src}
-                  alt={`Banner ${index + 1}`}
+                  src={item.bannerUrl}
+                  alt={item.title}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -116,7 +139,7 @@ const CategoryBanner = () => {
                       marginBottom: 16,
                     }}
                   >
-                    {item.subtitle}
+                    {item.publicId || ""}
                   </Paragraph>
                   <Button
                     type="primary"
@@ -126,7 +149,7 @@ const CategoryBanner = () => {
                       border: "none",
                     }}
                   >
-                    {item.buttonText}
+                    Xem chi tiết
                   </Button>
                 </div>
               </div>

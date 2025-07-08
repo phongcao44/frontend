@@ -41,6 +41,7 @@ const ProductDetail = () => {
       dispatch(loadProductDetail(productId));
     }
   }, [dispatch, productId]);
+  console.log(product);
 
   if (!product) return <div>Loading...</div>;
 

@@ -1,7 +1,7 @@
 import axiosInstance from "../utils/axiosInstance";
 
 export const fetchColors = async () => {
-  const response = await axiosInstance.get("/color/list");
+  const response = await axiosInstance.get("/list");
   return response.data;
 };
 

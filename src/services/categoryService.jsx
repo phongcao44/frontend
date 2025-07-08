@@ -1,9 +1,8 @@
 import axiosInstance from "../utils/axiosInstance";
 
-// Lấy danh sách danh mục cha (phân trang, sắp xếp)
 export const fetchParentCategories = async (
   page = 0,
-  limit = 100,
+  limit = 3,
   sortBy = "id",
   orderBy = "asc"
 ) => {
@@ -13,13 +12,16 @@ export const fetchParentCategories = async (
   return response.data;
 };
 
-// Lấy danh sách danh mục con theo parentId
 export const fetchSubCategories = async (parentId) => {
   const response = await axiosInstance.get(`/categories/list/son/${parentId}`);
   return response.data;
 };
 
-// Tìm kiếm danh mục theo keyword
+export const fetchParentLine = async (sonId) => {
+  const response = await axiosInstance.get(`/list/son_of_parent/${sonId}`);
+  return response.data;
+};
+
 export const searchCategories = async (keyword) => {
   const response = await axiosInstance.get(`/categories/search`, {
     params: { keyword },
@@ -27,55 +29,63 @@ export const searchCategories = async (keyword) => {
   return response.data;
 };
 
-// Thêm danh mục mới (dùng chung cho cả cha và con)
 export const addCategory = async (categoryData) => {
-  const response = await axiosInstance.post(`/categories/add`, categoryData);
+  const response = await axiosInstance.post(`/add`, categoryData);
   return response.data;
 };
 
-// Thêm danh mục cha
 export const addParentCategory = async (categoryData) => {
   const response = await axiosInstance.post(
-    `/categories/add/parent`,
+    `/admin/categories/add/parent`,
     categoryData
   );
   return response.data;
 };
 
-// Thêm danh mục con theo parentId
 export const addSubCategory = async (parentId, categoryData) => {
   const response = await axiosInstance.post(
-    `/categories/add/son/${parentId}`,
+    `/admin/categories/add/son/${parentId}`,
     categoryData
   );
   return response.data;
 };
 
-// Sửa danh mục cha
 export const updateParentCategory = async (id, data) => {
   const response = await axiosInstance.put(
-    `/categories/edit/parent/${id}`,
+    `/admin/categories/edit/parent/${id}`,
     data
   );
   return response.data;
 };
 
-// Sửa danh mục con
 export const updateSubCategory = async (id, data) => {
-  const response = await axiosInstance.put(`/categories/edit/son/${id}`, data);
-  return response.data;
-};
-
-// Xóa danh mục cha
-export const deleteParentCategory = async (id) => {
-  const response = await axiosInstance.delete(
-    `/categories/delete/parent/${id}`
+  const response = await axiosInstance.put(
+    `/admin/categories/edit/son/${id}`,
+    data
   );
   return response.data;
 };
 
-// Xóa danh mục con
+export const deleteParentCategory = async (id) => {
+  const response = await axiosInstance.delete(
+    `/admin/categories/delete/parent/${id}`
+  );
+  return response.data;
+};
+
 export const deleteSubCategory = async (id) => {
-  const response = await axiosInstance.delete(`/categories/delete/son/${id}`);
+  const response = await axiosInstance.delete(
+    `/admin/categories/delete/son/${id}`
+  );
+  return response.data;
+};
+
+export const fetchCategoryTree = async () => {
+  const response = await axiosInstance.get(`/categories/tree`);
+  return response.data;
+};
+
+export const fetchFlatCategoryList = async () => {
+  const response = await axiosInstance.get(`/categories/flat`);
   return response.data;
 };

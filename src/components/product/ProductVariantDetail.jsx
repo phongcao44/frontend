@@ -1,21 +1,7 @@
 import { useState, useEffect } from "react";
-import {
-  Card,
-  List,
-  Image,
-  Typography,
-  Divider,
-  Row,
-  Col,
-  Space,
-  Button,
-  InputNumber,
-  Select,
-  message,
-  Popconfirm,
-} from "antd";
+import { Card, List, Image, Typography, Row, Col, Button, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { loadProductDetail } from "../../redux/slices/productSlice";
 import { loadColors } from "../../redux/slices/colorSlice";
@@ -23,10 +9,11 @@ import { loadSizes } from "../../redux/slices/sizeSlice";
 import {
   editProductVariant,
   removeProductVariant,
+  addProductVariant,
 } from "../../redux/slices/productVariantSlice";
+import VariantFormPanel from "./VariantFormPanel";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -35,10 +22,13 @@ export default function ProductDetailPage() {
     sizeId: null,
     price: 0,
     stock: 0,
+    customAttributes: [],
   });
+  const [isAddingNew, setIsAddingNew] = useState(false);
 
   const { id: productId } = useParams();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const product = useSelector((state) => state.products.productDetail);
   const variants = product?.variants || [];
@@ -58,12 +48,12 @@ export default function ProductDetailPage() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (variants.length > 0) {
+    if (variants.length > 0 && !isAddingNew) {
       setSelectedVariant(variants[0]);
-    } else {
+    } else if (!isAddingNew) {
       setSelectedVariant(null);
     }
-  }, [variants]);
+  }, [variants, isAddingNew]);
 
   useEffect(() => {
     if (selectedVariant) {
@@ -96,7 +86,6 @@ export default function ProductDetailPage() {
         priceOverride: variantForm.price,
       },
     };
-    console.log("👉 Save Payload:", payload);
 
     try {
       await dispatch(editProductVariant(payload)).unwrap();
@@ -119,6 +108,37 @@ export default function ProductDetailPage() {
     } catch (err) {
       console.error(err);
       message.error("Xóa biến thể thất bại");
+    }
+  };
+
+  const handleAddVariant = () => {
+    setIsAddingNew(true);
+    setSelectedVariant(null);
+    setVariantForm({
+      colorId: null,
+      sizeId: null,
+      price: 0,
+      stock: 0,
+    });
+  };
+
+  const handleCreate = async () => {
+    const payload = {
+      productId: parseInt(productId),
+      colorId: variantForm.colorId,
+      sizeId: variantForm.sizeId,
+      stockQuantity: variantForm.stock,
+      priceOverride: variantForm.price,
+    };
+
+    try {
+      await dispatch(addProductVariant(payload)).unwrap();
+      message.success("Thêm biến thể mới thành công!");
+      setIsAddingNew(false);
+      dispatch(loadProductDetail(productId));
+    } catch (err) {
+      console.error(err);
+      message.error("Thêm biến thể thất bại");
     }
   };
 
@@ -149,14 +169,29 @@ export default function ProductDetailPage() {
                 </Title>
                 <Text type="secondary">{product?.description}</Text>
                 <br />
-                <Text style={{ color: "#1890ff", cursor: "pointer" }}>
-                  Xem thêm
-                </Text>
+                <Button
+                  type="link"
+                  onClick={() => navigate(`/admin/products/${productId}`)}
+                >
+                  Quay về chi tiết sản phẩm
+                </Button>
               </Col>
             </Row>
           </Card>
 
-          <Card title="Danh sách biến thể" style={{ marginBottom: 16 }}>
+          <Card
+            title="Danh sách biến thể"
+            extra={
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAddVariant}
+              >
+                Thêm biến thể
+              </Button>
+            }
+            style={{ marginBottom: 16 }}
+          >
             <List
               dataSource={variants}
               renderItem={(item) => (
@@ -170,6 +205,7 @@ export default function ProductDetailPage() {
                     padding: 12,
                   }}
                   onClick={() => {
+                    setIsAddingNew(false);
                     setSelectedVariant(item);
                   }}
                 >
@@ -197,98 +233,30 @@ export default function ProductDetailPage() {
         {/* RIGHT COLUMN */}
         <Col xs={24} lg={12}>
           <Card>
-            {selectedVariant ? (
-              <Space
-                direction="vertical"
-                size="middle"
-                style={{ width: "100%" }}
-              >
-                <div>
-                  <Title level={5}>Thông tin biến thể</Title>
-                  <Divider
-                    style={{ borderColor: "#d9d9d9", margin: "12px 0" }}
-                  />
-                </div>
-
-                <div>
-                  <Title level={5}>Màu sắc</Title>
-                  <Select
-                    value={variantForm.colorId}
-                    onChange={(value) => handleChange("colorId", value)}
-                    style={{ width: "100%" }}
-                    placeholder="Chọn màu"
-                  >
-                    {colors.map((c) => (
-                      <Option key={c.id} value={c.id}>
-                        {c.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </div>
-
-                <div>
-                  <Title level={5}>Kích thước</Title>
-                  <Select
-                    value={variantForm.sizeId}
-                    onChange={(value) => handleChange("sizeId", value)}
-                    style={{ width: "100%" }}
-                    placeholder="Chọn size"
-                  >
-                    {sizes.map((s) => (
-                      <Option key={s.id} value={s.id}>
-                        {s.sizeName}
-                      </Option>
-                    ))}
-                  </Select>
-                </div>
-
-                <div>
-                  <Title level={5}>Giá bán</Title>
-                  <InputNumber
-                    value={variantForm.price}
-                    style={{ width: "100%" }}
-                    onChange={(value) => handleChange("price", value)}
-                    formatter={(value) =>
-                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    addonAfter="₫"
-                  />
-                </div>
-
-                <div>
-                  <Title level={5}>Số lượng tồn</Title>
-                  <InputNumber
-                    value={variantForm.stock}
-                    style={{ width: "100%" }}
-                    onChange={(value) => handleChange("stock", value)}
-                  />
-                </div>
-
-                <Row gutter={16} style={{ marginTop: 24 }}>
-                  <Col span={8}>
-                    <Button block onClick={() => setSelectedVariant(null)}>
-                      Hủy
-                    </Button>
-                  </Col>
-                  <Col span={8}>
-                    <Button type="primary" block onClick={handleSave}>
-                      Lưu
-                    </Button>
-                  </Col>
-                  <Col span={8}>
-                    <Popconfirm
-                      title="Bạn có chắc chắn xóa biến thể này?"
-                      okText="Xóa"
-                      cancelText="Hủy"
-                      onConfirm={handleDelete}
-                    >
-                      <Button danger block>
-                        Xóa
-                      </Button>
-                    </Popconfirm>
-                  </Col>
-                </Row>
-              </Space>
+            {selectedVariant || isAddingNew ? (
+              <VariantFormPanel
+                variantForm={variantForm}
+                colors={colors}
+                sizes={sizes}
+                isEditMode={!isAddingNew}
+                onChange={handleChange}
+                onCancel={() => {
+                  if (isAddingNew) {
+                    setIsAddingNew(false);
+                  } else {
+                    setSelectedVariant(null);
+                  }
+                }}
+                onSave={() => {
+                  if (isAddingNew) {
+                    handleCreate();
+                  } else {
+                    handleSave();
+                  }
+                }}
+                onDelete={handleDelete}
+                variants={variants}
+              />
             ) : (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <Text>Vui lòng chọn 1 biến thể để xem chi tiết</Text>
