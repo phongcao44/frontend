@@ -3,7 +3,9 @@ import AdminLayout from "../layouts/AdminLayout";
 import ErrorPage from "../pages/ErrorPage";
 
 // Dashboard
-import Dashboard from "../pages/admin/Dashboard";
+// import Dashboard from "../pages/admin/dashboard/Dashboard";
+import Revenue from "../pages/admin/dashboard/Revenue";
+
 
 // Products
 import ProductManagement from "../pages/admin/ProductManagement";
@@ -33,7 +35,8 @@ function AdminRoutes() {
   return (
     <Route path="/admin" element={<AdminLayout />}>
       {/* Dashboard */}
-      <Route path="dashboard" element={<Dashboard />} />
+      {/* <Route path="dashboard" element={<Dashboard />} /> */}
+      <Route path="dashboard" element={<Revenue />} />
 
       {/* Products */}
       <Route path="products" element={<ProductManagement />} />

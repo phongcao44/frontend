@@ -6,6 +6,7 @@ import productVariantReducer from "./slices/productVariantSlice";
 import categoryReducer from "./slices/categorySlice";
 import orderReducer from "./slices/orderSlice";
 import bannerReducer from "./slices/bannerSlice";
+import dashboardReducer from "./slices/dashboardSlice";
 
 export const store = configureStore({
   reducer: {
@@ -16,5 +17,6 @@ export const store = configureStore({
     productVariants: productVariantReducer,
     order: orderReducer,
     banner: bannerReducer,
+    dashboard: dashboardReducer,
   },
 });
