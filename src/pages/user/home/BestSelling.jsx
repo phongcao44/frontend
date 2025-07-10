@@ -1,10 +1,19 @@
-import { Row, Col, Typography, Button } from "antd";
+import { Row, Col, Typography, Button, Spin } from "antd";
 import ProductCard from "./ProductCard";
+import { useDispatch, useSelector } from "react-redux";
+import { useEffect } from "react";
+import { loadTopBestSellingProducts } from "../../../redux/slices/productSlice";
 
 const { Text, Title } = Typography;
 
-// eslint-disable-next-line react/prop-types
-const BestSelling = ({ products = [] }) => {
+const BestSelling = () => {
+  const dispatch = useDispatch();
+  const { topBestSelling, loading } = useSelector((state) => state.products);
+
+  useEffect(() => {
+    dispatch(loadTopBestSellingProducts());
+  }, [dispatch]);
+
   return (
     <div
       style={{
@@ -68,19 +77,23 @@ const BestSelling = ({ products = [] }) => {
       </div>
 
       {/* Product List */}
-      <Row gutter={[16, 16]}>
-        {products.length > 0 ? (
-          products.map((product) => (
-            <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
-              <ProductCard product={product} />
+      {loading ? (
+        <Spin size="large" />
+      ) : (
+        <Row gutter={[16, 16]}>
+          {topBestSelling.length > 0 ? (
+            topBestSelling.map((product) => (
+              <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
+                <ProductCard product={product} />
+              </Col>
+            ))
+          ) : (
+            <Col span={24}>
+              <Text>No best selling products available.</Text>
             </Col>
-          ))
-        ) : (
-          <Col span={24}>
-            <Text>No best selling products available.</Text>
-          </Col>
-        )}
-      </Row>
+          )}
+        </Row>
+      )}
     </div>
   );
 };

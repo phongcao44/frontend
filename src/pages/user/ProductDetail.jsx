@@ -18,9 +18,8 @@ import {
 } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { loadProductDetail } from "../redux/slices/productSlice";
-import ProductCard from "../components/home/ProductCard";
-
+import { loadProductDetail, trackView } from "../../redux/slices/productSlice";
+import ProductCard from "./home/ProductCard";
 const { Title, Text, Paragraph } = Typography;
 
 const ProductDetail = () => {
@@ -41,7 +40,17 @@ const ProductDetail = () => {
       dispatch(loadProductDetail(productId));
     }
   }, [dispatch, productId]);
-  console.log(product);
+
+  useEffect(() => {
+    if (!productId) return;
+
+    const timer = setTimeout(() => {
+      dispatch(trackView(productId));
+    }, 3000);
+  
+
+    return () => clearTimeout(timer);
+  }, [productId, dispatch]);
 
   if (!product) return <div>Loading...</div>;
 

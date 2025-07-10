@@ -1,7 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
+  fetchLeastViewedProducts,
   fetchMergedProducts,
   fetchProductDetailById,
+  fetchProductsByCategory,
+  fetchTopBestSellingProducts,
+  fetchTopLeastSellingProducts,
+  fetchTopViewedProducts,
+  trackProductView,
 } from "../../services/productServices";
 import {
   fetchAllProducts,
@@ -70,6 +76,36 @@ export const searchProduct = createAsyncThunk(
   async (keyword) => await searchProducts(keyword)
 );
 
+export const loadProductsByCategory = createAsyncThunk(
+  "products/loadByCategory",
+  async (categoryId) => await fetchProductsByCategory(categoryId)
+);
+
+export const loadTopBestSellingProducts = createAsyncThunk(
+  "products/loadTopBestSelling",
+  fetchTopBestSellingProducts
+);
+
+export const loadTopLeastSellingProducts = createAsyncThunk(
+  "products/loadTopLeastSelling",
+  fetchTopLeastSellingProducts
+);
+
+export const loadTopViewedProducts = createAsyncThunk(
+  "products/loadTopViewed",
+  async (limit) => await fetchTopViewedProducts(limit)
+);
+
+export const loadLeastViewedProducts = createAsyncThunk(
+  "products/loadLeastViewed",
+  async (limit) => await fetchLeastViewedProducts(limit)
+);
+
+export const trackView = createAsyncThunk(
+  "products/trackView",
+  async (id) => await trackProductView(id)
+);
+
 const productSlice = createSlice({
   name: "products",
   initialState: {
@@ -77,6 +113,11 @@ const productSlice = createSlice({
     paginated: null,
     mergedProducts: [],
     productDetail: null,
+    topBestSelling: [],
+    topLeastSelling: [],
+    topViewed: [],
+    leastViewed: [],
+    productsByCategory: [],
     loading: false,
     error: null,
   },
@@ -163,7 +204,36 @@ const productSlice = createSlice({
       // Search
       .addCase(searchProduct.fulfilled, (state, action) => {
         state.list = action.payload;
-      });
+      })
+
+      // Products By Category
+      .addCase(loadProductsByCategory.fulfilled, (state, action) => {
+        state.productsByCategory = action.payload;
+      })
+
+      // Top Best Selling
+      .addCase(loadTopBestSellingProducts.fulfilled, (state, action) => {
+        state.topBestSelling = action.payload;
+      })
+
+      // Top Least Selling
+      .addCase(loadTopLeastSellingProducts.fulfilled, (state, action) => {
+        state.topLeastSelling = action.payload;
+      })
+
+      // Top Viewed
+      .addCase(loadTopViewedProducts.fulfilled, (state, action) => {
+        state.topViewed = action.payload;
+      })
+
+      // Least Viewed
+      .addCase(loadLeastViewedProducts.fulfilled, (state, action) => {
+        state.leastViewed = action.payload;
+      })
+
+      // Track View
+      // eslint-disable-next-line no-unused-vars
+      .addCase(trackView.fulfilled, (state) => {});
   },
 });
 

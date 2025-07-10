@@ -6,6 +6,11 @@ import productVariantReducer from "./slices/productVariantSlice";
 import categoryReducer from "./slices/categorySlice";
 import orderReducer from "./slices/orderSlice";
 import bannerReducer from "./slices/bannerSlice";
+import userReducer from "./slices/userSlice";
+import flashSaleReducer from "./slices/flashSaleSlice";
+import postReducer from "./slices/postSlice";
+import authReducer from "./slices/authSlice";
+import cartReducer from "./slices/cartSlice";
 
 export const store = configureStore({
   reducer: {
@@ -16,5 +21,10 @@ export const store = configureStore({
     productVariants: productVariantReducer,
     order: orderReducer,
     banner: bannerReducer,
+    users: userReducer,
+    flashSale: flashSaleReducer,
+    posts: postReducer,
+    auth: authReducer,
+    cart: cartReducer,
   },
 });

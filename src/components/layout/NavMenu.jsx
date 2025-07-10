@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Menu } from "antd";
 
 const menuItems = [
-  { key: "home", label: "Home", path: "/" },
+  { key: "home", label: "Home", path: "/home" },
   { key: "contact", label: "Contact", path: "/contact" },
   { key: "about", label: "About", path: "/about" },
   { key: "signup", label: "Sign Up", path: "/signup" },

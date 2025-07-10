@@ -3,6 +3,7 @@ import { Search, Plus, Edit2, Trash2 } from "lucide-react";
 import { getBanners, removeBanner } from "../../redux/slices/bannerSlice";
 import { useDispatch, useSelector } from "react-redux";
 import BannerFormModal from "./BannerForm";
+import Swal from "sweetalert2";
 
 const BannerManagement = () => {
   const dispatch = useDispatch();
@@ -18,9 +19,30 @@ const BannerManagement = () => {
     dispatch(getBanners());
   }, [dispatch]);
 
-  const handleDelete = (id) => {
-    if (window.confirm("Bạn có chắc muốn xóa banner này?")) {
-      dispatch(removeBanner(id));
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: "Bạn có chắc chắn?",
+      text: "Hành động này sẽ không thể hoàn tác!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await dispatch(removeBanner(id)).unwrap();
+        await Swal.fire("Đã xóa!", "Banner đã được xóa.", "success");
+      } catch (err) {
+        await Swal.fire(
+          "Thất bại!",
+          `Xóa banner thất bại: ${err.message || err}`,
+          "error"
+        );
+      }
+    } else if (result.dismiss === Swal.DismissReason.cancel) {
+      await Swal.fire("Đã hủy", "Banner vẫn còn nguyên.", "info");
     }
   };
 
@@ -212,7 +234,7 @@ const BannerManagement = () => {
         <BannerFormModal
           open={open}
           onClose={() => setOpen(false)}
-          id={editingId} 
+          id={editingId}
         />
       </div>
     </div>

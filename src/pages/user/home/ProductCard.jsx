@@ -1,14 +1,20 @@
+/* eslint-disable no-unused-vars */
+// 🗂️ Đúng imports
 import PropTypes from "prop-types";
-import { Card, Button, Typography, Rate } from "antd";
+import { Card, Button, Typography, Rate, message } from "antd";
 import { HeartOutlined, EyeOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { addItemToCart } from "../../../redux/slices/cartSlice";
+import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice";
 
 const { Title, Text } = Typography;
 
 const ProductCard = ({ product, showDiscountLabel = false }) => {
   const [hovered, setHovered] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   if (!product) return null;
 
@@ -18,7 +24,9 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
     images,
     price,
     originalPrice,
-    discount,
+    discountPercentage,
+    discountAmount,
+    discountType,
     averageRating,
     totalReviews,
   } = product;
@@ -28,13 +36,37 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
     images?.[0]?.image_url ||
     "/placeholder.png";
 
-  const salePrice = price;
-  const rating = averageRating || 0;
-  const reviews = totalReviews || 0;
-
   const handleNavigate = () => {
     navigate(`/product/${id}`);
   };
+
+  const handleAddToCart = async (e) => {
+    e.stopPropagation();
+
+    const res = await dispatch(loadVariantsByProduct(product.id)).unwrap();
+    const variantId = res?.[0]?.id;
+
+    if (!variantId) {
+      message.error("Không tìm thấy variant!");
+      return;
+    }
+
+    dispatch(addItemToCart({ variantId, quantity: 1 }))
+      .unwrap()
+      .then(() => {
+        message.success("Đã thêm vào giỏ hàng!");
+      })
+      .catch(() => {
+        message.error("Thêm giỏ hàng thất bại!");
+      });
+  };
+
+  // 👉 Xác định nhãn giảm giá
+  const discountLabel = discountPercentage
+    ? `-${discountPercentage}%`
+    : discountAmount
+    ? `- ${discountAmount.toLocaleString()}đ`
+    : null;
 
   return (
     <div
@@ -51,9 +83,7 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
           position: "relative",
         }}
         styles={{
-          body: {
-            padding: "16px",
-          },
+          body: { padding: "16px" },
         }}
         cover={
           <div
@@ -76,8 +106,7 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
               }}
             />
 
-            {/* Discount */}
-            {showDiscountLabel && discount && (
+            {showDiscountLabel && discountLabel && (
               <div
                 style={{
                   position: "absolute",
@@ -91,7 +120,7 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
                   borderRadius: "2px",
                 }}
               >
-                -{discount}%
+                {discountLabel}
               </div>
             )}
 
@@ -151,9 +180,7 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
                   height: "40px",
                   fontSize: "14px",
                 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
+                onClick={handleAddToCart}
               >
                 Add To Cart
               </Button>
@@ -174,7 +201,7 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
               marginBottom: "8px",
             }}
           >
-            {discount ? (
+            {discountLabel ? (
               <>
                 <Text
                   style={{
@@ -183,24 +210,30 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
                     color: "#ff4d4f",
                   }}
                 >
-                  ${salePrice}
+                  {price.toLocaleString("vi-VN")} VNĐ
                 </Text>
                 <Text delete style={{ fontSize: "14px", color: "#999" }}>
-                  ${originalPrice}
+                  {originalPrice?.toLocaleString("vi-VN")} VNĐ
                 </Text>
               </>
             ) : (
               <Text
                 style={{ fontSize: "16px", fontWeight: "600", color: "#000" }}
               >
-                ${originalPrice || salePrice}
+                {price.toLocaleString("vi-VN")} VNĐ
               </Text>
             )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <Rate disabled defaultValue={rating} style={{ fontSize: "12px" }} />
-            <Text style={{ fontSize: "12px", color: "#999" }}>({reviews})</Text>
+            <Rate
+              disabled
+              defaultValue={averageRating || 0}
+              style={{ fontSize: "12px" }}
+            />
+            <Text style={{ fontSize: "12px", color: "#999" }}>
+              ({totalReviews || 0})
+            </Text>
           </div>
         </div>
       </Card>
@@ -210,7 +243,7 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
 
 ProductCard.propTypes = {
   product: PropTypes.shape({
-    id: PropTypes.string.isRequired,
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     name: PropTypes.string.isRequired,
     images: PropTypes.arrayOf(
       PropTypes.shape({
@@ -220,7 +253,9 @@ ProductCard.propTypes = {
     ).isRequired,
     price: PropTypes.number.isRequired,
     originalPrice: PropTypes.number,
-    discount: PropTypes.number,
+    discountPercentage: PropTypes.number,
+    discountAmount: PropTypes.number,
+    discountType: PropTypes.string,
     averageRating: PropTypes.number,
     totalReviews: PropTypes.number,
   }),

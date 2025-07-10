@@ -2,18 +2,18 @@ import { Divider } from "antd";
 import "swiper/css";
 import "swiper/css/pagination";
 
-import { categories, bestSellingProducts } from "../components/home/data";
+import { categories } from "./home/data";
 
-import BestSelling from "../components/home/BestSelling";
-import Promo from "../components/home/Promo";
-import ExploreProducts from "../components/home/ExploreProducts";
-import NewArrival from "../components/home/NewArrival";
-import CategoryBanner from "../components/home/CategoryBanner";
-import FlashSale from "../components/home/FlashSale";
-import CategorySection from "../components/home/CategorySection";
+import BestSelling from "./home/BestSelling";
+import Promo from "./home/Promo";
+import ExploreProducts from "./home/ExploreProducts";
+import NewArrival from "./home/NewArrival";
+import CategoryBanner from "./home/CategoryBanner";
+import FlashSale from "./home/FlashSale";
+import CategorySection from "./home/CategorySection";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
-import { loadMergedProducts } from "../redux/slices/productSlice";
+import { loadMergedProducts } from "../../redux/slices/productSlice";
 
 const Home = () => {
   const divider = (
@@ -36,7 +36,7 @@ const Home = () => {
       <CategorySection categories={categories} />
 
       {divider}
-      <BestSelling products={bestSellingProducts} />
+      <BestSelling />
 
       <Promo />
       <ExploreProducts allProducts={allProducts} />

@@ -6,7 +6,6 @@ import {
   deleteBanner,
 } from "../../services/bannerService";
 
-// GET ALL
 export const getBanners = createAsyncThunk(
   "banner/getBanners",
   async (_, { rejectWithValue }) => {
@@ -18,7 +17,6 @@ export const getBanners = createAsyncThunk(
   }
 );
 
-// ADD
 export const createBanner = createAsyncThunk(
   "banner/createBanner",
   async (formData, { rejectWithValue }) => {
@@ -41,9 +39,8 @@ export const editBanner = createAsyncThunk(
       if (payload.image) {
         form.append("image", payload.image);
       }
-      form.append("startAt", payload.timeStart);
-      form.append("endAt", payload.timeEnd);
-
+      form.append("startAt", new Date(payload.timeStart).toISOString());
+      form.append("endAt", new Date(payload.timeEnd).toISOString());
       return await updateBanner(id, form);
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -51,7 +48,6 @@ export const editBanner = createAsyncThunk(
   }
 );
 
-// DELETE
 export const removeBanner = createAsyncThunk(
   "banner/removeBanner",
   async (id, { rejectWithValue }) => {

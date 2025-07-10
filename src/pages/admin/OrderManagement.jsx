@@ -155,7 +155,7 @@ const OrderManagement = () => {
       title: "Khách hàng",
       dataIndex: "userId",
       key: "userId.username",
-      render: (user) => user?.username || "",
+      render: (userId) => userId || "",
     },
     {
       title: "Trạng thái đơn hàng",

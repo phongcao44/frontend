@@ -6,7 +6,6 @@ import {
   deleteOrder,
 } from "../../services/orderService";
 
-// --- LOAD LIST ---
 export const loadOrders = createAsyncThunk(
   "order/loadOrders",
   async (_, { rejectWithValue }) => {
@@ -19,7 +18,6 @@ export const loadOrders = createAsyncThunk(
   }
 );
 
-// --- LOAD DETAIL ---
 export const loadOrderDetail = createAsyncThunk(
   "order/loadOrderDetail",
   async (id, { rejectWithValue }) => {
@@ -32,7 +30,6 @@ export const loadOrderDetail = createAsyncThunk(
   }
 );
 
-// --- EDIT STATUS ---
 export const editOrderStatus = createAsyncThunk(
   "order/editOrderStatus",
   async ({ id, status }, { rejectWithValue }) => {
@@ -45,7 +42,6 @@ export const editOrderStatus = createAsyncThunk(
   }
 );
 
-// --- REMOVE ORDER ---
 export const removeOrder = createAsyncThunk(
   "order/removeOrder",
   async (id, { rejectWithValue }) => {
@@ -73,7 +69,7 @@ const orderSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // LOAD LIST
+
       .addCase(loadOrders.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -87,7 +83,6 @@ const orderSlice = createSlice({
         state.error = action.payload;
       })
 
-      // LOAD DETAIL
       .addCase(loadOrderDetail.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -102,7 +97,6 @@ const orderSlice = createSlice({
         state.error = action.payload;
       })
 
-      // EDIT STATUS
       .addCase(editOrderStatus.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -111,12 +105,10 @@ const orderSlice = createSlice({
         state.loading = false;
         const updated = action.payload;
 
-        // Update trong list nếu có
         state.list = state.list.map((order) =>
           order.orderId === updated.id ? { ...order, ...updated } : order
         );
 
-        // Update chi tiết nếu đang mở
         if (state.currentOrder?.orderId === updated.id) {
           state.currentOrder = { ...state.currentOrder, ...updated };
         }

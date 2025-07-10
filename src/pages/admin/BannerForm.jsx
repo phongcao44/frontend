@@ -97,8 +97,6 @@ export default function BannerFormModal({ open, onClose, id }) {
       form.append("image", selectedFile);
     }
 
-    console.log([...form.entries()]);
-
     if (id) {
       dispatch(
         editBanner({
@@ -107,9 +105,9 @@ export default function BannerFormModal({ open, onClose, id }) {
             title: formData.title,
             position: formData.position,
             status: formData.status,
-            timeStart: isoStart,
-            timeEnd: isoEnd,
             image: selectedFile,
+            timeStart: formData.timeStart,
+            timeEnd: formData.timeEnd,
           },
         })
       );

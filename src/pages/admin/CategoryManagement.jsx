@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import {
   Table,
   Button,
@@ -141,15 +142,33 @@ const CategoryManagement = () => {
   };
 
   const handleDelete = async (category) => {
-    try {
-      if ((category.level || 1) === 1) {
-        await dispatch(removeParentCategory(category.id)).unwrap();
-      } else {
-        await dispatch(removeSubCategory(category.id)).unwrap();
+    const result = await Swal.fire({
+      title: "Bạn có chắc chắn?",
+      text: "Hành động này sẽ không thể hoàn tác!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        if ((category.level || 1) === 1) {
+          await dispatch(removeParentCategory(category.id)).unwrap();
+        } else {
+          await dispatch(removeSubCategory(category.id)).unwrap();
+        }
+        Swal.fire("Đã xóa!", "Danh mục đã được xóa.", "success");
+      } catch (err) {
+        Swal.fire(
+          "Thất bại!",
+          `Xóa danh mục thất bại: ${err.message || err}`,
+          "error"
+        );
       }
-      message.success("Xóa danh mục thành công!");
-    } catch (err) {
-      message.error(`Xóa danh mục thất bại: ${err.message || err}`);
+    } else if (result.dismiss === Swal.DismissReason.cancel) {
+      Swal.fire("Đã hủy", "Danh mục vẫn còn nguyên.", "info");
     }
   };
 
@@ -268,14 +287,7 @@ const CategoryManagement = () => {
             danger
             size="small"
             onClick={() => {
-              Modal.confirm({
-                title: "Xóa danh mục",
-                content: "Bạn có chắc muốn xóa danh mục này?",
-                onOk: () => handleDelete(record),
-                okText: "Xóa",
-                cancelText: "Hủy",
-                okButtonProps: { danger: true },
-              });
+              handleDelete(record);
             }}
           >
             Xóa
