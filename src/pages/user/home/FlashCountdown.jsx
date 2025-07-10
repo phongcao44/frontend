@@ -1,16 +1,12 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
 import { Typography } from "antd";
 
 const { Text } = Typography;
 
-// eslint-disable-next-line react/prop-types
 const CountdownBlock = ({ label, value }) => (
   <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-    }}
+    style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
   >
     <Text style={{ fontSize: "12px", marginBottom: "4px" }}>{label}</Text>
     <Text
@@ -26,29 +22,24 @@ const CountdownBlock = ({ label, value }) => (
   </div>
 );
 
-const FlashCountdown = () => {
+const FlashCountdown = ({ endTime }) => {
   const [timeLeft, setTimeLeft] = useState({
-    days: 3,
-    hours: 23,
-    minutes: 19,
-    seconds: 56,
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
   });
 
   useEffect(() => {
-    const deadline =
-      Date.now() +
-      1000 * 60 * 60 * 24 * 3 +
-      1000 * 60 * 60 * 23 +
-      1000 * 60 * 19 +
-      1000 * 59;
+    if (!endTime) return;
 
-    const timer = setInterval(() => {
+    const deadline = new Date(endTime).getTime();
+
+    const calculateTimeLeft = () => {
       const diff = deadline - Date.now();
 
       if (diff <= 0) {
-        clearInterval(timer);
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        return;
+        return { days: 0, hours: 0, minutes: 0, seconds: 0 };
       }
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -56,26 +47,28 @@ const FlashCountdown = () => {
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
 
-      setTimeLeft({ days, hours, minutes, seconds });
+      return { days, hours, minutes, seconds };
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [endTime]);
+
+  if (!endTime) return null;
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
       <CountdownBlock label="Days" value={timeLeft.days} />
-      <span style={{ fontSize: "20px", color: "#ff4d4f", alignSelf: "center" }}>
-        :
-      </span>
+      <span style={{ fontSize: "20px", color: "#ff4d4f" }}>:</span>
       <CountdownBlock label="Hours" value={timeLeft.hours} />
-      <span style={{ fontSize: "20px", color: "#ff4d4f", alignSelf: "center" }}>
-        :
-      </span>
+      <span style={{ fontSize: "20px", color: "#ff4d4f" }}>:</span>
       <CountdownBlock label="Minutes" value={timeLeft.minutes} />
-      <span style={{ fontSize: "20px", color: "#ff4d4f", alignSelf: "center" }}>
-        :
-      </span>
+      <span style={{ fontSize: "20px", color: "#ff4d4f" }}>:</span>
       <CountdownBlock label="Seconds" value={timeLeft.seconds} />
     </div>
   );

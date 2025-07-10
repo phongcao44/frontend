@@ -59,11 +59,6 @@ export const fetchProductsByCategory = async (categoryId) => {
   return res.data;
 };
 
-export const fetchTopBestSellingProducts = async () => {
-  const res = await axiosInstance.get("/admin/products/bestSell");
-  return res.data;
-};
-
 export const fetchTopLeastSellingProducts = async () => {
   const res = await axiosInstance.get("/admin/products/topLeastSell");
   return res.data;
@@ -86,6 +81,35 @@ export const fetchLeastViewedProducts = async (limit = 10) => {
     params: { limit },
   });
   return res.data;
+};
+
+export const fetchTopBestSellingProducts = async () => {
+  try {
+    const res = await axiosInstance.get("/products/bestSell");
+    const items = res.data || [];
+
+    const results = items.map((item) => {
+      // Tự mock 2 ảnh giả
+      const images = Array.from({ length: 2 }, (_, i) => ({
+        id: `img-${item.id}-${i + 1}`,
+        image_url: `https://picsum.photos/seed/${item.id}-${i + 1}/720/720`,
+        is_main: i === 0,
+      }));
+
+      return {
+        ...item,
+        id: `${item.id}`,
+        name: item.productName,
+        images,
+        averageRating: Math.floor(Math.random() * 2) + 3,
+        totalReviews: Math.floor(Math.random() * 50) + 1,
+      };
+    });
+    return results;
+  } catch (err) {
+    console.error("❌ Lỗi fetchTopBestSellingProducts:", err);
+    return [];
+  }
 };
 
 export const fetchMergedProducts = async (page = 0, limit = 10) => {

@@ -1,9 +1,11 @@
 import { Route } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute"; // Đường dẫn đúng file của Jx nhé!
 import AdminLayout from "../layouts/AdminLayout";
-import ErrorPage from "../pages/ErrorPage";
+import ErrorPage from "../pages/user/ErrorPage";
 
 // Dashboard
-import Dashboard from "../pages/admin/Dashboard";
+// import Dashboard from "../pages/admin/dashboard/Dashboard";
+import Revenue from "../pages/admin/dashboard/Revenue";
 
 // Products
 import ProductManagement from "../pages/admin/ProductManagement";
@@ -20,6 +22,7 @@ import CategoryManagement from "../pages/admin/CategoryManagement";
 
 // Users
 import UserManagement from "../pages/admin/UserManagement";
+import UserDetail from "../pages/admin/UserDetail";
 
 // Banners
 import BannerManagement from "../pages/admin/BannerManagement";
@@ -29,42 +32,70 @@ import BannerForm from "../pages/admin/BannerForm";
 import ReviewManagement from "../pages/admin/ReviewManagement";
 import Support from "../pages/admin/Support";
 
-function AdminRoutes() {
+import FlashSaleManagement from "../pages/admin/flash_Sale/FlashSaleManagement";
+import FlashSaleItemManagement from "../pages/admin/flash_Sale/FlashSaleItemManagement";
+
+import VoucherManagement from "../pages/admin/VoucherManagement";
+import PostManagement from "../pages/admin/posts/PostManagement";
+
+export default function AdminRoutes() {
   return (
-    <Route path="/admin" element={<AdminLayout />}>
+    <Route
+      element={
+        <ProtectedRoute allowedRoles={["ROLE_ADMIN"]}>
+          <AdminLayout />
+        </ProtectedRoute>
+      }
+    >
       {/* Dashboard */}
-      <Route path="dashboard" element={<Dashboard />} />
+      {/* <Route path="dashboard" element={<Dashboard />} /> */}
+      <Route path="/admin/dashboard" element={<Revenue />} />
 
       {/* Products */}
-      <Route path="products" element={<ProductManagement />} />
-      <Route path="products/add" element={<ProductForm />} />
-      <Route path="products/:id" element={<ProductForm />} />
-      <Route path="products/:id/variant" element={<ProductVariantDetail />} />
-      <Route path="products/stock" element={<StockManagement />} />
+      <Route path="/admin/products" element={<ProductManagement />} />
+      <Route path="/admin/products/add" element={<ProductForm />} />
+      <Route path="/admin/products/:id" element={<ProductForm />} />
+      <Route
+        path="/admin/products/:id/variant"
+        element={<ProductVariantDetail />}
+      />
+      <Route path="/admin/products/stock" element={<StockManagement />} />
 
       {/* Orders */}
-      <Route path="orders" element={<OrderManagement />} />
-      <Route path="orders/:orderId" element={<OrderDetail />} />
+      <Route path="/admin/orders" element={<OrderManagement />} />
+      <Route path="/admin/orders/:orderId" element={<OrderDetail />} />
 
       {/* Categories */}
-      <Route path="categories" element={<CategoryManagement />} />
+      <Route path="/admin/categories" element={<CategoryManagement />} />
 
       {/* Users */}
-      <Route path="users" element={<UserManagement />} />
+      <Route path="/admin/users" element={<UserManagement />} />
+      <Route path="/admin/users/:userId" element={<UserDetail />} />
 
       {/* Banners */}
-      <Route path="banner" element={<BannerManagement />} />
-      <Route path="banner/add" element={<BannerForm />} />
-      <Route path="banner/edit/:id" element={<BannerForm />} />
+      <Route path="/admin/banner" element={<BannerManagement />} />
+      <Route path="/admin/banner/add" element={<BannerForm />} />
+      <Route path="/admin/banner/edit/:id" element={<BannerForm />} />
+
+      {/* Flash Sale */}
+      <Route path="/admin/flash-sale" element={<FlashSaleManagement />} />
+      <Route
+        path="/admin/flash-sale/:id"
+        element={<FlashSaleItemManagement />}
+      />
+
+      {/* Posts */}
+      <Route path="/admin/posts" element={<PostManagement />} />
+
+      {/* Voucher */}
+      <Route path="/admin/voucher" element={<VoucherManagement />} />
 
       {/* Reviews & Support */}
-      <Route path="reviews" element={<ReviewManagement />} />
-      <Route path="support" element={<Support />} />
+      <Route path="/admin/reviews" element={<ReviewManagement />} />
+      <Route path="/admin/support" element={<Support />} />
 
       {/* Fallback */}
-      <Route path="*" element={<ErrorPage />} />
+      <Route path="/admin/*" element={<ErrorPage />} />
     </Route>
   );
 }
-
-export default AdminRoutes;

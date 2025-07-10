@@ -9,6 +9,7 @@ export const addColor = async (colorData) => {
   const response = await axiosInstance.post("/color/add", colorData);
   return response.data;
 };
+
 export const autoAddColor = async (colorData) => {
   const response = await axiosInstance.post("/color/autoadd", colorData);
   return response.data;

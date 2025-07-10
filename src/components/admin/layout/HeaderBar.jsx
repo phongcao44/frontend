@@ -1,4 +1,7 @@
+/* eslint-disable react/prop-types */
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   Layout,
   Menu,
@@ -26,65 +29,67 @@ import {
   CustomerServiceOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
+import { logout } from "../../../services/authService";
 
 const { Header } = Layout;
 const { Text, Title } = Typography;
 const { Search } = Input;
 
-// eslint-disable-next-line react/prop-types
 const HeaderBar = ({ collapsed, setCollapsed }) => {
   // eslint-disable-next-line no-unused-vars
-  const [currentTheme, setCurrentTheme] = useState("light");
+  const [, setCurrentTheme] = useState("light");
   const { token } = theme.useToken();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const handleLogout = () => {
+    dispatch(logout());
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    navigate("/login");
+  };
 
   const notifications = [
     {
       id: 1,
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=50&h=50&fit=crop&crop=face",
+      avatar: "...",
       title: "UI/UX Design",
-      description:
-        "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s...",
+      description: "...",
       time: "2 min ago",
       type: "today",
     },
     {
       id: 2,
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face",
+      avatar: "...",
       title: "Message",
-      description:
-        "Lorem Ipsum has been the industry's standard dummy text ever since the 1500.",
+      description: "...",
       time: "1 hour ago",
       type: "today",
     },
     {
       id: 3,
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face",
+      avatar: "...",
       title: "Forms",
-      description:
-        "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s...",
+      description: "...",
       time: "2 hour ago",
       type: "yesterday",
     },
     {
       id: 4,
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=50&h=50&fit=crop&crop=face",
+      avatar: "...",
       title: "Challenge invitation",
-      description: "Jonny aber invites to join the challenge",
+      description: "...",
       time: "12 hour ago",
       type: "yesterday",
       hasActions: true,
     },
     {
       id: 5,
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50&h=50&fit=crop&crop=face",
+      avatar: "...",
       title: "Security",
-      description:
-        "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s...",
+      description: "...",
       time: "5 hour ago",
       type: "yesterday",
     },
@@ -119,7 +124,12 @@ const HeaderBar = ({ collapsed, setCollapsed }) => {
       { key: "settings", icon: <SettingOutlined />, label: "Settings" },
       { key: "support", icon: <CustomerServiceOutlined />, label: "Support" },
       { key: "lock", icon: <LockOutlined />, label: "Lock Screen" },
-      { key: "logout", icon: <PoweroffOutlined />, label: "Logout" },
+      {
+        key: "logout",
+        icon: <PoweroffOutlined />,
+        label: "Logout",
+        onClick: handleLogout,
+      },
     ],
   };
 
@@ -137,7 +147,7 @@ const HeaderBar = ({ collapsed, setCollapsed }) => {
         key: "logout",
         icon: <PoweroffOutlined />,
         label: (
-          <Button type="primary" block>
+          <Button type="primary" block onClick={handleLogout}>
             <PoweroffOutlined /> Logout
           </Button>
         ),

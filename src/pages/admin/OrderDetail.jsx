@@ -18,9 +18,7 @@ import {
   Alert,
   message,
 } from "antd";
-import {
-  MoreOutlined,
-} from "@ant-design/icons";
+import { MoreOutlined } from "@ant-design/icons";
 import {
   loadOrderDetail,
   clearCurrentOrder,
@@ -364,10 +362,7 @@ export default function OrderDetail() {
         <Row gutter={24}>
           {/* LEFT */}
           <Col span={16}>
-            <Card
-             
-              style={{ marginBottom: 16 }}
-            >
+            <Card style={{ marginBottom: 16 }}>
               <Table
                 columns={productColumns}
                 dataSource={productData}
@@ -478,20 +473,26 @@ export default function OrderDetail() {
                 <Button type="link" style={{ padding: 0 }}>
                   {currentOrder.customer?.username || ""}
                 </Button>
+                <br />
+                <Text type="secondary">
+                  {currentOrder.customer?.email || ""}
+                </Text>
               </div>
               <Divider style={{ borderColor: "#d9d9d9", margin: "32px 0" }} />
+
               <Space>
                 <Text strong>Người liên hệ</Text>
                 <Button type="text" icon={<MoreOutlined />} />
               </Space>
               <div style={{ marginTop: 8 }}>
-                <Text>{currentOrder.customer?.username || ""}</Text>
+                <Text>
+                  {currentOrder.shippingAddress?.recipient_name || ""}
+                </Text>
                 <br />
                 <Text type="secondary">
                   {currentOrder.shippingAddress?.phone || ""}
                 </Text>
               </div>
-              <Divider style={{ borderColor: "#d9d9d9", margin: "32px 0" }} />
               <Space>
                 <Text strong>Địa chỉ giao hàng</Text>
                 <Button type="text" icon={<MoreOutlined />} />

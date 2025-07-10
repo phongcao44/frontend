@@ -8,6 +8,8 @@ import {
   PictureOutlined,
   CreditCardOutlined,
   StarOutlined,
+  ThunderboltOutlined,
+  GiftOutlined, // 🎁 NEW: thêm icon quà tặng cho voucher
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -85,9 +87,19 @@ const SidebarMenu = () => {
           label: "Banner quảng cáo",
         },
         {
+          key: "/admin/flash-sale",
+          icon: <ThunderboltOutlined />,
+          label: "Flash Sale",
+        },
+        {
           key: "/admin/reviews",
           icon: <StarOutlined />,
           label: "Đánh giá sản phẩm",
+        },
+        {
+          key: "/admin/voucher", 
+          icon: <GiftOutlined />, 
+          label: "Quản lý voucher",
         },
       ]}
     />
