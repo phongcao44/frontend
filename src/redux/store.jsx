@@ -12,6 +12,8 @@ import postReducer from "./slices/postSlice";
 import authReducer from "./slices/authSlice";
 import cartReducer from "./slices/cartSlice";
 import dashboardReducer from "./slices/dashboardSlice";
+import returnRequestReducer from "./slices/returnRequestSlice";
+
 
 export const store = configureStore({
   reducer: {
@@ -28,5 +30,6 @@ export const store = configureStore({
     auth: authReducer,
     cart: cartReducer,
     dashboard: dashboardReducer,
+    returnRequest: returnRequestReducer,
   },
 });

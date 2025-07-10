@@ -7,6 +7,10 @@ import ErrorPage from "../pages/user/ErrorPage";
 // import Dashboard from "../pages/admin/dashboard/Dashboard";
 import Revenue from "../pages/admin/dashboard/Revenue";
 
+// Return
+import ReturnRequestList from "../pages/admin/return/ReturnRequestList";
+import ReturnRequestDetail from "../pages/admin/return/ReturnRequestDetail";
+
 // Products
 import ProductManagement from "../pages/admin/ProductManagement";
 import ProductForm from "../components/product/ProductForm";
@@ -50,6 +54,10 @@ export default function AdminRoutes() {
       {/* Dashboard */}
       {/* <Route path="dashboard" element={<Dashboard />} /> */}
       <Route path="/admin/dashboard" element={<Revenue />} />
+
+      {/* Return */}
+      <Route path="/admin/return" element={<ReturnRequestList />} />
+      <Route path="/admin/return/:id" element={<ReturnRequestDetail />} />
 
       {/* Products */}
       <Route path="/admin/products" element={<ProductManagement />} />

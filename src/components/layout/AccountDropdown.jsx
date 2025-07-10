@@ -11,6 +11,9 @@ import {
   faStar as faStarRegular,
   faCircleXmark,
 } from "@fortawesome/free-regular-svg-icons";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { logoutUser } from "../../redux/slices/authSlice";
 
 const accountMenuItems = [
   {
@@ -41,8 +44,20 @@ const accountMenuItems = [
 ];
 
 const AccountDropdown = () => {
+   const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const handleClick = ({ key }) => {
     console.log("Clicked:", key);
+
+    if (key === "logout") {
+      // Xoá localStorage
+      localStorage.removeItem("user");
+      localStorage.removeItem("access_token");
+
+      dispatch(logoutUser());
+      navigate("/login");
+    }
   };
 
   return (

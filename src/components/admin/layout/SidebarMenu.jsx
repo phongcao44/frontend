@@ -9,7 +9,7 @@ import {
   CreditCardOutlined,
   StarOutlined,
   ThunderboltOutlined,
-  GiftOutlined, // 🎁 NEW: thêm icon quà tặng cho voucher
+  GiftOutlined, 
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -97,10 +97,17 @@ const SidebarMenu = () => {
           label: "Đánh giá sản phẩm",
         },
         {
-          key: "/admin/voucher", 
-          icon: <GiftOutlined />, 
+          key: "/admin/voucher",
+          icon: <GiftOutlined />,
           label: "Quản lý voucher",
         },
+
+        {
+          key: "/admin/return",
+          icon: <GiftOutlined />,
+          label: "Quản lý đổi trả",
+        }
+
       ]}
     />
   );
