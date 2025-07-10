@@ -4,7 +4,8 @@ import AdminLayout from "../layouts/AdminLayout";
 import ErrorPage from "../pages/user/ErrorPage";
 
 // Dashboard
-import Dashboard from "../pages/admin/dashboard/Dashboard";
+// import Dashboard from "../pages/admin/dashboard/Dashboard";
+import Revenue from "../pages/admin/dashboard/Revenue";
 
 // Products
 import ProductManagement from "../pages/admin/ProductManagement";
@@ -47,7 +48,8 @@ export default function AdminRoutes() {
       }
     >
       {/* Dashboard */}
-      <Route path="/admin/dashboard" element={<Dashboard />} />
+      {/* <Route path="dashboard" element={<Dashboard />} /> */}
+      <Route path="/admin/dashboard" element={<Revenue />} />
 
       {/* Products */}
       <Route path="/admin/products" element={<ProductManagement />} />

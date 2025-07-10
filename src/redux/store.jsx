@@ -11,6 +11,7 @@ import flashSaleReducer from "./slices/flashSaleSlice";
 import postReducer from "./slices/postSlice";
 import authReducer from "./slices/authSlice";
 import cartReducer from "./slices/cartSlice";
+import dashboardReducer from "./slices/dashboardSlice";
 
 export const store = configureStore({
   reducer: {
@@ -26,5 +27,6 @@ export const store = configureStore({
     posts: postReducer,
     auth: authReducer,
     cart: cartReducer,
+    dashboard: dashboardReducer,
   },
 });

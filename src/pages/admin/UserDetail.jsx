@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import {
   Edit,
   X,
@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 const UserDetail = () => {
-  // State management
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("orders");
   const [customerNote, setCustomerNote] = useState("230915DH75UYO4");
