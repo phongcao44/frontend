@@ -50,6 +50,7 @@ const FlashSale = () => {
     loadFlashSales();
   }, [dispatch]);
 
+  console.log(flashSaleItems);
   return (
     <div style={{ padding: "40px 20px", backgroundColor: "#fff" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>

@@ -29,7 +29,8 @@ import {
   CustomerServiceOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
-import { logout } from "../../../services/authService";
+import { logoutUser } from "../../../redux/slices/authSlice";
+import Cookies from "js-cookie";
 
 const { Header } = Layout;
 const { Text, Title } = Typography;
@@ -43,11 +44,10 @@ const HeaderBar = ({ collapsed, setCollapsed }) => {
   const dispatch = useDispatch();
 
   const handleLogout = () => {
-    dispatch(logout());
+    Cookies.remove("access_token", { path: "/" });
+    Cookies.remove("user", { path: "/" });
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
+    dispatch(logoutUser());
     navigate("/login");
   };
 

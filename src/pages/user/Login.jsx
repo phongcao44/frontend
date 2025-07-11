@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../../redux/slices/authSlice";
 import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -24,8 +25,10 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      localStorage.clear();
       console.log(formData);
+      const userString = Cookies.get("user");
+      const user = userString ? JSON.parse(userString) : null;
+      console.log(user);
       const res = await dispatch(loginUser(formData)).unwrap();
       const userInfo = {
         id: res.data.user.id,
@@ -38,12 +41,20 @@ const Login = () => {
         roles: res.data.roles,
       };
 
-      localStorage.setItem("user", JSON.stringify(userInfo));
-      localStorage.setItem("access_token", res.data.accessToken);
+      // localStorage.setItem("user", JSON.stringify(userInfo));
+      // localStorage.setItem("access_token", res.data.accessToken);
 
-      // Cookies.set("access_token", res.data.accessToken, {
-      //   sameSite: "strict",
-      // });
+      Cookies.set("access_token", res.data.accessToken, {
+        sameSite: "Strict",
+        secure: true,
+        path: "/",
+      });
+
+      Cookies.set("user", JSON.stringify(userInfo), {
+        sameSite: "Strict",
+        secure: true,
+        path: "/",
+      });
 
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");

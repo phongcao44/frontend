@@ -11,6 +11,10 @@ import {
   faStar as faStarRegular,
   faCircleXmark,
 } from "@fortawesome/free-regular-svg-icons";
+import { logoutUser } from "../../redux/slices/authSlice";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 const accountMenuItems = [
   {
@@ -41,8 +45,22 @@ const accountMenuItems = [
 ];
 
 const AccountDropdown = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const handleClick = ({ key }) => {
     console.log("Clicked:", key);
+
+    if (key === "logout") {
+      Cookies.remove("access_token", { path: "/" });
+      Cookies.remove("user", { path: "/" });
+
+      // Dispatch Redux action
+      dispatch(logoutUser());
+
+      // Điều hướng về trang login
+      navigate("/login");
+    }
   };
 
   return (

@@ -1,7 +1,7 @@
 import axiosInstance from "../utils/axiosInstance";
 
 export const fetchBanners = async () => {
-  const response = await axiosInstance.get("/admin/banner");
+  const response = await axiosInstance.get("/");
   return response.data;
 };
 

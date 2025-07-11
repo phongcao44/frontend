@@ -14,6 +14,7 @@ const Cart = () => {
   const { cart } = useSelector((state) => state.cart);
 
   const [localQuantities, setLocalQuantities] = useState({});
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     dispatch(getCart());
@@ -26,13 +27,15 @@ const Cart = () => {
         quantities[item.cartItemId] = item.quantity;
       });
       setLocalQuantities(quantities);
+      setSelectedItems(cart.items.map((item) => item.cartItemId));
     }
   }, [cart]);
 
   const handleQuantityChange = (cartItemId, delta) => {
+    if (!selectedItems.includes(cartItemId)) return; // Chỉ cho chỉnh khi đã chọn
     setLocalQuantities((prev) => {
       const newQty = (prev[cartItemId] || 0) + delta;
-      return { ...prev, [cartItemId]: newQty > 0 ? newQty : 0 };
+      return { ...prev, [cartItemId]: newQty > 0 ? newQty : 1 };
     });
   };
 
@@ -52,14 +55,40 @@ const Cart = () => {
     dispatch(getCart());
   };
 
+  const handleSelectItem = (cartItemId) => {
+    setSelectedItems((prev) =>
+      prev.includes(cartItemId)
+        ? prev.filter((id) => id !== cartItemId)
+        : [...prev, cartItemId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === cart.items.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(cart.items.map((item) => item.cartItemId));
+    }
+  };
+
   const subtotal =
     cart?.items?.reduce((sum, item) => {
-      const qty = localQuantities[item.cartItemId] || 0;
-      return sum + item.price * qty;
+      if (selectedItems.includes(item.cartItemId)) {
+        return sum + item.price * (localQuantities[item.cartItemId] || 0);
+      }
+      return sum;
     }, 0) || 0;
 
-  const shippingFee = 30000;
+  const shippingFee = selectedItems.length > 0 ? 30000 : 0;
   const total = subtotal + shippingFee;
+
+  const handleProceedToCheckout = () => {
+    const selectedCartItems = cart.items.filter((item) =>
+      selectedItems.includes(item.cartItemId)
+    );
+    console.log(selectedCartItems);
+    navigate("/checkout", { state: { selectedCartItems } });
+  };
 
   return (
     <div className="min-h-screen bg-white py-8">
@@ -73,7 +102,16 @@ const Cart = () => {
 
         {/* Cart Header */}
         <div className="bg-white shadow-sm border border-gray-200 mb-4">
-          <div className="grid grid-cols-4 gap-8 px-8 py-6">
+          <div className="grid grid-cols-5 gap-8 px-8 py-6 items-center">
+            <div className="font-medium flex items-center">
+              <input
+                type="checkbox"
+                checked={selectedItems.length === cart?.items?.length}
+                onChange={handleSelectAll}
+                className="h-5 w-5 text-red-500 mr-2"
+              />
+              Select All
+            </div>
             <div className="font-medium">Product</div>
             <div className="font-medium">Price</div>
             <div className="font-medium">Quantity</div>
@@ -88,7 +126,15 @@ const Cart = () => {
               key={item.cartItemId}
               className="bg-white shadow-sm border border-gray-200 mb-4"
             >
-              <div className="grid grid-cols-4 gap-8 px-8 py-8 items-center">
+              <div className="grid grid-cols-5 gap-8 px-8 py-8 items-center">
+                <div>
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.includes(item.cartItemId)}
+                    onChange={() => handleSelectItem(item.cartItemId)}
+                    className="h-5 w-5 text-red-500"
+                  />
+                </div>
                 <div className="flex items-center space-x-4">
                   <img
                     src={item.image || "/placeholder.png"}
@@ -97,15 +143,14 @@ const Cart = () => {
                   />
                   <span className="text-black">{item.productName}</span>
                 </div>
-
                 <div className="text-black">
                   {item.price.toLocaleString("vi-VN")} ₫
                 </div>
-
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, -1)}
                     className="px-2 py-1 border border-gray-300 rounded"
+                    disabled={!selectedItems.includes(item.cartItemId)}
                   >
                     -
                   </button>
@@ -115,11 +160,11 @@ const Cart = () => {
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, 1)}
                     className="px-2 py-1 border border-gray-300 rounded"
+                    disabled={!selectedItems.includes(item.cartItemId)}
                   >
                     +
                   </button>
                 </div>
-
                 <div className="text-black">
                   {(
                     item.price * (localQuantities[item.cartItemId] || 0)
@@ -181,10 +226,10 @@ const Cart = () => {
                 <span>{total.toLocaleString("vi-VN")} ₫</span>
               </div>
             </div>
-
             <button
-              className="w-full mt-8 px-6 py-3 bg-red-500 text-white hover:bg-red-600"
-              onClick={() => navigate("/checkout")}
+              className="w-full mt-8 px-6 py-3 bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300"
+              onClick={handleProceedToCheckout}
+              disabled={selectedItems.length === 0}
             >
               Proceed to checkout
             </button>

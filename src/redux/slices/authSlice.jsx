@@ -7,6 +7,7 @@ import {
   resetPassword,
   changePassword,
 } from "../../services/authService";
+import Cookies from "js-cookie";
 
 export const loginUser = createAsyncThunk(
   "auth/login",
@@ -129,6 +130,8 @@ const authSlice = createSlice({
       // Logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
+        Cookies.remove("access_token", { path: "/" });
+        Cookies.remove("user", { path: "/" });
       })
 
       // Forgot Password
