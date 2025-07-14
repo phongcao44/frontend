@@ -11,6 +11,7 @@ import WishList from "../pages/user/WishList";
 import Cart from "../pages/user/Cart";
 import ProductDetail from "../pages/user/ProductDetail";
 import CheckoutPage from "../pages/user/checkout/CheckoutPage";
+import ReturnForm from "../pages/user/ReturnProduct";
 
 const UserRoutes = () => {
   return (
@@ -32,6 +33,8 @@ const UserRoutes = () => {
       <Route path="checkout" element={<CheckoutPage />} />
 
       <Route path="*" element={<ErrorPage />} />
+
+      <Route path="return-product" element={<ReturnForm />} />
     </Route>
   );
 };
