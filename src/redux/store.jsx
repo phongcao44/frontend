@@ -12,6 +12,9 @@ import postReducer from "./slices/postSlice";
 import authReducer from "./slices/authSlice";
 import cartReducer from "./slices/cartSlice";
 import dashboardReducer from "./slices/dashboardSlice";
+import addressReducer from "./slices/addressSlice";
+import productImageReducer from "./slices/productImageSlice";
+import reviewReducer from "./slices/reviewSlice";
 
 export const store = configureStore({
   reducer: {
@@ -28,5 +31,8 @@ export const store = configureStore({
     auth: authReducer,
     cart: cartReducer,
     dashboard: dashboardReducer,
+    address: addressReducer,
+    productImage: productImageReducer,
+    review: reviewReducer,
   },
 });

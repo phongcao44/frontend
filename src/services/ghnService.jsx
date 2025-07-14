@@ -1,8 +1,7 @@
-// src/services/ghnService.js
 import axios from "axios";
 
 const GHN_API = "https://online-gateway.ghn.vn/shiip/public-api";
-const GHN_TOKEN = "30910b33-5888-11f0-8145-ea15d65c9236"; // hoặc hardcode tạm để test
+const GHN_TOKEN = "30910b33-5888-11f0-8145-ea15d65c9236"; 
 
 export const fetchProvinces = async () => {
   const res = await axios.get(`${GHN_API}/master-data/province`, {

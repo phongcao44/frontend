@@ -1,6 +1,4 @@
-import React from "react";
-import { Dropdown } from "antd";
-import { UserOutlined } from "@ant-design/icons";
+import { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faRightFromBracket,
@@ -14,143 +12,110 @@ import {
 import { logoutUser } from "../../redux/slices/authSlice";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import Cookies from "js-cookie";
 
 const accountMenuItems = [
   {
     key: "manage",
     label: "Manage My Account",
     icon: faUser,
+    path: "/user/profile",
   },
   {
     key: "order",
-    label: "My Order",
+    label: "My Orders",
     icon: faShoppingBag,
+    path: "/user/orders",
   },
   {
     key: "cancellations",
     label: "My Cancellations",
     icon: faCircleXmark,
+    path: "/user/orders/cancellations",
   },
   {
     key: "reviews",
     label: "My Reviews",
     icon: faStarRegular,
+    path: "/user/reviews",
   },
   {
     key: "logout",
     label: "Logout",
     icon: faRightFromBracket,
+    path: "/login",
   },
 ];
 
 const AccountDropdown = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleClick = ({ key }) => {
-    console.log("Clicked:", key);
+  const handleClick = async (key) => {
+    const item = accountMenuItems.find((i) => i.key === key);
 
     if (key === "logout") {
-      Cookies.remove("access_token", { path: "/" });
-      Cookies.remove("user", { path: "/" });
-
-      // Dispatch Redux action
       dispatch(logoutUser());
-
-      // Điều hướng về trang login
       navigate("/login");
+    } else if (item?.path) {
+      navigate(item.path);
     }
+
+    setIsOpen(false);
   };
 
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <Dropdown
-      trigger={["click"]}
-      placement="bottomRight"
-      menu={{
-        items: accountMenuItems.map((item) => ({
-          key: item.key,
-          label: (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                color: "#fff",
-                fontSize: 14,
-              }}
-            >
-              <FontAwesomeIcon icon={item.icon} style={{ color: "#fff" }} />
-              {item.label}
-            </div>
-          ),
-        })),
-        onClick: handleClick,
-      }}
-      popupRender={(menuNode) => (
-        <div
-          style={{
-            background: "linear-gradient(to bottom right, #D3D8DC, #4A2A60)",
-            borderRadius: 4,
-            padding: 6,
-            minWidth: 180,
-            maxWidth: 200,
-          }}
+    <div className="relative" ref={dropdownRef}>
+      {/* Trigger Button */}
+      <div className="relative cursor-pointer" onClick={toggleDropdown}>
+        <svg
+          className="w-5 h-5 text-black"
+          fill="currentColor"
+          viewBox="0 0 1024 1024"
         >
-          {React.cloneElement(menuNode, {
-            style: { background: "transparent" },
-            children: React.Children.map(menuNode.props.children, (child) =>
-              React.cloneElement(child, {
-                style: {
-                  ...child.props.style,
-                  color: "#fff",
-                  backgroundColor: "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "6px 10px",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  transition: "background 0.3s",
-                  fontSize: 14,
-                  whiteSpace: "nowrap",
-                },
-                onMouseEnter: (e) => {
-                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-                  e.currentTarget.style.color = "#fff";
-                },
-                onMouseLeave: (e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#fff";
-                },
-              })
-            ),
-          })}
-        </div>
-      )}
-    >
-      <div style={{ position: "relative", cursor: "pointer" }}>
-        <UserOutlined style={{ fontSize: 18, color: "#000" }} />
-        <span
-          style={{
-            position: "absolute",
-            top: "-5px",
-            right: "-10px",
-            background: "#ff0000",
-            color: "#fff",
-            borderRadius: "50%",
-            width: 14,
-            height: 14,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 9,
-          }}
-        >
+          <FontAwesomeIcon icon={faUser} className="w-5 h-5 text-black" />
+        </svg>
+
+        {/* Notification Badge */}
+        <span className="absolute -top-1 -right-2 bg-red-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]">
           1
         </span>
       </div>
-    </Dropdown>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-48 bg-gradient-to-br from-gray-300 to-purple-900 rounded p-1.5 shadow-lg z-50">
+          {accountMenuItems.map((item) => (
+            <div
+              key={item.key}
+              className="flex items-center gap-2 text-white text-sm py-1.5 px-2.5 rounded cursor-pointer transition-all duration-300 hover:bg-white/20 whitespace-nowrap"
+              onClick={() => handleClick(item.key)}
+            >
+              <FontAwesomeIcon icon={item.icon} className="text-white" />
+              {item.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 

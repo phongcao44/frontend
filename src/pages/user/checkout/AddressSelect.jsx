@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
 import Select from "react-select";
 import {
@@ -6,88 +7,108 @@ import {
   fetchWards,
 } from "../../../services/ghnService";
 
-export default function AddressSelect({ onAddressChange, selectedCity }) {
+export default function AddressSelect({ value, onChange, disabled }) {
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
 
-  const [selectedProvince, setSelectedProvince] = useState(null);
-  const [selectedDistrict, setSelectedDistrict] = useState(null);
-  const [selectedWard, setSelectedWard] = useState(null);
-
   useEffect(() => {
     fetchProvinces()
-      .then((data) =>
-        setProvinces(
-          (data || []).map((p) => ({
-            value: p.ProvinceID,
-            label: p.ProvinceName,
-          }))
-        )
-      )
+      .then((data) => {
+        const provinceOptions = (data || []).map((p) => ({
+          value: p.ProvinceID,
+          label: p.ProvinceName,
+        }));
+        setProvinces(provinceOptions);
+      })
       .catch((err) => console.error("Failed to fetch provinces:", err));
   }, []);
 
   useEffect(() => {
-    if (selectedProvince) {
-      fetchDistricts(selectedProvince.value)
-        .then((data) =>
-          setDistricts(
-            (data || []).map((d) => ({
+    if (value?.provinceName) {
+      const found = provinces.find((p) => p.label === value.provinceName);
+      if (found) {
+        fetchDistricts(found.value)
+          .then((data) => {
+            const districtOptions = (data || []).map((d) => ({
               value: d.DistrictID,
               label: d.DistrictName,
-            }))
-          )
-        )
-        .catch((err) => console.error("Failed to fetch districts:", err));
-      setSelectedDistrict(null);
-      setSelectedWard(null);
-      setWards([]);
+            }));
+            setDistricts(districtOptions);
+          })
+          .catch((err) => console.error("Failed to fetch districts:", err));
+      }
     } else {
       setDistricts([]);
-      setSelectedDistrict(null);
-      setWards([]);
-      setSelectedWard(null);
     }
-  }, [selectedProvince]);
+    setWards([]);
+  }, [value?.provinceName, provinces]);
 
   useEffect(() => {
-    if (selectedDistrict) {
-      fetchWards(selectedDistrict.value)
-        .then((data) =>
-          setWards(
-            (data || []).map((w) => ({
+    if (value?.districtName && districts.length > 0) {
+      const found = districts.find((d) => d.label === value.districtName);
+      if (found) {
+        fetchWards(found.value)
+          .then((data) => {
+            const wardOptions = (data || []).map((w) => ({
               value: w.WardCode,
               label: w.WardName,
-            }))
-          )
-        )
-        .catch((err) => console.error("Failed to fetch wards:", err));
-      setSelectedWard(null);
+            }));
+            setWards(wardOptions);
+          })
+          .catch((err) => console.error("Failed to fetch wards:", err));
+      }
     } else {
       setWards([]);
-      setSelectedWard(null);
     }
-  }, [selectedDistrict]);
+  }, [value?.districtName, districts]);
 
-  useEffect(() => {
-    if (onAddressChange) {
-      onAddressChange({
-        province: selectedProvince ? selectedProvince.label : "",
-        district: selectedDistrict ? selectedDistrict.label : "",
-        ward: selectedWard ? selectedWard.label : "",
-      });
-    }
-  }, [selectedProvince, selectedDistrict, selectedWard, onAddressChange]);
+  const handleProvinceChange = (selected) => {
+    onChange({
+      provinceName: selected ? selected.label : "",
+      districtName: "",
+      wardName: "",
+    });
+  };
 
-  useEffect(() => {
-    if (selectedCity && provinces.length > 0) {
-      const found = provinces.find((p) => p.label === selectedCity);
-      if (found && found.value !== selectedProvince?.value) {
-        setSelectedProvince(found);
-      }
-    }
-  }, [selectedCity, provinces]);
+  const handleDistrictChange = (selected) => {
+    onChange({
+      ...value,
+      districtName: selected ? selected.label : "",
+      wardName: "",
+    });
+  };
+
+  const handleWardChange = (selected) => {
+    onChange({
+      ...value,
+      wardName: selected ? selected.label : "",
+    });
+  };
+
+  const customStyles = {
+    control: (provided) => ({
+      ...provided,
+      borderRadius: "0.375rem",
+      borderColor: "#d1d5db",
+      minHeight: "2.75rem",
+      paddingLeft: "0.75rem",
+      paddingRight: "0.75rem",
+      "&:hover": {
+        borderColor: "#dc2626",
+      },
+      boxShadow: "none",
+      backgroundColor: disabled ? "#f3f4f6" : "white",
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: "#6b7280",
+    }),
+    menu: (provided) => ({
+      ...provided,
+      zIndex: 50,
+    }),
+  };
 
   return (
     <div className="space-y-6">
@@ -97,10 +118,12 @@ export default function AddressSelect({ onAddressChange, selectedCity }) {
         </label>
         <Select
           options={provinces}
-          value={selectedProvince}
-          onChange={setSelectedProvince}
+          value={provinces.find((p) => p.label === value?.provinceName) || null}
+          onChange={handleProvinceChange}
           placeholder="Select Province/City"
+          styles={customStyles}
           isClearable
+          isDisabled={disabled}
         />
       </div>
 
@@ -110,10 +133,11 @@ export default function AddressSelect({ onAddressChange, selectedCity }) {
         </label>
         <Select
           options={districts}
-          value={selectedDistrict}
-          onChange={setSelectedDistrict}
+          value={districts.find((d) => d.label === value?.districtName) || null}
+          onChange={handleDistrictChange}
           placeholder="Select District"
-          isDisabled={!selectedProvince}
+          isDisabled={!value?.provinceName || disabled}
+          styles={customStyles}
           isClearable
         />
       </div>
@@ -124,10 +148,11 @@ export default function AddressSelect({ onAddressChange, selectedCity }) {
         </label>
         <Select
           options={wards}
-          value={selectedWard}
-          onChange={setSelectedWard}
+          value={wards.find((w) => w.label === value?.wardName) || null}
+          onChange={handleWardChange}
           placeholder="Select Ward"
-          isDisabled={!selectedDistrict}
+          isDisabled={!value?.districtName || disabled}
+          styles={customStyles}
           isClearable
         />
       </div>

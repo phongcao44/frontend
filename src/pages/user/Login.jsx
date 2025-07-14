@@ -41,9 +41,6 @@ const Login = () => {
         roles: res.data.roles,
       };
 
-      // localStorage.setItem("user", JSON.stringify(userInfo));
-      // localStorage.setItem("access_token", res.data.accessToken);
-
       Cookies.set("access_token", res.data.accessToken, {
         sameSite: "Strict",
         secure: true,
@@ -61,8 +58,6 @@ const Login = () => {
       } else {
         navigate("/home");
       }
-
-      console.log("Login thành công:", res);
     } catch (err) {
       console.error("Đăng nhập lỗi:", err);
       console.error("Đăng nhập lỗi:", JSON.stringify(err, null, 2));
@@ -75,7 +70,7 @@ const Login = () => {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
-      {/* Left side - Image */}
+      {/* Left */}
       <div className="w-full md:w-3/5 flex items-center justify-center p-4 md:p-12">
         <img
           src="/public/assets/images/signUp.png"
@@ -84,7 +79,7 @@ const Login = () => {
         />
       </div>
 
-      {/* Right side - Form */}
+      {/* Right */}
       <div className="w-full md:w-2/5 flex items-center justify-center px-4 md:px-6 lg:px-8 pt-10 md:pt-16 pb-12">
         <div className="w-full max-w-md">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">

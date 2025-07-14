@@ -14,8 +14,6 @@ const BestSelling = () => {
     dispatch(loadTopBestSellingProducts());
   }, [dispatch]);
 
-  console.log(topBestSelling);
-
   return (
     <div
       style={{

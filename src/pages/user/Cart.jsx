@@ -31,27 +31,18 @@ const Cart = () => {
     }
   }, [cart]);
 
-  const handleQuantityChange = (cartItemId, delta) => {
-    if (!selectedItems.includes(cartItemId)) return; // Chỉ cho chỉnh khi đã chọn
-    setLocalQuantities((prev) => {
-      const newQty = (prev[cartItemId] || 0) + delta;
-      return { ...prev, [cartItemId]: newQty > 0 ? newQty : 1 };
-    });
-  };
+  const handleQuantityChange = async (cartItemId, delta) => {
+    if (!selectedItems.includes(cartItemId)) return;
 
-  const handleUpdateCart = async () => {
-    const updates = Object.entries(localQuantities).map(([cartItemId, qty]) => {
-      const id = Number(cartItemId);
-      if (qty < 1) {
-        return dispatch(removeItemFromCart(id));
-      } else {
-        return dispatch(
-          updateCartItemQuantity({ cartItemId: id, quantity: qty })
-        );
-      }
-    });
+    const currentQty = localQuantities[cartItemId] || 0;
+    const newQty = currentQty + delta;
 
-    await Promise.all(updates);
+    if (newQty <= 0) {
+      await dispatch(removeItemFromCart(cartItemId));
+    } else {
+      await dispatch(updateCartItemQuantity({ cartItemId, quantity: newQty }));
+    }
+
     dispatch(getCart());
   };
 
@@ -74,7 +65,7 @@ const Cart = () => {
   const subtotal =
     cart?.items?.reduce((sum, item) => {
       if (selectedItems.includes(item.cartItemId)) {
-        return sum + item.price * (localQuantities[item.cartItemId] || 0);
+        return sum + item.price * (item.quantity || 0);
       }
       return sum;
     }, 0) || 0;
@@ -86,7 +77,6 @@ const Cart = () => {
     const selectedCartItems = cart.items.filter((item) =>
       selectedItems.includes(item.cartItemId)
     );
-    console.log(selectedCartItems);
     navigate("/checkout", { state: { selectedCartItems } });
   };
 
@@ -119,7 +109,7 @@ const Cart = () => {
           </div>
         </div>
 
-        {/* Product Rows */}
+        {/* Product */}
         {cart?.items?.length > 0 ? (
           cart.items.map((item) => (
             <div
@@ -154,9 +144,7 @@ const Cart = () => {
                   >
                     -
                   </button>
-                  <span className="px-4">
-                    {localQuantities[item.cartItemId]}
-                  </span>
+                  <span className="px-4">{item.quantity}</span>
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, 1)}
                     className="px-2 py-1 border border-gray-300 rounded"
@@ -166,10 +154,7 @@ const Cart = () => {
                   </button>
                 </div>
                 <div className="text-black">
-                  {(
-                    item.price * (localQuantities[item.cartItemId] || 0)
-                  ).toLocaleString("vi-VN")}{" "}
-                  ₫
+                  {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
                 </div>
               </div>
             </div>
@@ -185,12 +170,6 @@ const Cart = () => {
             onClick={() => navigate("/home")}
           >
             Return To Shop
-          </button>
-          <button
-            className="px-8 py-3 border border-gray-300 text-black bg-white hover:bg-gray-50"
-            onClick={handleUpdateCart}
-          >
-            Update Cart
           </button>
         </div>
 
