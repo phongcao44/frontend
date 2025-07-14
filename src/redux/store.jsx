@@ -15,6 +15,7 @@ import dashboardReducer from "./slices/dashboardSlice";
 import addressReducer from "./slices/addressSlice";
 import productImageReducer from "./slices/productImageSlice";
 import reviewReducer from "./slices/reviewSlice";
+import returnRequestReducer from "./slices/returnRequestSlice";
 
 export const store = configureStore({
   reducer: {
@@ -34,5 +35,6 @@ export const store = configureStore({
     address: addressReducer,
     productImage: productImageReducer,
     review: reviewReducer,
+    returnRequest: returnRequestReducer,
   },
 });

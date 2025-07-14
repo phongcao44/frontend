@@ -101,6 +101,12 @@ const SidebarMenu = () => {
           icon: <GiftOutlined />,
           label: "Quản lý voucher",
         },
+
+        {
+          key: "/admin/return",
+          icon: <GiftOutlined />,
+          label: "Quản lý đổi trả",
+        },
       ]}
     />
   );

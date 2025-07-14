@@ -130,6 +130,8 @@ const authSlice = createSlice({
       // Logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
+        localStorage.removeItem("user");
+        localStorage.removeItem("access_token");
       })
 
       // Forgot Password
