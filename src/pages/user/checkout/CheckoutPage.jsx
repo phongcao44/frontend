@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+/* eslint-disable no-unused-vars */
+import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getCart, checkoutUserCart } from "../../../redux/slices/cartSlice";
+import Swal from "sweetalert2";
 import AddressSection from "./AddressSection";
 
 const CheckoutPage = () => {
@@ -11,14 +12,17 @@ const CheckoutPage = () => {
   const { selectedCartItems = [] } = location.state || {};
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    streetAddress: "",
-    apartment: "",
-    townCity: "",
-    phoneNumber: "",
-    saveInfo: true,
+    addressId: "",
+    recipientName: "",
+    phone: "",
+    fullAddress: "",
+    provinceName: "",
+    districtName: "",
+    wardName: "",
+    saveInfo: false,
+    useSavedAddress: false,
   });
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentMethod, setPaymentMethod] = useState("COD");
   const [couponCode, setCouponCode] = useState("");
   const [error, setError] = useState(null);
 
@@ -29,41 +33,44 @@ const CheckoutPage = () => {
   );
   const totalWithShipping = totalCartPrice + shippingFee;
 
-  useEffect(() => {
-    dispatch(getCart()).catch((err) => {
-      console.error("Failed to fetch cart:", err);
-      setError("Unable to load cart data.");
-    });
-  }, [dispatch]);
+  const paymentMethods = [
+    { id: "COD", name: "Thanh toán khi nhận hàng" },
+    { id: "BANK_TRANSFER", name: "Chuyển khoản ngân hàng" },
+    { id: "PAYPAL", name: "PayPal" },
+    { id: "CREDIT_CARD", name: "Thẻ tín dụng" },
+  ];
 
-  const handleAddressChange = (address) => {
-    console.log("Địa chỉ GHN:", address);
-    setFormData((prev) => ({
-      ...prev,
-      streetAddress: address.street || prev.streetAddress,
-      townCity: address.city || prev.townCity,
-    }));
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = {
-      ...formData,
-      paymentMethod,
-      couponCode,
-      selectedCartItems,
-    };
+    if (!formData.useSavedAddress || !formData.addressId) {
+      setError("Vui lòng chọn hoặc lưu địa chỉ trước khi thanh toán.");
+      return;
+    }
+    try {
+      const payload = {
+        addressId: formData.addressId,
+        recipientName: formData.recipientName,
+        phone: formData.phone,
+        fullAddress: formData.fullAddress,
+        province: formData.provinceName,
+        district: formData.districtName,
+        ward: formData.wardName,
+        paymentMethod,
+        cartItems: selectedCartItems,
+        totalAmount: totalWithShipping,
+      };
 
-    dispatch(checkoutUserCart(payload))
-      .unwrap()
-      .then(() => {
-        alert("Order placed successfully!");
-        navigate("/");
-      })
-      .catch((err) => {
-        console.error("Checkout failed:", err);
-        setError("Checkout failed. Please try again.");
+      Swal.fire({
+        title: "Đặt hàng thành công!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
       });
+      // navigate("/");
+    } catch (err) {
+      console.error("Checkout error:", err);
+      setError("Đã xảy ra lỗi trong quá trình thanh toán.");
+    }
   };
 
   return (
@@ -74,26 +81,27 @@ const CheckoutPage = () => {
       <div className="max-w-6xl mx-auto px-4">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-8">
-          <span>Account</span>
+          <span>Tài khoản</span>
           <span className="mx-2">/</span>
-          <span>My Account</span>
+          <span>Tài khoản của tôi</span>
           <span className="mx-2">/</span>
-          <span>Product</span>
+          <span>Sản phẩm</span>
           <span className="mx-2">/</span>
-          <span>View Cart</span>
+          <span>Giỏ hàng</span>
           <span className="mx-2">/</span>
-          <span className="text-gray-900">CheckOut</span>
+          <span className="text-gray-900">Thanh toán</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Billing Details */}
+          {/* Billing */}
           <div className="p-8">
-            <h2 className="text-2xl font-semibold mb-6">Billing Details</h2>
+            <h2 className="text-2xl font-semibold mb-6">
+              Thông tin thanh toán
+            </h2>
             <div className="space-y-6">
               <AddressSection
                 formData={formData}
                 setFormData={setFormData}
-                handleAddressChange={handleAddressChange}
                 setError={setError}
               />
             </div>
@@ -102,7 +110,6 @@ const CheckoutPage = () => {
           {/* Order Summary */}
           <div className="p-8">
             <div className="space-y-6">
-              {/* Product Items */}
               <div className="space-y-4">
                 {selectedCartItems.length > 0 ? (
                   selectedCartItems.map((item) => (
@@ -120,7 +127,7 @@ const CheckoutPage = () => {
                             />
                           ) : (
                             <span className="text-xs text-gray-400">
-                              No Image
+                              Không có hình ảnh
                             </span>
                           )}
                         </div>
@@ -139,95 +146,61 @@ const CheckoutPage = () => {
                     </div>
                   ))
                 ) : (
-                  <p>Your cart is empty.</p>
+                  <p>Giỏ hàng của bạn đang trống.</p>
                 )}
               </div>
 
-              {/* Order Summary */}
+              {/* Payment Method Selection */}
               <div className="border-t pt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-gray-700">Subtotal:</span>
-                  <span className="text-gray-900">
-                    {totalCartPrice.toLocaleString("vi-VN")} ₫
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-gray-700">Shipping:</span>
-                  <span className="text-gray-900">
-                    {shippingFee.toLocaleString("vi-VN")} ₫
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mb-6 text-lg font-semibold">
-                  <span className="text-gray-900">Total:</span>
-                  <span className="text-gray-900">
-                    {totalWithShipping.toLocaleString("vi-VN")} ₫
-                  </span>
-                </div>
-              </div>
-
-              {/* Payment Methods */}
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="bank"
-                    name="payment"
-                    value="bank"
-                    checked={paymentMethod === "bank"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="h-4 w-4"
-                  />
-                  <label htmlFor="bank" className="ml-3">
-                    Bank
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="radio"
-                    id="cash"
-                    name="payment"
-                    value="cash"
-                    checked={paymentMethod === "cash"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="h-4 w-4"
-                  />
-                  <label htmlFor="cash" className="ml-3">
-                    Cash on delivery
-                  </label>
+                <h3 className="text-lg font-semibold mb-4">
+                  Phương thức thanh toán
+                </h3>
+                <div className="space-y-2">
+                  {paymentMethods.map((method) => (
+                    <label
+                      key={method.id}
+                      className="flex items-center space-x-3 p-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50"
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={method.id}
+                        checked={paymentMethod === method.id}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                      />
+                      <span className="text-gray-700">{method.name}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
-              {/* Coupon Code */}
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  placeholder="Coupon Code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md"
-                />
-                <button
-                  type="button"
-                  className="px-6 py-2 bg-red-600 text-white rounded-md"
-                >
-                  Apply Coupon
-                </button>
+              {/* Order Total */}
+              <div className="border-t pt-6">
+                <div className="flex justify-between mb-4">
+                  <span>Tạm tính:</span>
+                  <span>{totalCartPrice.toLocaleString("vi-VN")} ₫</span>
+                </div>
+                <div className="flex justify-between mb-4">
+                  <span>Phí vận chuyển:</span>
+                  <span>{shippingFee.toLocaleString("vi-VN")} ₫</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Tổng cộng:</span>
+                  <span>{totalWithShipping.toLocaleString("vi-VN")} ₫</span>
+                </div>
               </div>
 
-              {/* Place Order */}
               <button
                 onClick={handleSubmit}
-                className="w-full py-4 bg-red-600 text-white rounded-lg disabled:bg-gray-300"
+                className="w-full py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:bg-gray-300"
                 disabled={
                   selectedCartItems.length === 0 ||
-                  !formData.firstName ||
-                  !formData.streetAddress ||
-                  !formData.townCity ||
-                  !formData.phoneNumber
+                  !formData.useSavedAddress ||
+                  !formData.addressId
                 }
               >
-                Place Order
+                Đặt hàng
               </button>
             </div>
           </div>

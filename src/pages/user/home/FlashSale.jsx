@@ -50,7 +50,6 @@ const FlashSale = () => {
     loadFlashSales();
   }, [dispatch]);
 
-  console.log(flashSaleItems);
   return (
     <div style={{ padding: "40px 20px", backgroundColor: "#fff" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
@@ -132,42 +131,64 @@ const FlashSale = () => {
             <Spin size="large" />
           </div>
         ) : flashSaleItems.length > 0 ? (
-          <Swiper
-            loop={flashSaleItems.length > 4}
-            spaceBetween={20}
-            slidesPerView={4}
-            navigation={{
-              prevEl: prevRef.current,
-              nextEl: nextRef.current,
-            }}
-            onInit={(swiper) => {
-              swiper.params.navigation.prevEl = prevRef.current;
-              swiper.params.navigation.nextEl = nextRef.current;
-              swiper.navigation.init();
-              swiper.navigation.update();
-            }}
-            modules={[Navigation]}
-          >
-            {flashSaleItems.map((product) => (
-              <SwiperSlide key={product.id}>
-                <ProductCard
-                  product={{
-                    id: product.id,
-                    name: product.name,
-                    images: product.images,
-                    price: product.price,
-                    originalPrice: product.originalPrice,
-                    discountPercentage: product.discountPercentage,
-                    discountAmount: product.discountAmount,
-                    discountType: product.discountType,
-                    averageRating: product.averageRating,
-                    totalReviews: product.totalReviews,
-                  }}
-                  showDiscountLabel
-                />
-              </SwiperSlide>
-            ))}
-          </Swiper>
+          <>
+            <Swiper
+              loop={flashSaleItems.length > 4}
+              spaceBetween={20}
+              slidesPerView={4}
+              navigation={{
+                prevEl: prevRef.current,
+                nextEl: nextRef.current,
+              }}
+              onInit={(swiper) => {
+                swiper.params.navigation.prevEl = prevRef.current;
+                swiper.params.navigation.nextEl = nextRef.current;
+                swiper.navigation.init();
+                swiper.navigation.update();
+              }}
+              modules={[Navigation]}
+            >
+              {flashSaleItems.map((product) => (
+                <SwiperSlide key={product.id}>
+                  <ProductCard
+                    product={{
+                      id: product.id,
+                      name: product.name,
+                      images: product.images,
+                      price: product.price,
+                      originalPrice: product.originalPrice,
+                      discountPercentage: product.discountPercentage,
+                      discountAmount: product.discountAmount,
+                      discountType: product.discountType,
+                      averageRating: product.averageRating,
+                      totalReviews: product.totalReviews,
+                    }}
+                    showDiscountLabel
+                  />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+
+            {/* View All */}
+            <div style={{ textAlign: "center", marginTop: "40px" }}>
+              <Button
+                type="primary"
+                size="large"
+                style={{
+                  backgroundColor: "#ff4d4f",
+                  borderColor: "#ff4d4f",
+                  padding: "12px 48px",
+                  height: "auto",
+                  borderRadius: "4px",
+                }}
+                onClick={() => {
+                  window.location.href = "/products";
+                }}
+              >
+                View All Products
+              </Button>
+            </div>
+          </>
         ) : (
           <div style={{ textAlign: "center", padding: "80px 20px" }}>
             <Title level={4} style={{ marginBottom: "16px" }}>
@@ -190,23 +211,6 @@ const FlashSale = () => {
             </Button>
           </div>
         )}
-
-        {/* View All */}
-        <div style={{ textAlign: "center", marginTop: "40px" }}>
-          <Button
-            type="primary"
-            size="large"
-            style={{
-              backgroundColor: "#ff4d4f",
-              borderColor: "#ff4d4f",
-              padding: "12px 48px",
-              height: "auto",
-              borderRadius: "4px",
-            }}
-          >
-            View All Products
-          </Button>
-        </div>
       </div>
     </div>
   );
