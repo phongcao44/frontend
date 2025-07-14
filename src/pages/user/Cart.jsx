@@ -14,6 +14,7 @@ const Cart = () => {
   const { cart } = useSelector((state) => state.cart);
 
   const [localQuantities, setLocalQuantities] = useState({});
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     dispatch(getCart());
@@ -26,40 +27,58 @@ const Cart = () => {
         quantities[item.cartItemId] = item.quantity;
       });
       setLocalQuantities(quantities);
+      setSelectedItems(cart.items.map((item) => item.cartItemId));
     }
   }, [cart]);
 
-  const handleQuantityChange = (cartItemId, delta) => {
-    setLocalQuantities((prev) => {
-      const newQty = (prev[cartItemId] || 0) + delta;
-      return { ...prev, [cartItemId]: newQty > 0 ? newQty : 0 };
-    });
+  const handleQuantityChange = async (cartItemId, delta) => {
+    if (!selectedItems.includes(cartItemId)) return;
+
+    const currentQty = localQuantities[cartItemId] || 0;
+    const newQty = currentQty + delta;
+
+    if (newQty <= 0) {
+      await dispatch(removeItemFromCart(cartItemId));
+    } else {
+      await dispatch(updateCartItemQuantity({ cartItemId, quantity: newQty }));
+    }
+
+    dispatch(getCart());
   };
 
-  const handleUpdateCart = async () => {
-    const updates = Object.entries(localQuantities).map(([cartItemId, qty]) => {
-      const id = Number(cartItemId);
-      if (qty < 1) {
-        return dispatch(removeItemFromCart(id));
-      } else {
-        return dispatch(
-          updateCartItemQuantity({ cartItemId: id, quantity: qty })
-        );
-      }
-    });
+  const handleSelectItem = (cartItemId) => {
+    setSelectedItems((prev) =>
+      prev.includes(cartItemId)
+        ? prev.filter((id) => id !== cartItemId)
+        : [...prev, cartItemId]
+    );
+  };
 
-    await Promise.all(updates);
-    dispatch(getCart());
+  const handleSelectAll = () => {
+    if (selectedItems.length === cart.items.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(cart.items.map((item) => item.cartItemId));
+    }
   };
 
   const subtotal =
     cart?.items?.reduce((sum, item) => {
-      const qty = localQuantities[item.cartItemId] || 0;
-      return sum + item.price * qty;
+      if (selectedItems.includes(item.cartItemId)) {
+        return sum + item.price * (item.quantity || 0);
+      }
+      return sum;
     }, 0) || 0;
 
-  const shippingFee = 30000;
+  const shippingFee = selectedItems.length > 0 ? 30000 : 0;
   const total = subtotal + shippingFee;
+
+  const handleProceedToCheckout = () => {
+    const selectedCartItems = cart.items.filter((item) =>
+      selectedItems.includes(item.cartItemId)
+    );
+    navigate("/checkout", { state: { selectedCartItems } });
+  };
 
   return (
     <div className="min-h-screen bg-white py-8">
@@ -73,7 +92,16 @@ const Cart = () => {
 
         {/* Cart Header */}
         <div className="bg-white shadow-sm border border-gray-200 mb-4">
-          <div className="grid grid-cols-4 gap-8 px-8 py-6">
+          <div className="grid grid-cols-5 gap-8 px-8 py-6 items-center">
+            <div className="font-medium flex items-center">
+              <input
+                type="checkbox"
+                checked={selectedItems.length === cart?.items?.length}
+                onChange={handleSelectAll}
+                className="h-5 w-5 text-red-500 mr-2"
+              />
+              Select All
+            </div>
             <div className="font-medium">Product</div>
             <div className="font-medium">Price</div>
             <div className="font-medium">Quantity</div>
@@ -81,14 +109,22 @@ const Cart = () => {
           </div>
         </div>
 
-        {/* Product Rows */}
+        {/* Product */}
         {cart?.items?.length > 0 ? (
           cart.items.map((item) => (
             <div
               key={item.cartItemId}
               className="bg-white shadow-sm border border-gray-200 mb-4"
             >
-              <div className="grid grid-cols-4 gap-8 px-8 py-8 items-center">
+              <div className="grid grid-cols-5 gap-8 px-8 py-8 items-center">
+                <div>
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.includes(item.cartItemId)}
+                    onChange={() => handleSelectItem(item.cartItemId)}
+                    className="h-5 w-5 text-red-500"
+                  />
+                </div>
                 <div className="flex items-center space-x-4">
                   <img
                     src={item.image || "/placeholder.png"}
@@ -97,34 +133,28 @@ const Cart = () => {
                   />
                   <span className="text-black">{item.productName}</span>
                 </div>
-
                 <div className="text-black">
                   {item.price.toLocaleString("vi-VN")} ₫
                 </div>
-
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, -1)}
                     className="px-2 py-1 border border-gray-300 rounded"
+                    disabled={!selectedItems.includes(item.cartItemId)}
                   >
                     -
                   </button>
-                  <span className="px-4">
-                    {localQuantities[item.cartItemId]}
-                  </span>
+                  <span className="px-4">{item.quantity}</span>
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, 1)}
                     className="px-2 py-1 border border-gray-300 rounded"
+                    disabled={!selectedItems.includes(item.cartItemId)}
                   >
                     +
                   </button>
                 </div>
-
                 <div className="text-black">
-                  {(
-                    item.price * (localQuantities[item.cartItemId] || 0)
-                  ).toLocaleString("vi-VN")}{" "}
-                  ₫
+                  {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
                 </div>
               </div>
             </div>
@@ -140,12 +170,6 @@ const Cart = () => {
             onClick={() => navigate("/home")}
           >
             Return To Shop
-          </button>
-          <button
-            className="px-8 py-3 border border-gray-300 text-black bg-white hover:bg-gray-50"
-            onClick={handleUpdateCart}
-          >
-            Update Cart
           </button>
         </div>
 
@@ -181,10 +205,10 @@ const Cart = () => {
                 <span>{total.toLocaleString("vi-VN")} ₫</span>
               </div>
             </div>
-
             <button
-              className="w-full mt-8 px-6 py-3 bg-red-500 text-white hover:bg-red-600"
-              onClick={() => navigate("/checkout")}
+              className="w-full mt-8 px-6 py-3 bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300"
+              onClick={handleProceedToCheckout}
+              disabled={selectedItems.length === 0}
             >
               Proceed to checkout
             </button>

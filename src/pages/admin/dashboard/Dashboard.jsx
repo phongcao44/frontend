@@ -1,12 +1,4 @@
-
-// import Revenue from "./Revenue";
-
-// function Dashboard() {
-//   return
-//      <div>Dashboard</div>
-// }
-
-import React from "react";
+// import React from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
