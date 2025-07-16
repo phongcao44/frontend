@@ -33,19 +33,19 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
     setIsAdding(true);
     setTimeout(() => setIsAdding(false), 500);
 
-    const variantId = matchedVariant?.id || productId;
-    const cartQuantity =
-      cart.items?.find((item) => item.variantId === variantId)?.quantity || 0;
-    const totalQuantity = cartQuantity + quantity;
-
-    if (totalQuantity > maxQuantity) {
-      message.warning(
-        `Bạn đã thêm ${cartQuantity} sản phẩm, chỉ có thể thêm tối đa ${
-          maxQuantity - cartQuantity
-        } sản phẩm nữa.`
-      );
-      return;
-    }
+    const variantId = matchedVariant?.id;
+    // const cartQuantity =
+    //   cart.items?.find((item) => item.variantId === variantId)?.quantity || 0;
+    const totalQuantity = quantity;
+    //
+    // if (totalQuantity > maxQuantity) {
+    //   message.warning(
+    //     `Bạn đã thêm ${cartQuantity} sản phẩm, chỉ có thể thêm tối đa ${
+    //       maxQuantity - cartQuantity
+    //     } sản phẩm nữa.`
+    //   );
+    //   return;
+    // }
 
     try {
       await dispatch(addItemToCart({ variantId, quantity })).unwrap();

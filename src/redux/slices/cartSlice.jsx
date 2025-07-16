@@ -8,6 +8,7 @@ import {
   clearCart,
   checkoutCart,
   checkoutByCartItem,
+  checkoutSelectedItems,
 } from "../../services/cartService";
 
 export const getCart = createAsyncThunk("cart/getCart", async (_, thunkAPI) => {
@@ -78,6 +79,17 @@ export const checkoutSingleCartItem = createAsyncThunk(
   async ({ cartItemId, payload }, thunkAPI) => {
     try {
       return await checkoutByCartItem(cartItemId, payload);
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+export const checkoutSelectedItemsThunk = createAsyncThunk(
+  "cart/checkoutSelectedItems",
+  async (payload, thunkAPI) => {
+    try {
+      return await checkoutSelectedItems(payload);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
@@ -188,6 +200,19 @@ const cartSlice = createSlice({
         state.loading = false;
       })
       .addCase(checkoutSingleCartItem.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(checkoutSelectedItemsThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(checkoutSelectedItemsThunk.fulfilled, (state, action) => {
+        state.cart = null;
+        state.loading = false;
+      })
+      .addCase(checkoutSelectedItemsThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

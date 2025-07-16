@@ -26,8 +26,10 @@ const Cart = () => {
       cart.items.forEach((item) => {
         quantities[item.cartItemId] = item.quantity;
       });
+      if (selectedItems.length === 0) {
+        setSelectedItems(cart.items.map((item) => item.cartItemId));
+      }
       setLocalQuantities(quantities);
-      setSelectedItems(cart.items.map((item) => item.cartItemId));
     }
   }, [cart]);
 
@@ -39,11 +41,22 @@ const Cart = () => {
 
     if (newQty <= 0) {
       await dispatch(removeItemFromCart(cartItemId));
+      setSelectedItems((prev) => prev.filter((id) => id !== cartItemId));
     } else {
       await dispatch(updateCartItemQuantity({ cartItemId, quantity: newQty }));
+      setLocalQuantities((prev) => ({
+        ...prev,
+        [cartItemId]: newQty,
+      }));
     }
+    await dispatch(getCart());
+  };
 
-    dispatch(getCart());
+  const handleRemoveItem = async (cartItemId) => {
+    await dispatch(removeItemFromCart(cartItemId));
+    setSelectedItems((prev) => prev.filter((id) => id !== cartItemId));
+
+    await dispatch(getCart());
   };
 
   const handleSelectItem = (cartItemId) => {
@@ -55,7 +68,7 @@ const Cart = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedItems.length === cart.items.length) {
+    if (selectedItems.length === cart?.items?.length) {
       setSelectedItems([]);
     } else {
       setSelectedItems(cart.items.map((item) => item.cartItemId));
@@ -65,12 +78,12 @@ const Cart = () => {
   const subtotal =
     cart?.items?.reduce((sum, item) => {
       if (selectedItems.includes(item.cartItemId)) {
-        return sum + item.price * (item.quantity || 0);
+        return sum + (item.totalPrice || 0) * (item.quantity || 0);
       }
       return sum;
     }, 0) || 0;
 
-  const shippingFee = selectedItems.length > 0 ? 30000 : 0;
+  const shippingFee = 0;
   const total = subtotal + shippingFee;
 
   const handleProceedToCheckout = () => {
@@ -79,6 +92,8 @@ const Cart = () => {
     );
     navigate("/checkout", { state: { selectedCartItems } });
   };
+
+  const placeholderImage = "/placeholder.png";
 
   return (
     <div className="min-h-screen bg-white py-8">
@@ -92,11 +107,14 @@ const Cart = () => {
 
         {/* Cart Header */}
         <div className="bg-white shadow-sm border border-gray-200 mb-4">
-          <div className="grid grid-cols-5 gap-8 px-8 py-6 items-center">
+          <div className="grid grid-cols-6 gap-8 px-8 py-6 items-center">
             <div className="font-medium flex items-center">
               <input
                 type="checkbox"
-                checked={selectedItems.length === cart?.items?.length}
+                checked={
+                  cart?.items?.length > 0 &&
+                  selectedItems.length === cart.items.length
+                }
                 onChange={handleSelectAll}
                 className="h-5 w-5 text-red-500 mr-2"
               />
@@ -106,17 +124,18 @@ const Cart = () => {
             <div className="font-medium">Price</div>
             <div className="font-medium">Quantity</div>
             <div className="font-medium">Subtotal</div>
+            <div className="font-medium">Action</div>
           </div>
         </div>
 
-        {/* Product */}
+        {/* Product Rows */}
         {cart?.items?.length > 0 ? (
           cart.items.map((item) => (
             <div
               key={item.cartItemId}
               className="bg-white shadow-sm border border-gray-200 mb-4"
             >
-              <div className="grid grid-cols-5 gap-8 px-8 py-8 items-center">
+              <div className="grid grid-cols-6 gap-8 px-8 py-8 items-center">
                 <div>
                   <input
                     type="checkbox"
@@ -127,14 +146,20 @@ const Cart = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                   <img
-                    src={item.image || "/placeholder.png"}
-                    alt={item.productName}
+                    src={
+                      item.image && item.image.trim()
+                        ? item.image
+                        : placeholderImage
+                    }
+                    alt={item.productName || "Product Image"}
                     className="w-12 h-12 object-cover rounded"
                   />
-                  <span className="text-black">{item.productName}</span>
+                  <span className="text-black">
+                    {item.productName || "Unknown Product"}
+                  </span>
                 </div>
                 <div className="text-black">
-                  {item.price.toLocaleString("vi-VN")} ₫
+                  {(item.totalPrice || 0).toLocaleString("vi-VN")} ₫
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
@@ -144,7 +169,7 @@ const Cart = () => {
                   >
                     -
                   </button>
-                  <span className="px-4">{item.quantity}</span>
+                  <span className="px-4">{item.quantity || 0}</span>
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, 1)}
                     className="px-2 py-1 border border-gray-300 rounded"
@@ -154,7 +179,18 @@ const Cart = () => {
                   </button>
                 </div>
                 <div className="text-black">
-                  {(item.price * item.quantity).toLocaleString("vi-VN")} ₫
+                  {(
+                    (item.totalPrice || 0) * (item.quantity || 0)
+                  ).toLocaleString("vi-VN")}{" "}
+                  ₫
+                </div>
+                <div>
+                  <button
+                    onClick={() => handleRemoveItem(item.cartItemId)}
+                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
             </div>

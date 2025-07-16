@@ -21,6 +21,7 @@ import UserAccountPage from "../pages/user/account/UserAccountPage";
 import EditProfileForm from "../pages/user/account/EditProfileForm";
 import AddressBook from "../pages/user/account/AddressBook";
 import Orders from "../pages/user/account/Orders";
+import OrderSuccessPage from "../pages/user/checkout/OrderSuccessPage";
 
 const UserRoutes = () => {
   return (
@@ -54,6 +55,8 @@ const UserRoutes = () => {
           <Route path="addresses" element={<AddressBook />} />
           <Route path="orders" element={<Orders />} />
         </Route>
+
+        <Route path="payment-success" element={<OrderSuccessPage />} />
 
         {/* Auth */}
         <Route path="login" element={<Login />} />

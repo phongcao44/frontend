@@ -75,10 +75,10 @@ const SignUp = () => {
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");
       } else {
-        navigate("/home");
+        navigate("/");
       }
 
-      navigate("/home");
+      navigate("/");
     } catch (error) {
       console.error("Register or auto login failed:", error);
       setError(
