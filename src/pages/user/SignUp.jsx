@@ -12,13 +12,17 @@ const SignUp = () => {
     email: "",
     username: "",
     password: "",
+    confirmPassword: "",
   });
   const [error, setError] = useState(null);
   const [validationErrors, setValidationErrors] = useState({
     email: "",
     username: "",
     password: "",
+    confirmPassword: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -27,21 +31,66 @@ const SignUp = () => {
       [name]: value,
     }));
     setError(null);
+    setValidationErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
   const validateForm = () => {
     const errors = {
-      email: formData.email.trim() ? "" : "Vui lòng nhập email",
-      username: formData.username.trim() ? "" : "Vui lòng nhập tên người dùng",
-      password: formData.password.trim() ? "" : "Vui lòng nhập mật khẩu",
+      email: "",
+      username: "",
+      password: "",
+      confirmPassword: "",
     };
+
+    // Username (Full Name) validation
+    if (!formData.username.trim()) {
+      errors.username = "Vui lòng nhập họ và tên";
+    } else if (!/^[\p{L}\s]+$/u.test(formData.username)) {
+      errors.username =
+        "Họ và tên không được chứa ký tự lạ (@#!$) hoặc toàn số";
+    } else if (formData.username.length < 2 || formData.username.length > 50) {
+      errors.username = "Họ và tên phải có độ dài từ 2 đến 50 ký tự";
+    }
+
+    // Email validation
+    if (!formData.email.trim()) {
+      errors.email = "Vui lòng nhập email";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Email không đúng định dạng";
+    }
+
+    // Password validation
+    if (!formData.password.trim()) {
+      errors.password = "Vui lòng nhập mật khẩu";
+    } else if (formData.password.length < 6 || formData.password.length > 20) {
+      errors.password = "Mật khẩu phải có độ dài từ 6 đến 20 ký tự";
+    } else if (!/(?=.*[A-Z])(?=.*[a-z])(?=.*\d)/.test(formData.password)) {
+      errors.password =
+        "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số";
+    }
+
+    // Confirm Password validation
+    if (!formData.confirmPassword.trim()) {
+      errors.confirmPassword = "Vui lòng nhập xác nhận mật khẩu";
+    } else if (formData.confirmPassword !== formData.password) {
+      errors.confirmPassword = "Mật khẩu xác nhận không khớp";
+    }
+
     setValidationErrors(errors);
     return !Object.values(errors).some((error) => error !== "");
   };
 
   const handleRegister = async (data) => {
     try {
-      dispatch(registerUser(data)).unwrap();
+      const registerPayload = {
+        email: data.email,
+        username: data.username,
+        password: data.password,
+      };
+      await dispatch(registerUser(registerPayload)).unwrap();
 
       const loginPayload = {
         email: data.email,
@@ -50,17 +99,17 @@ const SignUp = () => {
       const res = await dispatch(loginUser(loginPayload)).unwrap();
 
       const userInfo = {
-        id: res.data.user.id,
-        username: res.data.user.username,
-        email: res.data.user.email,
-        status: res.data.user.status,
-        createdAt: res.data.user.createdAt,
-        updatedAt: res.data.user.updatedAt,
-        userPoint: res.data.user.userPoint,
-        roles: res.data.roles,
+        id: res.data?.user?.id || "",
+        username: res.data?.user?.username || "",
+        email: res.data?.user?.email || "",
+        status: res.data?.user?.status || "",
+        createdAt: res.data?.user?.createdAt || "",
+        updatedAt: res.data?.user?.updatedAt || "",
+        userPoint: res.data?.user?.userPoint || 0,
+        roles: res.data?.roles || [],
       };
 
-      Cookies.set("access_token", res.data.accessToken, {
+      Cookies.set("access_token", res.data?.accessToken || "", {
         sameSite: "Strict",
         secure: true,
         path: "/",
@@ -77,12 +126,10 @@ const SignUp = () => {
       } else {
         navigate("/");
       }
-
-      navigate("/");
     } catch (error) {
       console.error("Register or auto login failed:", error);
       setError(
-        error.data ||
+        error?.data?.message ||
           "Đăng ký hoặc đăng nhập tự động thất bại. Vui lòng thử lại."
       );
     }
@@ -100,7 +147,12 @@ const SignUp = () => {
   const handleGoogleSignUp = () => {
     console.log("Google sign up clicked");
     setError(null);
-    setValidationErrors({ email: "", username: "", password: "" });
+    setValidationErrors({
+      email: "",
+      username: "",
+      password: "",
+      confirmPassword: "",
+    });
   };
 
   return (
@@ -134,7 +186,7 @@ const SignUp = () => {
               <input
                 type="text"
                 name="username"
-                placeholder="Tên người dùng"
+                placeholder="Họ và tên"
                 value={formData.username}
                 onChange={handleInputChange}
                 className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
@@ -168,22 +220,120 @@ const SignUp = () => {
               )}
             </div>
 
-            <div>
+            <div className="relative">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Mật khẩu"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
                   validationErrors.password
                     ? "border-red-500"
                     : "border-gray-300"
                 } focus:border-red-500 focus:outline-none bg-transparent`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-3 text-gray-500 hover:text-gray-700"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showPassword ? (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.418 0-8-3.582-8-8s3.582-8 8-8c1.947 0 3.74.696 5.125 1.853M15 12a3 3 0 11-6 0 3 3 0 016 0zm4.586 7.414L4.586 4.414"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm6.146-2.146C19.593 7.853 16.96 5 12 5c-4.96 0-7.593 2.853-9.146 4.854a2 2 0 000 2.292C4.407 14.147 7.04 17 12 17c4.96 0 7.593-2.853 9.146-4.854a2 2 0 000-2.292z"
+                    />
+                  </svg>
+                )}
+              </button>
               {validationErrors.password && (
                 <p className="text-red-500 text-sm mt-1">
                   {validationErrors.password}
+                </p>
+              )}
+            </div>
+
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Xác nhận mật khẩu"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                  validationErrors.confirmPassword
+                    ? "border-red-500"
+                    : "border-gray-300"
+                } focus:border-red-500 focus:outline-none bg-transparent`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-2 top-3 text-gray-500 hover:text-gray-700"
+                aria-label={
+                  showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                }
+              >
+                {showConfirmPassword ? (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.418 0-8-3.582-8-8s3.582-8 8-8c1.947 0 3.74.696 5.125 1.853M15 12a3 3 0 11-6 0 3 3 0 016 0zm4.586 7.414L4.586 4.414"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm6.146-2.146C19.593 7.853 16.96 5 12 5c-4.96 0-7.593 2.853-9.146 4.854a2 2 0 000 2.292C4.407 14.147 7.04 17 12 17c4.96 0 7.593-2.853 9.146-4.854a2 2 0 000-2.292z"
+                    />
+                  </svg>
+                )}
+              </button>
+              {validationErrors.confirmPassword && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.confirmPassword}
                 </p>
               )}
             </div>

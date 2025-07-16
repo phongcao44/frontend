@@ -5,8 +5,6 @@ import {
   ChevronDown,
   MoreHorizontal,
   Plus,
-  Edit,
-  Trash2,
   Eye,
   Download,
   RefreshCw,
@@ -24,24 +22,59 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { loadOrders } from "../../redux/slices/orderSlice";
+import { loadPaginatedOrders } from "../../redux/slices/orderSlice";
 import { useNavigate } from "react-router-dom";
 
 export default function OrderManagement() {
   const [activeTab, setActiveTab] = useState("Tất cả đơn hàng");
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 10;
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [orderBy, setOrderBy] = useState("desc");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const orders = useSelector((state) => state.order.list) || [];
-  const loading = useSelector((state) => state.order.loading);
+  const orders = useSelector((state) => state.order.list?.content || []);
+  const loading = useSelector((state) => state.order.loading || false);
+  const error = useSelector((state) => state.order.error || null);
+  const totalPages = useSelector((state) => state.order.list?.totalPages || 1);
+  const totalElements = useSelector(
+    (state) => state.order.list?.totalElements || 0
+  );
 
   useEffect(() => {
-    dispatch(loadOrders());
-  }, [dispatch]);
+    const status =
+      statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : "");
+    setIsLoading(true);
+    dispatch(
+      loadPaginatedOrders({
+        page: currentPage,
+        limit: itemsPerPage,
+        sortBy,
+        orderBy,
+        status,
+        keyword: searchTerm,
+      })
+    ).finally(() => setTimeout(() => setIsLoading(false), 500));
+  }, [
+    dispatch,
+    currentPage,
+    activeTab,
+    searchTerm,
+    sortBy,
+    orderBy,
+    statusFilter,
+  ]);
+
+  useEffect(() => {
+    console.log("Orders:", orders);
+    console.log("Total elements:", totalElements);
+    console.log("Total pages:", totalPages);
+    console.log("Error:", error);
+  }, [orders, totalElements, totalPages, error]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -91,6 +124,7 @@ export default function OrderManagement() {
   };
 
   const translatePaymentStatus = (status) => {
+    if (!status) return "Không rõ";
     switch (status) {
       case "PENDING":
         return "Chờ thanh toán";
@@ -104,6 +138,7 @@ export default function OrderManagement() {
   };
 
   const translatePaymentMethod = (method) => {
+    if (!method) return "Không rõ";
     switch (method) {
       case "COD":
         return "Thanh toán khi nhận hàng";
@@ -135,50 +170,46 @@ export default function OrderManagement() {
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
-    const orderId = order.orderId ? String(order.orderId) : "";
-    const userId = order.userId ? String(order.userId) : "";
-
-    const matchesSearch =
-      orderId.includes(searchTerm) || userId.includes(searchTerm);
-
-    if (activeTab === "Chưa thanh toán") {
-      return matchesSearch && order.paymentStatus === "PENDING";
-    }
-    return matchesSearch;
-  });
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredOrders.length / itemsPerPage)
-  );
-  const paginatedOrders = filteredOrders.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 0 && page < totalPages) {
       setCurrentPage(page);
     }
   };
 
+  const handleStatusFilterChange = (e) => {
+    const value = e.target.value;
+    setStatusFilter(value);
+    setCurrentPage(0);
+    if (value) {
+      setActiveTab("Tất cả đơn hàng");
+    }
+  };
+
   const tabs = [
-    { name: "Tất cả đơn hàng", count: orders.length },
+    { name: "Tất cả đơn hàng", count: totalElements },
     {
       name: "Chưa thanh toán",
-      count: orders.filter((o) => o.paymentStatus === "PENDING").length,
+      count: orders.filter((o) => o.payment?.status === "PENDING").length,
     },
   ];
 
   const handleRefresh = () => {
     setIsLoading(true);
-    dispatch(loadOrders()).finally(() =>
-      setTimeout(() => setIsLoading(false), 1000)
-    );
+    dispatch(
+      loadPaginatedOrders({
+        page: currentPage,
+        limit: itemsPerPage,
+        sortBy,
+        orderBy,
+        status:
+          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+        keyword: searchTerm,
+      })
+    ).finally(() => setTimeout(() => setIsLoading(false), 500));
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) throw new Error("Invalid date");
@@ -189,20 +220,44 @@ export default function OrderManagement() {
   };
 
   const formatCurrency = (amount) => {
-    return Number(amount || 0).toLocaleString("vi-VN") + " ₫";
+    if (amount == null) return "0 ₫";
+    return Number(amount).toLocaleString("vi-VN") + " ₫";
   };
 
-  const totalRevenue = orders.reduce(
+  // Filter out invalid orders and log issues for debugging
+  const validOrders = orders.filter((order) => {
+    if (!order || !order.orderId) {
+      console.warn("Invalid order detected:", order);
+      return false;
+    }
+    return true;
+  });
+
+  const totalRevenue = validOrders.reduce(
     (sum, order) => sum + Number(order.totalAmount || 0),
     0
   );
-  const completedOrders = orders.filter((o) => o.status === "DELIVERED").length;
-  const pendingOrders = orders.filter((o) => o.status === "PENDING").length;
-  const todayOrders = orders.filter((o) => {
+  const completedOrders = validOrders.filter(
+    (o) => o.status === "DELIVERED"
+  ).length;
+  const pendingOrders = validOrders.filter(
+    (o) => o.status === "PENDING"
+  ).length;
+  const todayOrders = validOrders.filter((o) => {
+    if (!o.createdAt) return false;
     const orderDate = new Date(o.createdAt);
     const today = new Date();
     return orderDate.toDateString() === today.toDateString();
   }).length;
+
+  const statusOptions = [
+    { value: "", label: "Tất cả trạng thái" },
+    { value: "PENDING", label: "Chờ xử lý" },
+    { value: "CONFIRMED", label: "Đã xác nhận" },
+    { value: "SHIPPED", label: "Đã gửi hàng" },
+    { value: "DELIVERED", label: "Đã giao hàng" },
+    { value: "CANCELLED", label: "Đã hủy" },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -248,12 +303,20 @@ export default function OrderManagement() {
             {tabs.map((tab) => (
               <button
                 key={tab.name}
-                onClick={() => setActiveTab(tab.name)}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative $(
+                onClick={() => {
+                  setActiveTab(tab.name);
+                  setCurrentPage(0);
+                  if (tab.name === "Tất cả đơn hàng") {
+                    setStatusFilter("");
+                  } else if (tab.name === "Chưa thanh toán") {
+                    setStatusFilter("PENDING");
+                  }
+                }}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
                   activeTab === tab.name
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
-                )`}
+                }`}
               >
                 <span>{tab.name}</span>
                 <span
@@ -283,7 +346,7 @@ export default function OrderManagement() {
                   Tổng đơn hàng
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {orders.length}
+                  {totalElements}
                 </p>
               </div>
             </div>
@@ -334,16 +397,32 @@ export default function OrderManagement() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="h-5 w-5" />
-                <span>Bộ lọc</span>
-              </button>
-              <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option>Tất cả trạng thái</option>
-                <option>Chờ xử lý</option>
-                <option>Đã xác nhận</option>
-                <option>Đã giao hàng</option>
-                <option>Đã hủy</option>
+              <select
+                value={statusFilter}
+                onChange={handleStatusFilterChange}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                onChange={(e) => {
+                  const [newSortBy, newOrderBy] = e.target.value.split(":");
+                  setSortBy(newSortBy);
+                  setOrderBy(newOrderBy);
+                  setCurrentPage(0);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="createdAt:desc">Mới nhất</option>
+                <option value="createdAt:asc">Cũ nhất</option>
+                <option value="totalAmount:desc">
+                  Tổng tiền: Cao đến thấp
+                </option>
+                <option value="totalAmount:asc">Tổng tiền: Thấp đến cao</option>
               </select>
             </div>
 
@@ -351,9 +430,12 @@ export default function OrderManagement() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Tìm kiếm theo mã đơn hàng..."
+                placeholder="Tìm kiếm theo mã đơn hàng hoặc khách hàng..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(0);
+                }}
                 className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-80 transition-all duration-200"
               />
             </div>
@@ -367,7 +449,15 @@ export default function OrderManagement() {
           </div>
         )}
 
-        {!loading && !isLoading && filteredOrders.length === 0 && (
+        {error && (
+          <div className="bg-red-100 p-6 rounded-xl shadow-sm border border-red-200 text-center">
+            <p className="text-sm text-red-600">
+              Lỗi: {error.message || "Không thể tải đơn hàng"}
+            </p>
+          </div>
+        )}
+
+        {!loading && !isLoading && !error && validOrders.length === 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
             <p className="text-sm text-gray-600">
               Không tìm thấy đơn hàng nào.
@@ -375,7 +465,7 @@ export default function OrderManagement() {
           </div>
         )}
 
-        {!loading && !isLoading && paginatedOrders.length > 0 && (
+        {!loading && !isLoading && !error && validOrders.length > 0 && (
           <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden lg:block">
               <div className="overflow-x-auto">
@@ -412,7 +502,7 @@ export default function OrderManagement() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedOrders.map((order) => (
+                    {validOrders.map((order) => (
                       <tr
                         key={order.orderId}
                         className="hover:bg-gray-50 transition-colors"
@@ -464,11 +554,11 @@ export default function OrderManagement() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentColor(
-                              order.payment.status
+                              order.payment?.status
                             )}`}
                           >
                             <CreditCard className="h-3 w-3 mr-1" />
-                            {translatePaymentStatus(order.payment.status)}
+                            {translatePaymentStatus(order.payment?.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -492,7 +582,7 @@ export default function OrderManagement() {
             </div>
 
             <div className="lg:hidden space-y-4">
-              {paginatedOrders.map((order) => (
+              {validOrders.map((order) => (
                 <div
                   key={order.orderId}
                   className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
@@ -545,10 +635,10 @@ export default function OrderManagement() {
                       </div>
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPaymentColor(
-                          order.payment.status
+                          order.payment?.status
                         )}`}
                       >
-                        {translatePaymentStatus(order.payment.status)}
+                        {translatePaymentStatus(order.payment?.status)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -581,44 +671,114 @@ export default function OrderManagement() {
               ))}
             </div>
 
-            {filteredOrders.length > itemsPerPage && (
+            {totalElements > itemsPerPage && (
               <div className="mt-6 flex items-center justify-between px-4 sm:px-6 lg:px-8">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                    currentPage === 1
+                  disabled={currentPage === 0}
+                  aria-label="Previous page"
+                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === 0
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-700 hover:bg-gray-50"
+                      : "bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400"
                   }`}
                 >
                   <ChevronLeft className="h-5 w-5 mr-2" />
                   Trước
                 </button>
-                <div className="flex items-center space-x-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
+
+                <div className="flex items-center space-x-1">
+                  {totalPages <= 7 ? (
+                    Array.from({ length: totalPages }, (_, i) => i).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          aria-label={`Page ${page + 1}`}
+                          aria-current={
+                            currentPage === page ? "page" : undefined
+                          }
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? "bg-blue-600 text-white"
+                              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                          }`}
+                        >
+                          {page + 1}
+                        </button>
+                      )
+                    )
+                  ) : (
+                    <>
                       <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                          currentPage === page
+                        onClick={() => handlePageChange(0)}
+                        aria-label="Page 1"
+                        aria-current={currentPage === 0 ? "page" : undefined}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === 0
                             ? "bg-blue-600 text-white"
                             : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
                         }`}
                       >
-                        {page}
+                        1
                       </button>
-                    )
+                      {currentPage > 3 && (
+                        <span className="px-3 py-1 text-gray-500">...</span>
+                      )}
+                      {Array.from(
+                        { length: 5 },
+                        (_, i) => currentPage - 2 + i
+                      ).map((page) => {
+                        if (page > 0 && page < totalPages - 1) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              aria-label={`Page ${page + 1}`}
+                              aria-current={
+                                currentPage === page ? "page" : undefined
+                              }
+                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                currentPage === page
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                              }`}
+                            >
+                              {page + 1}
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+                      {currentPage < totalPages - 4 && (
+                        <span className="px-3 py-1 text-gray-500">...</span>
+                      )}
+                      <button
+                        onClick={() => handlePageChange(totalPages - 1)}
+                        aria-label={`Page ${totalPages}`}
+                        aria-current={
+                          currentPage === totalPages - 1 ? "page" : undefined
+                        }
+                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === totalPages - 1
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                        }`}
+                      >
+                        {totalPages}
+                      </button>
+                    </>
                   )}
                 </div>
+
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                    currentPage === totalPages
+                  disabled={currentPage === totalPages - 1}
+                  aria-label="Next page"
+                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === totalPages - 1
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-700 hover:bg-gray-50"
+                      : "bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400"
                   }`}
                 >
                   Sau

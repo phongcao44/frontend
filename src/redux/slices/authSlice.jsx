@@ -8,7 +8,6 @@ import {
   changePassword,
 } from "../../services/authService";
 
-
 export const loginUser = createAsyncThunk(
   "auth/login",
   async (formLogin, { rejectWithValue }) => {
@@ -108,6 +107,7 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.user = action.payload.data;
         state.loading = false;
+        console.log(state.user);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -130,8 +130,6 @@ const authSlice = createSlice({
       // Logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
-        localStorage.removeItem("user");
-        localStorage.removeItem("access_token");
       })
 
       // Forgot Password

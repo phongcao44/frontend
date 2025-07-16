@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Input,
   Upload,
@@ -13,6 +13,7 @@ import {
   Form,
   Popconfirm,
   Space,
+  Spin,
 } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -27,9 +28,12 @@ import {
   addProductVariant,
   removeProductVariant,
 } from "../../redux/slices/productVariantSlice";
+import { getReturnPolicyById } from "../../redux/slices/returnPolicySlice";
 import VariantSection from "./VariantSection";
 import CategorySelector from "./CategorySelector";
 import VariantEditor from "./VariantEditor";
+import ReturnPolicyEditor from "./ReturnPolicyEditor";
+import ReturnPolicySection from "./ReturnPolicySection";
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -39,21 +43,35 @@ const ProductForm = () => {
   const [fileList, setFileList] = useState([]);
   const [shippingEnabled, setShippingEnabled] = useState(true);
   const [form] = Form.useForm();
-  const [formData, setFormData] = useState({ variants: [] });
+  const [formData, setFormData] = useState({
+    variants: [],
+    returnPolicy: null,
+  });
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { id: productId } = useParams();
   const product = useSelector((state) => state.products.productDetail);
+  const returnPolicy = useSelector((state) => state.returnPolicy.policy);
+  const loadingProduct = useSelector((state) => state.products.loading);
+  const loadingPolicy = useSelector((state) => state.returnPolicy.loading);
+  const errorProduct = useSelector((state) => state.products.error);
+  const errorPolicy = useSelector((state) => state.returnPolicy.error);
 
-  console.log(product);
-  const variants = product?.variants || [];
+  console.log(fileList);
 
   useEffect(() => {
     if (productId) {
       dispatch(loadProductDetail(productId));
     }
   }, [dispatch, productId]);
+
+  useEffect(() => {
+    console.log(product);
+    if (productId && product?.returnPolicy?.id) {
+      dispatch(getReturnPolicyById(product.returnPolicy.id));
+    }
+  }, [dispatch, productId, product]);
 
   useEffect(() => {
     if (product && productId) {
@@ -65,7 +83,19 @@ const ProductForm = () => {
         category_id: product.category?.id,
       });
       setShippingEnabled(product.status === "IN_STOCK");
-      setFormData((prev) => ({ ...prev, variants: product.variants || [] }));
+      setFormData((prev) => {
+        if (
+          prev.variants !== product.variants ||
+          prev.returnPolicy?.id !== product.returnPolicy?.id
+        ) {
+          return {
+            ...prev,
+            variants: Array.isArray(product.variants) ? product.variants : [],
+            returnPolicy: product.returnPolicy || null,
+          };
+        }
+        return prev;
+      });
     }
   }, [product, productId, form]);
 
@@ -79,14 +109,37 @@ const ProductForm = () => {
     beforeUpload: () => false,
   };
 
-  const handleVariantsChange = (variantsData) => {
+  const handleVariantsChange = useCallback((variantsData) => {
     setFormData((prev) => ({
       ...prev,
-      variants: variantsData,
+      variants: Array.isArray(variantsData) ? variantsData : [],
     }));
-  };
+  }, []);
+
+  const handleReturnPolicyChange = useCallback((policy) => {
+    setFormData((prev) => {
+      console.log("handleReturnPolicyChange", policy);
+      const newReturnPolicy = policy || null;
+      if (prev.returnPolicy?.id !== newReturnPolicy?.id) {
+        return {
+          ...prev,
+          returnPolicy: newReturnPolicy,
+        };
+      }
+      return prev;
+    });
+  }, []);
 
   const handleSubmit = async (values) => {
+    if (!formData.variants || formData.variants.length === 0) {
+      message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
+      return;
+    }
+    if (!formData.returnPolicy?.id) {
+      message.error("Vui lòng chọn một chính sách đổi trả");
+      return;
+    }
+
     const productData = {
       name: values.productName,
       description: values.description || "",
@@ -94,9 +147,11 @@ const ProductForm = () => {
       brand: values.brand || "",
       status: shippingEnabled ? "IN_STOCK" : "OUT_OF_STOCK",
       categoryId: values.category_id,
+      return_policy_id: formData.returnPolicy.id,
     };
 
     try {
+      console.log("Submitting product:", productData);
       const productResponse = await dispatch(addProduct(productData)).unwrap();
       const newProductId = productResponse.data.id;
 
@@ -121,6 +176,15 @@ const ProductForm = () => {
 
   const handleUpdate = async () => {
     const values = await form.validateFields();
+    if (!formData.variants || formData.variants.length === 0) {
+      message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
+      return;
+    }
+    if (!formData.returnPolicy?.id) {
+      message.error("Vui lòng chọn một chính sách đổi trả");
+      return;
+    }
+
     const updatedProduct = {
       name: values.productName,
       description: values.description || "",
@@ -128,9 +192,8 @@ const ProductForm = () => {
       brand: values.brand || "",
       status: shippingEnabled ? "IN_STOCK" : "OUT_OF_STOCK",
       categoryId: values.category_id,
+      return_policy_id: formData.returnPolicy.id,
     };
-
-    console.log(updatedProduct);
 
     try {
       await dispatch(
@@ -146,8 +209,7 @@ const ProductForm = () => {
 
   const handleDelete = async () => {
     try {
-      const variants = product.variants || [];
-
+      const variants = Array.isArray(product?.variants) ? product.variants : [];
       if (variants.length > 0) {
         for (const variant of variants) {
           await dispatch(removeProductVariant(variant.id)).unwrap();
@@ -169,6 +231,22 @@ const ProductForm = () => {
           {productId ? "Chỉnh sửa sản phẩm" : "Tạo sản phẩm"}
         </Title>
       </Row>
+
+      {(errorProduct || errorPolicy) && (
+        <div style={{ marginBottom: 16 }}>
+          <Typography.Text type="danger">
+            {errorProduct
+              ? `Lỗi khi tải sản phẩm: ${errorProduct}`
+              : `Lỗi khi tải chính sách: ${errorPolicy}`}
+          </Typography.Text>
+        </div>
+      )}
+
+      {(loadingProduct || loadingPolicy) && (
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <Spin tip="Đang tải dữ liệu..." />
+        </div>
+      )}
 
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Card title="Thông tin chung" style={{ marginBottom: 24 }}>
@@ -243,14 +321,32 @@ const ProductForm = () => {
         </Card>
 
         {!productId && (
+          <ReturnPolicySection
+            onChange={handleReturnPolicyChange}
+            defaultPolicyId={formData.returnPolicy?.id}
+          />
+        )}
+
+        {productId && product && !loadingProduct && !loadingPolicy && (
+          <ReturnPolicyEditor
+            returnPolicy={formData.returnPolicy}
+            productId={productId}
+            onChange={handleReturnPolicyChange}
+          />
+        )}
+
+        {!productId && (
           <VariantSection
             onChange={handleVariantsChange}
             defaultVariants={formData.variants}
           />
         )}
 
-        {productId && (
-          <VariantEditor variants={variants} productId={productId} />
+        {productId && product && !loadingProduct && (
+          <VariantEditor
+            variants={Array.isArray(product.variants) ? product.variants : []}
+            productId={productId}
+          />
         )}
 
         {!productId && (
