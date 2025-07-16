@@ -419,7 +419,7 @@ export default function OrderDetail() {
                   />
                   <Button type="primary">Cập nhật</Button>
                   <br />
-                  
+
                   <br />
                   <Button
                     type="default"
