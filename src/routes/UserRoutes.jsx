@@ -8,7 +8,10 @@ import ProductDetail from "../pages/user/productDetail/ProductDetail";
 import WishList from "../pages/user/WishList";
 import Cart from "../pages/user/Cart";
 import CheckoutPage from "../pages/user/checkout/CheckoutPage";
-import ReturnForm from "../pages/user/ReturnProduct";
+
+import DeliveredProductsPage from "../pages/user/Delivered";
+import ReturnForm from "../pages/user/ReturnForm"; // trang form bạn đã có
+import ReturnRequestsPage from "../pages/user/ReturnRequestsPage"; // trang danh sách yêu cầu trả hàng
 
 // --- Auth ---
 import Login from "../pages/user/Login";
@@ -66,10 +69,15 @@ const UserRoutes = () => {
         <Route path="about" element={<About />} />
         <Route path="contact" element={<Contact />} />
 
-          <Route path="return-product" element={<ReturnForm />} />
 
         {/* Default Redirect */}
         <Route path="*" element={<ErrorPage />} />
+
+
+        <Route path="delivered-products" element={<DeliveredProductsPage />} />
+        <Route path="return-form" element={<ReturnForm />} />
+
+        <Route path="return-requests" element={<ReturnRequestsPage />} />
       </Route>
     </>
   );

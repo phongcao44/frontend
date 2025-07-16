@@ -56,7 +56,7 @@ const Login = () => {
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");
       } else {
-        navigate("/home");
+        navigate("/");
       }
     } catch (err) {
       console.error("Đăng nhập lỗi:", err);
