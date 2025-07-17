@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams } from "react-router-dom";
+import { handleDownloadPDF } from "../../services/handleDownloadPDF";
 import {
   Card,
   Table,
@@ -327,13 +328,13 @@ export default function OrderDetail() {
             <Text style={{ fontSize: "14px" }}>
               {currentOrder.createdAt
                 ? new Date(currentOrder.createdAt)
-                    .toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                    .replace(",", "") + " SA"
+                  .toLocaleDateString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                  .replace(",", "") + " SA"
                 : "unknown"}
             </Text>
           </Col>
@@ -417,8 +418,19 @@ export default function OrderDetail() {
                     style={{ width: "100%", marginBottom: 8 }}
                   />
                   <Button type="primary">Cập nhật</Button>
+                  <br />
+
+                  <br />
+                  <Button
+                    type="default"
+                    onClick={() => handleDownloadPDF(currentOrder.orderId)}
+                    style={{ marginBottom: 16 }}
+                  >
+                    Tải PDF đơn hàng
+                  </Button>
+
                 </div>
-              </Col>
+              </Col >
 
               <Col span={12}>
                 <Card>

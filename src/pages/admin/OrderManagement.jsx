@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { handleDownloadExcel } from "../../services/handleDownloadExcel";
+
 import {
   Search,
   Filter,
@@ -227,9 +229,16 @@ export default function OrderManagement() {
                   className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
                 />
               </button>
-              <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
+              <button
+                onClick={handleDownloadExcel}
+                className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+              >
                 <Download className="h-5 w-5" />
               </button>
+
+
+
+
               <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
                 <MoreHorizontal className="h-5 w-5" />
               </button>
@@ -257,11 +266,10 @@ export default function OrderManagement() {
               >
                 <span>{tab.name}</span>
                 <span
-                  className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                    activeTab === tab.name
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
+                  className={`ml-2 px-2 py-1 text-xs rounded-full ${activeTab === tab.name
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-600"
+                    }`}
                 >
                   {tab.count}
                 </span>
@@ -586,11 +594,10 @@ export default function OrderManagement() {
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                    currentPage === 1
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${currentPage === 1
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    }`}
                 >
                   <ChevronLeft className="h-5 w-5 mr-2" />
                   Trước
@@ -601,11 +608,10 @@ export default function OrderManagement() {
                       <button
                         key={page}
                         onClick={() => handlePageChange(page)}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                          currentPage === page
-                            ? "bg-blue-600 text-white"
-                            : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                        }`}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium ${currentPage === page
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                          }`}
                       >
                         {page}
                       </button>
@@ -615,11 +621,10 @@ export default function OrderManagement() {
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${
-                    currentPage === totalPages
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium ${currentPage === totalPages
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    }`}
                 >
                   Sau
                   <ChevronRight className="h-5 w-5 ml-2" />
