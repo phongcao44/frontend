@@ -1,5 +1,12 @@
-import React, { useEffect } from "react";
-import { Table, Typography, Tag, Image, Button, Card } from "antd";
+import React, { useEffect, useState } from "react";
+import {
+  Table,
+  Typography,
+  Tag,
+  Image,
+  Button,
+  Card,
+} from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { loadReturnRequests } from "../../../redux/slices/returnRequestSlice";
@@ -17,28 +24,39 @@ const ReturnRequestList = () => {
   const navigate = useNavigate();
   const { list: data, loading } = useSelector((state) => state.returnRequest);
 
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
     dispatch(loadReturnRequests());
   }, [dispatch]);
 
+  const filteredData = data.filter((item) => {
+    const matchStatus =
+      statusFilter === "ALL" || item.status === statusFilter;
+    const matchSearch =
+      item.orderId?.toString().toLowerCase().includes(searchTerm.toLowerCase());
+    return matchStatus && matchSearch;
+  });
+
   const columns = [
     { title: "ID", dataIndex: "id", width: 60 },
     { title: "Mã đơn hàng", dataIndex: "orderId" },
-    { title: "Người yêu cầu", dataIndex: "fullName" , width: 150},
+    { title: "Người yêu cầu", dataIndex: "fullName", width: 150 },
     {
       title: "Ảnh/Video",
       dataIndex: "mediaUrl",
       render: (url) => {
-  const isVideo = url.match(/\.(mp4|webm|ogg)$/i);
-  return isVideo ? (
-    <video width={100} height={60} controls>
-      <source src={url} type="video/mp4" />
-      Trình duyệt không hỗ trợ video.
-    </video>
-  ) : (
-    <Image width={60} src={url} />
-  );
-},
+        const isVideo = url?.match(/\.(mp4|webm|ogg)$/i);
+        return isVideo ? (
+          <video width={100} height={60} controls>
+            <source src={url} type="video/mp4" />
+            Trình duyệt không hỗ trợ video.
+          </video>
+        ) : (
+          <Image width={60} src={url} />
+        );
+      },
     },
     { title: "Lý do", dataIndex: "reason" },
     {
@@ -95,6 +113,54 @@ const ReturnRequestList = () => {
       >
         Danh Sách Yêu Cầu Đổi Trả Hàng
       </Title>
+
+      {/* BỘ LỌC */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 24,
+          flexWrap: "wrap",
+          gap: 16,
+        }}
+      >
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <Button icon={<i className="fas fa-filter" />} type="default">
+            Bộ lọc
+          </Button>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: "1px solid #d9d9d9",
+              outline: "none",
+            }}
+          >
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="PENDING">Chờ xử lý</option>
+            <option value="APPROVED">Đã xác nhận</option>
+            <option value="REJECTED">Đã từ chối</option>
+          </select>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Tìm kiếm theo mã đơn hàng..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid #d9d9d9",
+            width: 260,
+          }}
+        />
+      </div>
+
+      {/* BẢNG DỮ LIỆU */}
       <Card
         style={{
           padding: 24,
@@ -105,7 +171,7 @@ const ReturnRequestList = () => {
       >
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={filteredData}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 8 }}
