@@ -9,6 +9,10 @@ import WishList from "../pages/user/WishList";
 import Cart from "../pages/user/Cart";
 import CheckoutPage from "../pages/user/checkout/CheckoutPage";
 
+import DeliveredProductsPage from "../pages/user/Delivered";
+import ReturnForm from "../pages/user/ReturnForm"; // trang form bạn đã có
+import ReturnRequestsPage from "../pages/user/ReturnRequestsPage"; // trang danh sách yêu cầu trả hàng
+
 // --- Auth ---
 import Login from "../pages/user/Login";
 import SignUp from "../pages/user/SignUp";
@@ -21,6 +25,7 @@ import UserAccountPage from "../pages/user/account/UserAccountPage";
 import EditProfileForm from "../pages/user/account/EditProfileForm";
 import AddressBook from "../pages/user/account/AddressBook";
 import Orders from "../pages/user/account/Orders";
+import OrderSuccessPage from "../pages/user/checkout/OrderSuccessPage";
 
 const UserRoutes = () => {
   return (
@@ -55,6 +60,8 @@ const UserRoutes = () => {
           <Route path="orders" element={<Orders />} />
         </Route>
 
+        <Route path="payment-success" element={<OrderSuccessPage />} />
+
         {/* Auth */}
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SignUp />} />
@@ -65,8 +72,15 @@ const UserRoutes = () => {
         <Route path="about" element={<About />} />
         <Route path="contact" element={<Contact />} />
 
+
         {/* Default Redirect */}
         <Route path="*" element={<ErrorPage />} />
+
+
+        <Route path="delivered-products" element={<DeliveredProductsPage />} />
+        <Route path="return-form" element={<ReturnForm />} />
+
+        <Route path="return-requests" element={<ReturnRequestsPage />} />
       </Route>
     </>
   );

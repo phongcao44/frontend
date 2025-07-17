@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Menu } from "antd";
 
 const menuItems = [
   { key: "home", label: "Home", path: "/" },
@@ -9,45 +8,31 @@ const menuItems = [
 ];
 
 // eslint-disable-next-line react/prop-types
-const NavMenu = ({ activePath, vertical = false }) => {
-  if (vertical) {
-    return (
-      <Menu
-        mode="vertical"
-        selectedKeys={[activePath]}
-        items={menuItems.map((item) => ({
-          key: item.path,
-          label: <Link to={item.path}>{item.label}</Link>,
-        }))}
-      />
-    );
-  }
+const NavMenu = ({ activePath, vertical = false, isLoggedIn = false }) => {
+  const filteredMenuItems = isLoggedIn
+    ? menuItems.filter((item) => item.key !== "signup")
+    : menuItems;
 
   return (
-    <nav style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+    <nav
+      className={`flex ${
+        vertical ? "flex-col" : "flex-row justify-center"
+      } w-full`}
+    >
       <ul
-        style={{
-          display: "flex",
-          listStyle: "none",
-          margin: 0,
-          padding: 0,
-          gap: "48px",
-        }}
+        className={`flex ${
+          vertical ? "flex-col space-y-4" : "flex-row space-x-12"
+        } list-none m-0 p-0`}
       >
-        {menuItems.map(({ key, label, path }) => (
+        {filteredMenuItems.map(({ key, label, path }) => (
           <li key={key}>
             <Link
               to={path}
-              style={{
-                textDecoration: "none",
-                color: "#000",
-                fontSize: "16px",
-                borderBottom:
-                  activePath === path
-                    ? "2px solid #aaa"
-                    : "2px solid transparent",
-                paddingBottom: "4px",
-              }}
+              className={`text-black text-base no-underline transition-colors duration-200 ${
+                activePath === path
+                  ? "border-b-2 border-gray-400 pb-1"
+                  : "border-b-2 border-transparent hover:border-gray-300 pb-1"
+              } ${vertical ? "block px-4 py-2" : ""}`}
             >
               {label}
             </Link>

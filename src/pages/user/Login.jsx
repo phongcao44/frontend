@@ -14,21 +14,28 @@ const Login = () => {
     password: "",
   });
 
+  // 👇 Thêm state lưu lỗi validate
+  const [validationError, setValidationError] = useState("");
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+    setValidationError(""); // Clear lỗi khi gõ lại
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 👇 Check input
+    if (!formData.email.trim() || !formData.password.trim()) {
+      setValidationError("Vui lòng nhập đầy đủ Email và Mật khẩu.");
+      return; // Không dispatch
+    }
+
     try {
-      console.log(formData);
-      const userString = Cookies.get("user");
-      const user = userString ? JSON.parse(userString) : null;
-      console.log(user);
       const res = await dispatch(loginUser(formData)).unwrap();
       const userInfo = {
         id: res.data.user.id,
@@ -56,11 +63,10 @@ const Login = () => {
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");
       } else {
-        navigate("/home");
+        navigate("/");
       }
     } catch (err) {
       console.error("Đăng nhập lỗi:", err);
-      console.error("Đăng nhập lỗi:", JSON.stringify(err, null, 2));
     }
   };
 
@@ -110,6 +116,12 @@ const Login = () => {
               />
             </div>
 
+            {/* Hiển thị lỗi validate nếu có */}
+            {validationError && (
+              <p className="text-red-500 text-sm">{validationError}</p>
+            )}
+
+            {/* Hiển thị lỗi từ server nếu có */}
             {error && <p className="text-red-500 text-sm">{error}</p>}
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

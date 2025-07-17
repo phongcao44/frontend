@@ -88,3 +88,16 @@ export const checkoutByCartItem = async (cartItemId, orderPayload) => {
     throw err;
   }
 };
+
+export const checkoutSelectedItems = async (orderPayload) => {
+  try {
+    const res = await axiosInstance.post(
+      "/user/carts/checkout/selected",
+      orderPayload
+    );
+    return res.data;
+  } catch (err) {
+    console.error("❌ Checkout Selected Items failed:", err);
+    throw err;
+  }
+};
