@@ -16,6 +16,23 @@ export const addUser = async (userData) => {
 };
 
 /**
+ * Call API get all users with pagination & filter
+ * @param {Object} params - { page, size, sortBy, orderBy, keyword, status }
+ * @returns {Promise<any>}
+ */
+export const getAllUsersPaginateAndFilter = async (params) => {
+  try {
+    const response = await axiosInstance.get("/admin/users/paginate", {
+      params, // Tự động map query params
+    });
+    return response.data;
+  } catch (error) {
+    console.error("getAllUsersPaginateAndFilter error:", error);
+    throw extractApiError(error);
+  }
+};
+
+/**
  * Fetch all users (Admin)
  * @returns {Promise<any>}
  */

@@ -23,12 +23,12 @@ import {
   editProduct,
   removeProduct,
   loadProductDetail,
-} from "../../redux/slices/productSlice";
+} from "../../../redux/slices/productSlice";
 import {
   addProductVariant,
   removeProductVariant,
-} from "../../redux/slices/productVariantSlice";
-import { getReturnPolicyById } from "../../redux/slices/returnPolicySlice";
+} from "../../../redux/slices/productVariantSlice";
+import { getReturnPolicyById } from "../../../redux/slices/returnPolicySlice";
 import VariantSection from "./VariantSection";
 import CategorySelector from "./CategorySelector";
 import VariantEditor from "./VariantEditor";
@@ -58,7 +58,7 @@ const ProductForm = () => {
   const errorProduct = useSelector((state) => state.products.error);
   const errorPolicy = useSelector((state) => state.returnPolicy.error);
 
-  console.log(fileList);
+  console.log(product);
 
   useEffect(() => {
     if (productId) {

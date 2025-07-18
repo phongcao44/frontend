@@ -21,6 +21,8 @@
     "antd": "^5.26.1",
     "axios": "^1.7.2",
     "bootstrap": "^5.3.7",
+    "firebase": "^11.10.0",
+    "formik": "^2.4.6",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.518.0",
     "react": "^18.2.0",
@@ -34,7 +36,8 @@
     "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
     "sweetalert2": "^11.22.2",
-    "swiper": "^11.2.8"
+    "swiper": "^11.2.8",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.56",

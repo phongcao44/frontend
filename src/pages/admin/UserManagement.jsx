@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Search,
   Filter,
@@ -16,52 +16,241 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { getUsers } from "../../redux/slices/userSlice";
+import {
+  fetchUsersPaginateAndFilter,
+  createUser,
+  updateUserStatus,
+  updateUserRole,
+  clearError,
+} from "../../redux/slices/userSlice";
+import Pagination from "../../components/Pagination";
+
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(null, args), wait);
+  };
+};
 
 export default function UserManagement() {
   const [activeTab, setActiveTab] = useState("Tất cả khách hàng");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [orderBy, setOrderBy] = useState("desc");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [rankFilter, setRankFilter] = useState("");
 
   const dispatch = useDispatch();
-  const customers = useSelector((state) => state.users.users) || [];
-  const error = useSelector((state) => state.users.error) || null;
+  const { users, loading, error } = useSelector((state) => state.users);
+  const customers = users?.content || [];
+  const totalPages = users?.totalPages || 1;
+  const totalElements = users?.totalElements || 0;
+
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      dispatch(
+        fetchUsersPaginateAndFilter({
+          page: 0,
+          size: itemsPerPage,
+          sortBy,
+          orderBy,
+          keyword: value,
+          status:
+            statusFilter || (activeTab === "Khách hàng VIP" ? "ROLE_VIP" : ""),
+          rank: rankFilter,
+        })
+      );
+    }, 500),
+    [
+      dispatch,
+      itemsPerPage,
+      sortBy,
+      orderBy,
+      statusFilter,
+      rankFilter,
+      activeTab,
+    ]
+  );
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setCurrentPage(0);
+    debouncedSearch(value);
+  };
+
+  const handleSearchClick = () => {
+    setCurrentPage(0);
+    dispatch(
+      fetchUsersPaginateAndFilter({
+        page: 0,
+        size: itemsPerPage,
+        sortBy,
+        orderBy,
+        keyword: searchTerm,
+        status:
+          statusFilter || (activeTab === "Khách hàng VIP" ? "ROLE_VIP" : ""),
+        rank: rankFilter,
+      })
+    );
+  };
 
   useEffect(() => {
-    setIsLoading(true);
-    dispatch(getUsers()).finally(() => setIsLoading(false));
-  }, [dispatch]);
+    dispatch(
+      fetchUsersPaginateAndFilter({
+        page: currentPage,
+        size: itemsPerPage,
+        sortBy,
+        orderBy,
+        keyword: searchTerm,
+        status:
+          statusFilter || (activeTab === "Khách hàng VIP" ? "ROLE_VIP" : ""),
+        rank: rankFilter,
+      })
+    );
+  }, [
+    dispatch,
+    currentPage,
+    itemsPerPage,
+    sortBy,
+    orderBy,
+    statusFilter,
+    rankFilter,
+    activeTab,
+  ]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        dispatch(clearError());
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, dispatch]);
 
   const filteredCustomers = customers.filter((customer) => {
-    const matchesSearch =
-      customer.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase());
     if (activeTab === "Khách hàng VIP") {
-      return matchesSearch && customer.roles.includes("ROLE_ADMIN");
+      return customer.roles.some((role) => role === "ROLE_VIP");
     }
-    return matchesSearch;
+    return true;
   });
 
   const tabs = [
-    { name: "Tất cả khách hàng", count: customers.length },
+    { name: "Tất cả khách hàng", count: totalElements },
     {
       name: "Khách hàng VIP",
-      count: customers.filter((c) => c.roles.includes("ROLE_ADMIN")).length || 0,
+      count:
+        customers.filter((c) => c.roles.some((role) => role === "ROLE_VIP"))
+          .length || 0,
     },
   ];
 
   const handleRefresh = () => {
-    setIsLoading(true);
-    dispatch(getUsers()).finally(() => setTimeout(() => setIsLoading(false), 1000));
+    dispatch(
+      fetchUsersPaginateAndFilter({
+        page: currentPage,
+        size: itemsPerPage,
+        sortBy,
+        orderBy,
+        keyword: searchTerm,
+        status:
+          statusFilter || (activeTab === "Khách hàng VIP" ? "ROLE_VIP" : ""),
+        rank: rankFilter,
+      })
+    );
+  };
+
+  const handlePageChange = (page, newItemsPerPage) => {
+    const updatedItemsPerPage = newItemsPerPage || itemsPerPage;
+    setCurrentPage(page);
+    setItemsPerPage(updatedItemsPerPage);
+    dispatch(
+      fetchUsersPaginateAndFilter({
+        page,
+        size: updatedItemsPerPage,
+        sortBy,
+        orderBy,
+        keyword: searchTerm,
+        status:
+          statusFilter || (activeTab === "Khách hàng VIP" ? "ROLE_VIP" : ""),
+        rank: rankFilter,
+      })
+    );
+  };
+
+  const handleStatusFilterChange = (e) => {
+    const value = e.target.value;
+    setStatusFilter(value);
+    setCurrentPage(0);
+    if (value) {
+      setActiveTab("Tất cả khách hàng");
+    }
+  };
+
+  const handleRankFilterChange = (e) => {
+    const value = e.target.value;
+    setRankFilter(value);
+    setCurrentPage(0);
+    if (value) {
+      setActiveTab("Tất cả khách hàng");
+    }
+  };
+
+  const handleCreateUser = () => {
+    const userData = {
+      username: prompt("Enter username:") || "newuser",
+      email: prompt("Enter email:") || "newuser@example.com",
+      status: "ACTIVE",
+      roles: ["ROLE_USER"],
+      rank: "BRONZE", // Mặc định là Đồng
+    };
+    dispatch(createUser(userData));
+  };
+
+  const handleUpdateStatus = (userId, currentStatus) => {
+    const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    dispatch(updateUserStatus({ userId, status: newStatus }));
+  };
+
+  const handleUpdateRole = (userId, currentRoles) => {
+    const newRole = currentRoles.includes("ROLE_VIP")
+      ? "ROLE_USER"
+      : "ROLE_VIP";
+    dispatch(updateUserRole({ userId, roleId: newRole }));
+  };
+
+  const handleDelete = (userId) => {
+    if (window.confirm("Bạn có chắc muốn xóa người dùng này?")) {
+      console.log(`Delete user with ID: ${userId}`);
+    }
   };
 
   const getRoleColor = (roles) => {
-    if (roles.includes("ROLE_ADMIN")) return "bg-purple-100 text-purple-800";
+    if (roles.includes("ROLE_VIP")) return "bg-purple-100 text-purple-800";
     if (roles.includes("ROLE_PREMIUM")) return "bg-orange-100 text-orange-800";
     return "bg-blue-100 text-blue-800";
   };
 
+  const getRankColor = (rank) => {
+    switch (rank) {
+      case "SILVER":
+        return "bg-gray-100 text-gray-800";
+      case "BRONZE":
+        return "bg-amber-100 text-amber-800";
+      case "PLATINUM":
+        return "bg-blue-100 text-blue-800";
+      case "DIAMOND":
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) throw new Error("Invalid date");
@@ -73,7 +262,6 @@ export default function UserManagement() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* HEADER */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -89,10 +277,10 @@ export default function UserManagement() {
               <button
                 onClick={handleRefresh}
                 className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
-                disabled={isLoading}
+                disabled={loading}
               >
                 <RefreshCw
-                  className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
+                  className={`h-5 w-5 ${loading ? "animate-spin" : ""}`}
                 />
               </button>
               <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
@@ -101,7 +289,10 @@ export default function UserManagement() {
               <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
                 <MoreHorizontal className="h-5 w-5" />
               </button>
-              <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105">
+              <button
+                onClick={handleCreateUser}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105"
+              >
                 <Plus className="h-5 w-5" />
                 <span className="font-medium">Tạo khách hàng</span>
               </button>
@@ -110,7 +301,6 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {/* TABS */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8 overflow-x-auto">
@@ -140,9 +330,7 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {/* STATS CARDS */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
@@ -154,7 +342,7 @@ export default function UserManagement() {
                   Tổng khách hàng
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {customers.length}
+                  {totalElements}
                 </p>
               </div>
             </div>
@@ -169,7 +357,7 @@ export default function UserManagement() {
                   Đang hoạt động
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                0
+                  {customers.filter((c) => c.status === "ACTIVE").length || 0}
                 </p>
               </div>
             </div>
@@ -184,7 +372,9 @@ export default function UserManagement() {
                   Khách hàng VIP
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-               0
+                  {customers.filter((c) =>
+                    c.roles.some((role) => role === "ROLE_VIP")
+                  ).length || 0}
                 </p>
               </div>
             </div>
@@ -210,35 +400,64 @@ export default function UserManagement() {
           </div>
         </div>
 
-        {/* FILTER + SEARCH */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 flex-wrap">
               <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                 <Filter className="h-5 w-5" />
                 <span>Bộ lọc</span>
               </button>
-              <select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option>Tất cả trạng thái</option>
-                <option>Hoạt động</option>
-                <option>Không hoạt động</option>
+              <select
+                value={statusFilter}
+                onChange={handleStatusFilterChange}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="INACTIVE">Không hoạt động</option>
+              </select>
+              <select
+                value={rankFilter}
+                onChange={handleRankFilterChange}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Tất cả rank</option>
+                <option value="BAC">Bạc</option>
+                <option value="DONG">Đồng</option>
+                <option value="VANG">Bạch Kim</option>
+                <option value="KIM CUONG">Kim Cương</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="createdAt">Ngày tạo</option>
+                <option value="username">Tên người dùng</option>
+                <option value="email">Email</option>
+              </select>
+              <select
+                value={orderBy}
+                onChange={(e) => setOrderBy(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="desc">Giảm dần</option>
+                <option value="asc">Tăng dần</option>
               </select>
             </div>
-
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm kiếm theo tên hoặc email..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
                 className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-80 transition-all duration-200"
               />
             </div>
           </div>
         </div>
 
-        {/* ERROR OR LOADING STATE */}
         {error && (
           <div className="bg-red-50 p-4 rounded-xl mb-6 text-sm text-red-800 flex items-center">
             <svg
@@ -256,14 +475,14 @@ export default function UserManagement() {
           </div>
         )}
 
-        {isLoading && (
+        {loading && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
             <RefreshCw className="h-6 w-6 animate-spin mx-auto text-blue-600" />
             <p className="mt-2 text-sm text-gray-600">Đang tải dữ liệu...</p>
           </div>
         )}
 
-        {!isLoading && !error && filteredCustomers.length === 0 && (
+        {!loading && !error && filteredCustomers.length === 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
             <p className="text-sm text-gray-600">
               Không tìm thấy khách hàng nào.
@@ -271,8 +490,7 @@ export default function UserManagement() {
           </div>
         )}
 
-        {/* TABLE */}
-        {!isLoading && !error && filteredCustomers.length > 0 && (
+        {!loading && !error && filteredCustomers.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden lg:block">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -289,6 +507,9 @@ export default function UserManagement() {
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Vai trò
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Rank
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Trạng thái
@@ -310,11 +531,11 @@ export default function UserManagement() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                            {customer.username.charAt(0)}
+                            {customer.username?.charAt(0) || "?"}
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {customer.username}
+                              {customer.username || "N/A"}
                             </div>
                             <div className="text-sm text-gray-500">
                               ID: #{customer.id}
@@ -324,34 +545,51 @@ export default function UserManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {customer.email}
+                          {customer.email || "N/A"}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(
-                            customer.roles
+                            customer.roles || []
                           )}`}
                         >
-                          {customer.roles.join(", ")}
+                          {(customer.roles || []).join(", ") || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRankColor(
+                            customer.userRank || ""
+                          )}`}
+                        >
+                          {customer.userRank === "BAC"
+                            ? "Bạc"
+                            : customer.userRank === "DONG"
+                            ? "Đồng"
+                            : customer.userRank === "VANG"
+                            ? "Vàng"
+                            : customer.userRank === "KIM CUONG"
+                            ? "Kim Cương"
+                            : "N/A"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            (customer.status || "ACTIVE") === "ACTIVE"
+                            customer.userStatus === "ACTIVE"
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
                           }`}
                         >
                           <span
                             className={`w-2 h-2 rounded-full mr-1 ${
-                              (customer.status || "ACTIVE") === "ACTIVE"
+                              customer.userStatus === "ACTIVE"
                                 ? "bg-green-500"
                                 : "bg-red-500"
                             }`}
                           ></span>
-                          {(customer.status || "ACTIVE") === "ACTIVE"
+                          {customer.userStatus === "ACTIVE"
                             ? "Hoạt động"
                             : "Không hoạt động"}
                         </span>
@@ -361,13 +599,26 @@ export default function UserManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-2">
-                          <button className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors">
+                          <button
+                            onClick={() =>
+                              console.log(`View user ${customer.id}`)
+                            }
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors">
+                          <button
+                            onClick={() =>
+                              handleUpdateStatus(customer.id, customer.status)
+                            }
+                            className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                          >
                             <Edit className="h-4 w-4" />
                           </button>
-                          <button className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors">
+                          <button
+                            onClick={() => handleDelete(customer.id)}
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
@@ -377,11 +628,18 @@ export default function UserManagement() {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalElements}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(page, newItemsPerPage) =>
+                handlePageChange(page, newItemsPerPage || itemsPerPage)
+              }
+            />
           </div>
         )}
 
-        {/* MOBILE CARDS */}
-        {!isLoading && !error && filteredCustomers.length > 0 && (
+        {!loading && !error && filteredCustomers.length > 0 && (
           <div className="lg:hidden space-y-4">
             {filteredCustomers.map((customer) => (
               <div
@@ -391,11 +649,11 @@ export default function UserManagement() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center">
                     <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium text-lg">
-                      {customer.username.charAt(0)}
+                      {customer.username?.charAt(0) || "?"}
                     </div>
                     <div className="ml-4">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {customer.username}
+                        {customer.username || "N/A"}
                       </h3>
                       <p className="text-sm text-gray-500">
                         ID: #{customer.id}
@@ -404,37 +662,54 @@ export default function UserManagement() {
                   </div>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      (customer.status || "ACTIVE") === "ACTIVE"
+                      customer.status === "ACTIVE"
                         ? "bg-green-100 text-green-800"
                         : "bg-red-100 text-red-800"
                     }`}
                   >
                     <span
                       className={`w-2 h-2 rounded-full mr-1 ${
-                        (customer.status || "ACTIVE") === "ACTIVE"
+                        customer.status === "ACTIVE"
                           ? "bg-green-500"
                           : "bg-red-500"
                       }`}
                     ></span>
-                    {(customer.status || "ACTIVE") === "ACTIVE"
+                    {customer.status === "ACTIVE"
                       ? "Hoạt động"
                       : "Không hoạt động"}
                   </span>
                 </div>
-
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
                     <Mail className="h-4 w-4 mr-2" />
-                    {customer.email}
+                    {customer.email || "N/A"}
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Shield className="h-4 w-4 mr-2" />
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(
-                        customer.roles
+                        customer.roles || []
                       )}`}
                     >
-                      {customer.roles.join(", ")}
+                      {(customer.roles || []).join(", ") || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Shield className="h-4 w-4 mr-2" />
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRankColor(
+                        customer.userRank || ""
+                      )}`}
+                    >
+                      {customer.userRank === "BAC"
+                        ? "Bạc"
+                        : customer.userRank === "DONG"
+                        ? "Đồng"
+                        : customer.userRank === "VANG"
+                        ? "Vàng"
+                        : customer.userRank === "KIM CUONG"
+                        ? "Kim Cương"
+                        : "N/A"}
                     </span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
@@ -442,21 +717,39 @@ export default function UserManagement() {
                     {formatDate(customer.createTime)}
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-2 pt-4 border-t border-gray-200">
-                  <button className="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+                  <button
+                    onClick={() => console.log(`View user ${customer.id}`)}
+                    className="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                  >
                     <Eye className="h-4 w-4 inline mr-2" />
                     Xem chi tiết
                   </button>
-                  <button className="px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                  <button
+                    onClick={() =>
+                      handleUpdateStatus(customer.id, customer.status)
+                    }
+                    className="px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                  >
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button
+                    onClick={() => handleDelete(customer.id)}
+                    className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
             ))}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalElements}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(page, newItemsPerPage) =>
+                handlePageChange(page, newItemsPerPage || itemsPerPage)
+              }
+            />
           </div>
         )}
       </div>

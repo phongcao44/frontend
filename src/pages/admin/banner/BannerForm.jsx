@@ -6,13 +6,11 @@ import {
   getBanners,
   createBanner,
   editBanner,
-} from "../../redux/slices/bannerSlice";
+} from "../../../redux/slices/bannerSlice";
 
 export default function BannerFormModal({ open, onClose, id }) {
   const dispatch = useDispatch();
   const { banners, loading, error } = useSelector((state) => state.banner);
-  console.log(error);
-  console.log(loading);
 
   const editingBanner = id ? (banners || []).find((b) => b.id === id) : null;
 

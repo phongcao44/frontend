@@ -3,14 +3,14 @@ import { Card, List, Image, Typography, Row, Col, Button, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { loadProductDetail } from "../../redux/slices/productSlice";
-import { loadColors } from "../../redux/slices/colorSlice";
-import { loadSizes } from "../../redux/slices/sizeSlice";
+import { loadProductDetail } from "../../../redux/slices/productSlice";
+import { loadColors } from "../../../redux/slices/colorSlice";
+import { loadSizes } from "../../../redux/slices/sizeSlice";
 import {
   editProductVariant,
   removeProductVariant,
   addProductVariant,
-} from "../../redux/slices/productVariantSlice";
+} from "../../../redux/slices/productVariantSlice";
 import VariantFormPanel from "./VariantFormPanel";
 
 const { Title, Text } = Typography;

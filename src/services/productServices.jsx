@@ -15,12 +15,15 @@ export const fetchProductsPaginate = async ({
   limit = 10,
   sortBy = "price",
   orderBy = "asc",
+  keyword = "",
+  status = "",
 }) => {
   const res = await axiosInstance.get("/paginate", {
-    params: { page, limit, sortBy, orderBy },
+    params: { page, limit, sortBy, orderBy, keyword, status },
   });
   return res.data;
 };
+
 
 export const createProduct = async (productData) => {
   const res = await axiosInstance.post("/admin/product/add", productData);

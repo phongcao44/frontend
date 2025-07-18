@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import { Tag, Input, InputNumber, Button, Select, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { editReturnPolicy } from "../../redux/slices/returnPolicySlice";
+import { editReturnPolicy } from "../../../redux/slices/returnPolicySlice";
 
 const { Option } = Select;
 

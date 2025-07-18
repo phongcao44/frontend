@@ -36,7 +36,7 @@ export const fetchOrders = async () => {
 
 export const updateOrderStatus = async (id, status) => {
   try {
-    const response = await axiosInstance.put(`.admin/order/edit/${id}`, {
+    const response = await axiosInstance.put(`admin/order/edit/${id}`, {
       status,
     });
 

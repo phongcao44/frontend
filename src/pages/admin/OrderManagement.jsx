@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { handleDownloadExcel } from "../../services/handleDownloadExcel";
 import {
   Search,
-  Filter,
   ChevronDown,
   MoreHorizontal,
   Plus,
@@ -10,27 +10,39 @@ import {
   RefreshCw,
   Package,
   CreditCard,
-  Truck,
-  CheckCircle,
   Clock,
-  XCircle,
   DollarSign,
   ShoppingCart,
   Calendar,
   User,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { loadPaginatedOrders } from "../../redux/slices/orderSlice";
 import { useNavigate } from "react-router-dom";
+import Pagination from "../../components/Pagination";
+import { getStatusColor, translateStatus } from "../../utils/orderUtils";
+import {
+  getPaymentColor,
+  translatePaymentStatus,
+  translatePaymentMethod,
+} from "../../utils/paymentUtils";
+import OrderStatusIcon from "../../components/OrderStatusIcon";
+
+// Debounce utility function
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(null, args), wait);
+  };
+};
 
 export default function OrderManagement() {
   const [activeTab, setActiveTab] = useState("Tất cả đơn hàng");
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10); // State for items per page
   const [sortBy, setSortBy] = useState("createdAt");
   const [orderBy, setOrderBy] = useState("desc");
   const [statusFilter, setStatusFilter] = useState("");
@@ -45,9 +57,50 @@ export default function OrderManagement() {
     (state) => state.order.list?.totalElements || 0
   );
 
+  // Debounced function to handle search
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      dispatch(
+        loadPaginatedOrders({
+          page: 0, // Reset to first page on search
+          limit: itemsPerPage,
+          sortBy,
+          orderBy,
+          status:
+            statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+          keyword: value,
+        })
+      ).finally(() => setTimeout(() => setIsLoading(false), 500));
+    }, 500),
+    [dispatch, itemsPerPage, sortBy, orderBy, statusFilter, activeTab]
+  );
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setIsLoading(true);
+    debouncedSearch(value);
+  };
+
+  // Handle search button click
+  const handleSearchClick = () => {
+    setIsLoading(true);
+    setCurrentPage(0);
+    dispatch(
+      loadPaginatedOrders({
+        page: 0,
+        limit: itemsPerPage,
+        sortBy,
+        orderBy,
+        status:
+          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+        keyword: searchTerm,
+      })
+    ).finally(() => setTimeout(() => setIsLoading(false), 500));
+  };
+
   useEffect(() => {
-    const status =
-      statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : "");
     setIsLoading(true);
     dispatch(
       loadPaginatedOrders({
@@ -55,15 +108,16 @@ export default function OrderManagement() {
         limit: itemsPerPage,
         sortBy,
         orderBy,
-        status,
+        status:
+          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
   }, [
     dispatch,
     currentPage,
+    itemsPerPage,
     activeTab,
-    searchTerm,
     sortBy,
     orderBy,
     statusFilter,
@@ -76,103 +130,10 @@ export default function OrderManagement() {
     console.log("Error:", error);
   }, [orders, totalElements, totalPages, error]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "PENDING":
-        return "bg-yellow-100 text-yellow-800";
-      case "CONFIRMED":
-        return "bg-blue-100 text-blue-800";
-      case "SHIPPED":
-        return "bg-cyan-100 text-cyan-800";
-      case "DELIVERED":
-        return "bg-green-100 text-green-800";
-      case "CANCELLED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const translateStatus = (status) => {
-    switch (status) {
-      case "PENDING":
-        return "Chờ xử lý";
-      case "CONFIRMED":
-        return "Đã xác nhận";
-      case "SHIPPED":
-        return "Đã gửi hàng";
-      case "DELIVERED":
-        return "Đã giao hàng";
-      case "CANCELLED":
-        return "Đã hủy";
-      default:
-        return "Không rõ";
-    }
-  };
-
-  const getPaymentColor = (status) => {
-    switch (status) {
-      case "PENDING":
-        return "bg-yellow-100 text-yellow-800";
-      case "COMPLETED":
-        return "bg-green-100 text-green-800";
-      case "FAILED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const translatePaymentStatus = (status) => {
-    if (!status) return "Không rõ";
-    switch (status) {
-      case "PENDING":
-        return "Chờ thanh toán";
-      case "COMPLETED":
-        return "Đã thanh toán";
-      case "FAILED":
-        return "Thanh toán thất bại";
-      default:
-        return "Không rõ";
-    }
-  };
-
-  const translatePaymentMethod = (method) => {
-    if (!method) return "Không rõ";
-    switch (method) {
-      case "COD":
-        return "Thanh toán khi nhận hàng";
-      case "BANK_TRANSFER":
-        return "Chuyển khoản ngân hàng";
-      case "PAYPAL":
-        return "PayPal";
-      case "CREDIT_CARD":
-        return "Thẻ tín dụng";
-      default:
-        return "Không rõ";
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "PENDING":
-        return <Clock className="h-4 w-4" />;
-      case "CONFIRMED":
-        return <CheckCircle className="h-4 w-4" />;
-      case "SHIPPED":
-        return <Truck className="h-4 w-4" />;
-      case "DELIVERED":
-        return <Package className="h-4 w-4" />;
-      case "CANCELLED":
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
-  };
-
-  const handlePageChange = (page) => {
-    if (page >= 0 && page < totalPages) {
-      setCurrentPage(page);
+  const handlePageChange = (page, newItemsPerPage) => {
+    setCurrentPage(page);
+    if (newItemsPerPage !== itemsPerPage) {
+      setItemsPerPage(newItemsPerPage);
     }
   };
 
@@ -282,7 +243,10 @@ export default function OrderManagement() {
                   className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
                 />
               </button>
-              <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
+              <button
+                onClick={handleDownloadExcel}
+                className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+              >
                 <Download className="h-5 w-5" />
               </button>
               <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
@@ -426,18 +390,22 @@ export default function OrderManagement() {
               </select>
             </div>
 
-            <div className="relative">
+            <div className="relative flex items-center">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm kiếm theo mã đơn hàng hoặc khách hàng..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(0);
-                }}
-                className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-80 transition-all duration-200"
+                onChange={handleSearchChange}
+                className="pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-80 transition-all duration-200"
               />
+              <button
+                onClick={handleSearchClick}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-900 transition-colors p-1 rounded-lg hover:bg-gray-100"
+                aria-label="Search orders"
+              >
+                <Search className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -545,12 +513,14 @@ export default function OrderManagement() {
                               order.status
                             )}`}
                           >
-                            {getStatusIcon(order.status)}
+                            {OrderStatusIcon(order.status)}
                             <span className="ml-1">
                               {translateStatus(order.status)}
                             </span>
                           </span>
                         </td>
+
+                        
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentColor(
@@ -611,7 +581,7 @@ export default function OrderManagement() {
                         order.status
                       )}`}
                     >
-                      {getStatusIcon(order.status)}
+                      {OrderStatusIcon(order.status)}
                       <span className="ml-1">
                         {translateStatus(order.status)}
                       </span>
@@ -671,121 +641,14 @@ export default function OrderManagement() {
               ))}
             </div>
 
-            {totalElements > itemsPerPage && (
-              <div className="mt-6 flex items-center justify-between px-4 sm:px-6 lg:px-8">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
-                  aria-label="Previous page"
-                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors ${
-                    currentPage === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400"
-                  }`}
-                >
-                  <ChevronLeft className="h-5 w-5 mr-2" />
-                  Trước
-                </button>
-
-                <div className="flex items-center space-x-1">
-                  {totalPages <= 7 ? (
-                    Array.from({ length: totalPages }, (_, i) => i).map(
-                      (page) => (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          aria-label={`Page ${page + 1}`}
-                          aria-current={
-                            currentPage === page ? "page" : undefined
-                          }
-                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                            currentPage === page
-                              ? "bg-blue-600 text-white"
-                              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                          }`}
-                        >
-                          {page + 1}
-                        </button>
-                      )
-                    )
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => handlePageChange(0)}
-                        aria-label="Page 1"
-                        aria-current={currentPage === 0 ? "page" : undefined}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === 0
-                            ? "bg-blue-600 text-white"
-                            : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                        }`}
-                      >
-                        1
-                      </button>
-                      {currentPage > 3 && (
-                        <span className="px-3 py-1 text-gray-500">...</span>
-                      )}
-                      {Array.from(
-                        { length: 5 },
-                        (_, i) => currentPage - 2 + i
-                      ).map((page) => {
-                        if (page > 0 && page < totalPages - 1) {
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => handlePageChange(page)}
-                              aria-label={`Page ${page + 1}`}
-                              aria-current={
-                                currentPage === page ? "page" : undefined
-                              }
-                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                                currentPage === page
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                              }`}
-                            >
-                              {page + 1}
-                            </button>
-                          );
-                        }
-                        return null;
-                      })}
-                      {currentPage < totalPages - 4 && (
-                        <span className="px-3 py-1 text-gray-500">...</span>
-                      )}
-                      <button
-                        onClick={() => handlePageChange(totalPages - 1)}
-                        aria-label={`Page ${totalPages}`}
-                        aria-current={
-                          currentPage === totalPages - 1 ? "page" : undefined
-                        }
-                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === totalPages - 1
-                            ? "bg-blue-600 text-white"
-                            : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                        }`}
-                      >
-                        {totalPages}
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages - 1}
-                  aria-label="Next page"
-                  className={`flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors ${
-                    currentPage === totalPages - 1
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400"
-                  }`}
-                >
-                  Sau
-                  <ChevronRight className="h-5 w-5 ml-2" />
-                </button>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalElements}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(page, newItemsPerPage) => {
+                handlePageChange(page, newItemsPerPage || itemsPerPage);
+              }}
+            />
           </>
         )}
       </div>

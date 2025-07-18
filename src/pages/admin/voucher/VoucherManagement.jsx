@@ -6,20 +6,17 @@ import {
   Edit,
   Trash2,
   Calendar,
-  Clock,
+  Percent,
   Tag,
-  Package,
-  Eye,
   RefreshCw,
   Download,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import {
-  fetchFlashSales,
-  removeFlashSale,
-} from "../../../redux/slices/flashSaleSlice";
-import FlashSaleForm from "./FlashSaleForm";
-import FlashSaleItemManagement from "./FlashSaleItemManagement";
+  fetchAllVouchers,
+  removeVoucher,
+} from "../../../redux/slices/voucherSlice";
+import VoucherForm from "./VoucherForm";
 import Pagination from "../../../components/Pagination";
 
 const debounce = (func, wait) => {
@@ -30,12 +27,11 @@ const debounce = (func, wait) => {
   };
 };
 
-export default function FlashSaleManagement() {
+export default function VoucherManagement() {
   const dispatch = useDispatch();
-  const { flashSales, loading, error } = useSelector((state) => state.flashSale);
-  const [currentView, setCurrentView] = useState("list");
-  const [selectedFlashSale, setSelectedFlashSale] = useState(null);
+  const { allVouchers, loading, error } = useSelector((state) => state.voucher);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -57,34 +53,28 @@ export default function FlashSaleManagement() {
   };
 
   useEffect(() => {
-    dispatch(fetchFlashSales());
+    dispatch(fetchAllVouchers());
   }, [dispatch]);
 
-  const filteredFlashSales = flashSales.filter(
-    (sale) =>
-      (sale.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        sale.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
-      (statusFilter === "" || sale.status === statusFilter)
+  const filteredVouchers = allVouchers.filter(
+    (voucher) =>
+      voucher.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) &&
+      (statusFilter === "" || String(voucher.active) === statusFilter)
   );
 
-  const paginatedFlashSales = filteredFlashSales.slice(
+  const paginatedVouchers = filteredVouchers.slice(
     currentPage * itemsPerPage,
     (currentPage + 1) * itemsPerPage
   );
 
   const openCreateForm = () => {
-    setSelectedFlashSale(null);
+    setSelectedVoucher(null);
     setIsFormModalOpen(true);
   };
 
-  const openEditForm = (flashSale) => {
-    setSelectedFlashSale(flashSale);
+  const openEditForm = (voucher) => {
+    setSelectedVoucher(voucher);
     setIsFormModalOpen(true);
-  };
-
-  const openItemsView = (flashSale) => {
-    setSelectedFlashSale(flashSale);
-    setCurrentView("items");
   };
 
   const handleDelete = (id) => {
@@ -98,17 +88,21 @@ export default function FlashSaleManagement() {
       reverseButtons: true,
     }).then((result) => {
       if (result.isConfirmed) {
-        dispatch(removeFlashSale(id)).then(() => {
-          Swal.fire("Đã xóa!", "Flash Sale đã được xóa.", "success");
+
+        dispatch(removeVoucher({ voucherId: id })).then(() => {
+          Swal.fire("Đã xóa!", "Voucher đã được xóa.", "success");
         });
       } else if (result.dismiss === Swal.DismissReason.cancel) {
-        Swal.fire("Đã hủy", "Flash Sale vẫn còn nguyên.", "info");
+        Swal.fire("Đã hủy", "Voucher vẫn còn nguyên.", "info");
       }
     });
   };
 
   const handleRefresh = () => {
-    dispatch(fetchFlashSales());
+    setSearchTerm("");
+    setStatusFilter("");
+    setCurrentPage(0);
+    dispatch(fetchAllVouchers());
   };
 
   const handlePageChange = (page, newItemsPerPage) => {
@@ -121,31 +115,22 @@ export default function FlashSaleManagement() {
   const formatDateTime = (dateTime) =>
     dateTime ? new Date(dateTime).toLocaleString("vi-VN") : "N/A";
 
-  const getStatusBadge = (status) => {
+  const formatCurrency = (amount) =>
+    amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+
+  const getStatusBadge = (active) => {
     const base = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    return status === "ACTIVE"
+    return active
       ? `${base} bg-green-100 text-green-800`
       : `${base} bg-red-100 text-red-800`;
   };
 
-  const totalFlashSales = filteredFlashSales.length;
-  const activeFlashSales = filteredFlashSales.filter((sale) => sale.status === "ACTIVE").length;
-  const inactiveFlashSales = filteredFlashSales.filter((sale) => sale.status !== "ACTIVE").length;
-  const todayFlashSales = filteredFlashSales.filter((sale) => {
-    if (!sale.startTime) return false;
-    const saleDate = new Date(sale.startTime);
-    const today = new Date();
-    return saleDate.toDateString() === today.toDateString();
-  }).length;
-
-  if (currentView === "items") {
-    return (
-      <FlashSaleItemManagement
-        selectedFlashSale={selectedFlashSale}
-        onBack={() => setCurrentView("list")}
-      />
-    );
-  }
+  const totalVouchers = filteredVouchers.length;
+  const activeVouchers = filteredVouchers.filter((v) => v.active).length;
+  const expiredVouchers = filteredVouchers.filter(
+    (v) => new Date(v.endDate) < new Date()
+  ).length;
+  const collectibleVouchers = filteredVouchers.filter((v) => v.collectible).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -153,9 +138,9 @@ export default function FlashSaleManagement() {
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="mb-4 sm:mb-0">
-              <h1 className="text-3xl font-bold text-gray-900">Quản lý Flash Sale</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Quản lý Voucher</h1>
               <p className="text-sm text-gray-600 mt-1">
-                Theo dõi và quản lý tất cả chương trình Flash Sale
+                Theo dõi và quản lý tất cả voucher khuyến mãi
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -178,7 +163,7 @@ export default function FlashSaleManagement() {
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105"
               >
                 <Plus className="h-5 w-5" />
-                <span className="font-medium">Tạo Flash Sale</span>
+                <span className="font-medium">Tạo Voucher</span>
               </button>
             </div>
           </div>
@@ -193,8 +178,8 @@ export default function FlashSaleManagement() {
                 <Tag className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tổng Flash Sale</p>
-                <p className="text-2xl font-bold text-gray-900">{totalFlashSales}</p>
+                <p className="text-sm font-medium text-gray-600">Tổng Voucher</p>
+                <p className="text-2xl font-bold text-gray-900">{totalVouchers}</p>
               </div>
             </div>
           </div>
@@ -205,7 +190,7 @@ export default function FlashSaleManagement() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Đang hoạt động</p>
-                <p className="text-2xl font-bold text-gray-900">{activeFlashSales}</p>
+                <p className="text-2xl font-bold text-gray-900">{activeVouchers}</p>
               </div>
             </div>
           </div>
@@ -215,19 +200,19 @@ export default function FlashSaleManagement() {
                 <Tag className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tạm dừng</p>
-                <p className="text-2xl font-bold text-gray-900">{inactiveFlashSales}</p>
+                <p className="text-sm font-medium text-gray-600">Hết hạn</p>
+                <p className="text-2xl font-bold text-gray-900">{expiredVouchers}</p>
               </div>
             </div>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-3 bg-purple-100 rounded-lg">
-                <Calendar className="h-6 w-6 text-purple-600" />
+                <Tag className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Hôm nay</p>
-                <p className="text-2xl font-bold text-gray-900">{todayFlashSales}</p>
+                <p className="text-sm font-medium text-gray-600">Có thể thu thập</p>
+                <p className="text-2xl font-bold text-gray-900">{collectibleVouchers}</p>
               </div>
             </div>
           </div>
@@ -246,15 +231,15 @@ export default function FlashSaleManagement() {
                 disabled={loading}
               >
                 <option value="">Tất cả trạng thái</option>
-                <option value="ACTIVE">Kích hoạt</option>
-                <option value="INACTIVE">Tạm dừng</option>
+                <option value="true">Kích hoạt</option>
+                <option value="false">Tạm dừng</option>
               </select>
             </div>
             <div className="relative flex items-center">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Tìm kiếm theo tên hoặc mô tả..."
+                placeholder="Tìm kiếm theo mã voucher..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-80 transition-all duration-200"
@@ -284,19 +269,19 @@ export default function FlashSaleManagement() {
                 clipRule="evenodd"
               />
             </svg>
-            {error}
+            {error.message || "Có lỗi xảy ra"}
           </div>
         )}
 
-        {!loading && !error && paginatedFlashSales.length === 0 && (
+        {!loading && !error && paginatedVouchers.length === 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
             <p className="text-sm text-gray-600">
-              Không tìm thấy Flash Sale nào.
+              Không tìm thấy voucher nào.
             </p>
           </div>
         )}
 
-        {!loading && !error && paginatedFlashSales.length > 0 && (
+        {!loading && !error && paginatedVouchers.length > 0 && (
           <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden lg:block">
               <div className="overflow-x-auto">
@@ -304,19 +289,25 @@ export default function FlashSaleManagement() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Tên Flash Sale
+                        Mã Voucher
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Giảm giá
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Thời gian
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Số lượng
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Tối thiểu đơn hàng
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Có thể thu thập
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Trạng thái
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Sản phẩm
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Ngày tạo
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Thao tác
@@ -324,72 +315,71 @@ export default function FlashSaleManagement() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedFlashSales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                    {paginatedVouchers.map((voucher) => (
+                      <tr key={voucher.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <Tag className="h-5 w-5 text-orange-500 mr-2" />
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {sale.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {sale.description}
-                              </div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {voucher.code}
                             </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {voucher.discountPercent}% (Tối đa {formatCurrency(voucher.maxDiscount)})
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
                             <div className="flex items-center">
                               <Calendar size={16} className="mr-1" />
-                              {formatDateTime(sale.startTime)}
+                              {formatDateTime(voucher.startDate)}
                             </div>
                             <div className="flex items-center mt-1">
-                              <Clock size={16} className="mr-1" />
-                              {formatDateTime(sale.endTime)}
+                              <Calendar size={16} className="mr-1" />
+                              {formatDateTime(voucher.endDate)}
                             </div>
                           </div>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {voucher.quantity}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatCurrency(voucher.minOrderAmount)}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={getStatusBadge(sale.status)}>
-                            <span
-                              className={`w-2 h-2 rounded-full mr-1 ${
-                                sale.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"
-                              }`}
-                            ></span>
-                            {sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              voucher.collectible
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {voucher.collectible ? "Có" : "Không"}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <Package size={16} className="mr-1" />
-                            <span className="text-sm text-gray-900">
-                              {(sale.items?.length || 0)} sản phẩm
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDateTime(sale.createdAt)}
+                          <span className={getStatusBadge(voucher.active)}>
+                            <span
+                              className={`w-2 h-2 rounded-full mr-1 ${
+                                voucher.active ? "bg-green-500" : "bg-red-500"
+                              }`}
+                            ></span>
+                            {voucher.active ? "Kích hoạt" : "Tạm dừng"}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
                             <button
-                              onClick={() => openItemsView(sale)}
-                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                              title="Xem sản phẩm"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={() => openEditForm(sale)}
+                              onClick={() => openEditForm(voucher)}
                               className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors"
                               title="Chỉnh sửa"
                             >
                               <Edit size={16} />
                             </button>
                             <button
-                              onClick={() => handleDelete(sale.id)}
+                              onClick={() => handleDelete(voucher)}
                               className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
                               title="Xóa"
                             >
@@ -405,9 +395,9 @@ export default function FlashSaleManagement() {
             </div>
 
             <div className="lg:hidden space-y-4">
-              {paginatedFlashSales.map((sale) => (
+              {paginatedVouchers.map((voucher) => (
                 <div
-                  key={sale.id}
+                  key={voucher.id}
                   className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
                 >
                   <div className="flex items-start justify-between mb-4">
@@ -415,54 +405,55 @@ export default function FlashSaleManagement() {
                       <Tag className="h-5 w-5 text-orange-500 mr-2" />
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {sale.name}
+                          {voucher.code}
                         </h3>
-                        <p className="text-sm text-gray-500">{sale.description}</p>
                       </div>
                     </div>
-                    <span className={getStatusBadge(sale.status)}>
+                    <span className={getStatusBadge(voucher.active)}>
                       <span
                         className={`w-2 h-2 rounded-full mr-1 ${
-                          sale.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"
+                          voucher.active ? "bg-green-500" : "bg-red-500"
                         }`}
                       ></span>
-                      {sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"}
+                      {voucher.active ? "Kích hoạt" : "Tạm dừng"}
                     </span>
                   </div>
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center text-sm text-gray-600">
-                      <Calendar size={16} className="mr-2" />
-                      Bắt đầu: {formatDateTime(sale.startTime)}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock size={16} className="mr-2" />
-                      Kết thúc: {formatDateTime(sale.endTime)}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Package size={16} className="mr-2" />
-                      {(sale.items?.length || 0)} sản phẩm
+                      <Percent size={16} className="mr-2" />
+                      {voucher.discountPercent}% (Tối đa {formatCurrency(voucher.maxDiscount)})
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar size={16} className="mr-2" />
-                      Ngày tạo: {formatDateTime(sale.createdAt)}
+                      Bắt đầu: {formatDateTime(voucher.startDate)}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Calendar size={16} className="mr-2" />
+                      Kết thúc: {formatDateTime(voucher.endDate)}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Tag size={16} className="mr-2" />
+                      Số lượng: {voucher.quantity}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Tag size={16} className="mr-2" />
+                      Tối thiểu đơn: {formatCurrency(voucher.minOrderAmount)}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Tag size={16} className="mr-2" />
+                      Có thể thu thập: {voucher.collectible ? "Có" : "Không"}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 pt-4 border-t border-gray-200">
                     <button
-                      onClick={() => openItemsView(sale)}
-                      className="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                      onClick={() => openEditForm(voucher)}
+                      className="flex-1 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-medium"
                     >
-                      <Eye className="h-4 w-4 inline mr-2" />
-                      Xem sản phẩm
+                      <Edit className="h-4 w-4 inline mr-2" />
+                      Chỉnh sửa
                     </button>
                     <button
-                      onClick={() => openEditForm(sale)}
-                      className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(sale.id)}
+                      onClick={() => handleDelete(voucher.id)}
                       className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -474,7 +465,7 @@ export default function FlashSaleManagement() {
 
             <Pagination
               currentPage={currentPage}
-              totalItems={filteredFlashSales.length}
+              totalItems={filteredVouchers.length}
               itemsPerPage={itemsPerPage}
               onPageChange={(page, newItemsPerPage) => {
                 handlePageChange(page, newItemsPerPage || itemsPerPage);
@@ -483,10 +474,10 @@ export default function FlashSaleManagement() {
           </>
         )}
 
-        <FlashSaleForm
+        <VoucherForm
           isOpen={isFormModalOpen}
           onClose={() => setIsFormModalOpen(false)}
-          flashSale={selectedFlashSale}
+          voucher={selectedVoucher}
         />
       </div>
     </div>

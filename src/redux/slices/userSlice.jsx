@@ -5,6 +5,7 @@ import {
   changeUserRole,
   deleteUserRole,
   changeUserStatus,
+  getAllUsersPaginateAndFilter,
 } from "../../services/userService";
 
 
@@ -71,6 +72,18 @@ export const updateUserStatus = createAsyncThunk(
       return { userId, status: data.status };
     } catch (error) {
       return rejectWithValue(error.message || "Failed to change user status");
+    }
+  }
+);
+
+export const fetchUsersPaginateAndFilter = createAsyncThunk(
+  "users/fetchUsersPaginateAndFilter",
+  async (params, { rejectWithValue }) => {
+    try {
+      const data = await getAllUsersPaginateAndFilter(params);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error || "Failed to fetch paginated users");
     }
   }
 );
@@ -164,6 +177,20 @@ const userSlice = createSlice({
         );
       })
       .addCase(updateUserStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+       // Fetch users with pagination and filter
+      .addCase(fetchUsersPaginateAndFilter.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchUsersPaginateAndFilter.fulfilled, (state, action) => {
+        state.loading = false;
+        state.users = action.payload.data; 
+      })
+      .addCase(fetchUsersPaginateAndFilter.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

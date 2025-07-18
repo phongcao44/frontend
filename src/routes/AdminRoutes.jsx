@@ -11,9 +11,9 @@ import ReturnRequestList from "../pages/admin/return/ReturnRequestList";
 import ReturnRequestDetail from "../pages/admin/return/ReturnRequestDetail";
 
 // Products
-import ProductManagement from "../pages/admin/ProductManagement";
-import ProductForm from "../components/product/ProductForm";
-import ProductVariantDetail from "../components/product/ProductVariantDetail";
+import ProductManagement from "../pages/admin/product/ProductManagement";
+import ProductForm from "../pages/admin/product/ProductForm";
+import ProductVariantDetail from  "../pages/admin/product/ProductVariantDetail";
 import StockManagement from "../pages/admin/StockManagement";
 
 // Orders
@@ -25,11 +25,10 @@ import CategoryManagement from "../pages/admin/CategoryManagement";
 
 // Users
 import UserManagement from "../pages/admin/UserManagement";
-import UserDetail from "../pages/admin/UserDetail";
+import UserDetail from "../pages/admin/User/UserDetail";
 
 // Banners
-import BannerManagement from "../pages/admin/BannerManagement";
-import BannerForm from "../pages/admin/BannerForm";
+import BannerManagement from "../pages/admin/banner/BannerManagement";
 
 // Reviews & Support
 import ReviewManagement from "../pages/admin/ReviewManagement";
@@ -38,7 +37,7 @@ import Support from "../pages/admin/Support";
 import FlashSaleManagement from "../pages/admin/flash_Sale/FlashSaleManagement";
 import FlashSaleItemManagement from "../pages/admin/flash_Sale/FlashSaleItemManagement";
 
-import VoucherManagement from "../pages/admin/VoucherManagement";
+import VoucherManagement from "../pages/admin/voucher/VoucherManagement";
 import PostManagement from "../pages/admin/posts/PostManagement";
 
 export default function AdminRoutes() {
@@ -80,8 +79,6 @@ export default function AdminRoutes() {
 
       {/* Banners */}
       <Route path="/admin/banner" element={<BannerManagement />} />
-      <Route path="/admin/banner/add" element={<BannerForm />} />
-      <Route path="/admin/banner/edit/:id" element={<BannerForm />} />
 
       {/* Flash Sale */}
       <Route path="/admin/flash-sale" element={<FlashSaleManagement />} />

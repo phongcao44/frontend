@@ -17,6 +17,7 @@ import productImageReducer from "./slices/productImageSlice";
 import reviewReducer from "./slices/reviewSlice";
 import returnRequestReducer from "./slices/returnRequestSlice";
 import returnPolicyReducer from "./slices/returnPolicySlice";
+import voucherReducer from "./slices/voucherSlice";
 
 export const store = configureStore({
   reducer: {
@@ -38,5 +39,6 @@ export const store = configureStore({
     review: reviewReducer,
     returnRequest: returnRequestReducer,
     returnPolicy: returnPolicyReducer,
+    voucher: voucherReducer,
   },
 });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../../redux/slices/authSlice";
 import { Link, useNavigate } from "react-router-dom";
-import Cookies from "js-cookie";
+
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -67,28 +67,6 @@ const Login = () => {
 
     try {
       const res = await dispatch(loginUser(formData)).unwrap();
-      const userInfo = {
-        id: res.data?.user?.id || "",
-        username: res.data?.user?.username || "",
-        email: res.data?.user?.email || "",
-        status: res.data?.user?.status || "",
-        createdAt: res.data?.user?.createdAt || "",
-        updatedAt: res.data?.user?.updatedAt || "",
-        userPoint: res.data?.user?.userPoint || 0,
-        roles: res.data?.roles || [],
-      };
-
-      Cookies.set("access_token", res.data?.accessToken || "", {
-        sameSite: "Strict",
-        secure: true,
-        path: "/",
-      });
-
-      Cookies.set("user", JSON.stringify(userInfo), {
-        sameSite: "Strict",
-        secure: true,
-        path: "/",
-      });
 
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");

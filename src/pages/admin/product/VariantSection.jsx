@@ -13,8 +13,8 @@ import {
 } from "antd";
 import { DeleteOutlined, DownOutlined, PlusOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
-import { loadColors, createColor } from "../../redux/slices/colorSlice";
-import { loadSizes, createSize } from "../../redux/slices/sizeSlice";
+import { loadColors, createColor } from "../../../redux/slices/colorSlice";
+import { loadSizes, createSize } from "../../../redux/slices/sizeSlice";
 import VariantPreview from "./VariantPreview";
 
 const { Option } = Select;
