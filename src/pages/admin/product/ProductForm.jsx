@@ -28,12 +28,21 @@ import {
   addProductVariant,
   removeProductVariant,
 } from "../../../redux/slices/productVariantSlice";
+import {
+  addProductSpecification,
+  getProductSpecificationById,
+  removeProductSpecification,
+} from "../../../redux/slices/productSpecificationSlice";
+
 import { getReturnPolicyById } from "../../../redux/slices/returnPolicySlice";
 import VariantSection from "./VariantSection";
 import CategorySelector from "./CategorySelector";
 import VariantEditor from "./VariantEditor";
 import ReturnPolicyEditor from "./ReturnPolicyEditor";
 import ReturnPolicySection from "./ReturnPolicySection";
+import ProductSpecificationSection from "./ProductSpecificationSection";
+import ProductSpecificationEditor from "./ProductSpecificationEditor";
+
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -46,6 +55,7 @@ const ProductForm = () => {
   const [formData, setFormData] = useState({
     variants: [],
     returnPolicy: null,
+    specifications: [],
   });
 
   const dispatch = useDispatch();
@@ -59,10 +69,14 @@ const ProductForm = () => {
   const errorPolicy = useSelector((state) => state.returnPolicy.error);
 
   console.log(product);
+  const { current: specificationData } = useSelector((state) => state.productSpecification);
+
+  console.log(fileList);
 
   useEffect(() => {
     if (productId) {
       dispatch(loadProductDetail(productId));
+      dispatch(getProductSpecificationById(productId));
     }
   }, [dispatch, productId]);
 
@@ -72,6 +86,19 @@ const ProductForm = () => {
       dispatch(getReturnPolicyById(product.returnPolicy.id));
     }
   }, [dispatch, productId, product]);
+
+  useEffect(() => {
+    if (specificationData && Array.isArray(specificationData)) {
+      setFormData((prev) => ({
+        ...prev,
+        specifications: specificationData.map((spec) => ({
+          id: spec.id,
+          key: spec.specKey,
+          value: spec.specValue,
+        })),
+      }));
+    }
+  }, [specificationData]);
 
   useEffect(() => {
     if (product && productId) {
@@ -130,6 +157,10 @@ const ProductForm = () => {
     });
   }, []);
 
+  const handleSpecificationChange = (newSpecs) => {
+    setFormData((prev) => ({ ...prev, specifications: newSpecs }));
+  };
+
   const handleSubmit = async (values) => {
     if (!formData.variants || formData.variants.length === 0) {
       message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
@@ -138,6 +169,10 @@ const ProductForm = () => {
     if (!formData.returnPolicy?.id) {
       message.error("Vui lòng chọn một chính sách đổi trả");
       return;
+    }
+    if (!formData.specifications || formData.specifications.length === 0) {
+      message.error("Vui lòng chọn một thông số kỹ thuật");
+      return
     }
 
     const productData = {
@@ -166,11 +201,25 @@ const ProductForm = () => {
         await dispatch(addProductVariant(productVariant)).unwrap();
       }
 
-      message.success("Thêm sản phẩm thành công");
-      navigate(`/admin/products/${newProductId}`);
+      // 2. Chuẩn hoá specifications
+      const normalizedSpecs = formData.specifications
+        .map((spec) => ({
+          productId: newProductId,
+          specKey: spec.key || spec.name,
+          specValue: spec.value,
+        }))
+        .filter((spec) => spec.specKey && spec.specValue); // bỏ thông số rỗng
+
+      // 3. Gửi từng specification lên backend
+      for (const spec of normalizedSpecs) {
+        await dispatch(addProductSpecification(spec)).unwrap();
+      }
+
+      message.success("Thêm sản phẩm thành công!");
+      navigate("/admin/products");
     } catch (err) {
-      console.error(err);
-      message.error("Thêm sản phẩm thất bại");
+      console.error("Lỗi khi thêm sản phẩm:", err);
+      message.error("Thêm sản phẩm thất bại!");
     }
   };
 
@@ -184,6 +233,10 @@ const ProductForm = () => {
       message.error("Vui lòng chọn một chính sách đổi trả");
       return;
     }
+    // if (!formData.specifications || formData.specifications.length == 0) {
+    //   message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
+    //   return;
+    // }
 
     const updatedProduct = {
       name: values.productName,
@@ -208,21 +261,33 @@ const ProductForm = () => {
   };
 
   const handleDelete = async () => {
-    try {
-      const variants = Array.isArray(product?.variants) ? product.variants : [];
-      if (variants.length > 0) {
-        for (const variant of variants) {
-          await dispatch(removeProductVariant(variant.id)).unwrap();
-        }
+  try {
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+
+    // Xoá tất cả biến thể sản phẩm
+    if (variants.length > 0) {
+      for (const variant of variants) {
+        await dispatch(removeProductVariant(variant.id)).unwrap();
       }
-      await dispatch(removeProduct(productId)).unwrap();
-      message.success("Xóa sản phẩm thành công");
-      navigate("/admin/products");
-    } catch (err) {
-      console.error(err);
-      message.error("Xóa sản phẩm thất bại");
     }
-  };
+
+    // Xoá tất cả thông số kỹ thuật (ProductSpecification)
+    if (Array.isArray(specificationData) && specificationData.length > 0) {
+      for (const spec of specificationData) {
+        await dispatch(removeProductSpecification(spec.id)).unwrap();
+      }
+    }
+
+    // Xoá sản phẩm
+    await dispatch(removeProduct(productId)).unwrap();
+    message.success("Xóa sản phẩm thành công");
+    navigate("/admin/products");
+  } catch (err) {
+    console.error(err);
+    message.error("Xóa sản phẩm thất bại");
+  }
+};
+
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
@@ -346,6 +411,22 @@ const ProductForm = () => {
           <VariantEditor
             variants={Array.isArray(product.variants) ? product.variants : []}
             productId={productId}
+          />
+        )}
+
+        {!productId && (
+          <ProductSpecificationSection
+            onChange={handleSpecificationChange}
+            defaultSpecs={formData.specifications}
+          />
+        )}
+
+        {productId && product && !loadingProduct && (
+          <ProductSpecificationEditor
+            specifications={formData.specifications}
+            onChange={(updated) =>
+              setFormData((prev) => ({ ...prev, specifications: updated }))
+            }
           />
         )}
 

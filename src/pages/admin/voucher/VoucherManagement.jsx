@@ -46,6 +46,8 @@ export default function VoucherManagement() {
     []
   );
 
+  console.log("All Vouchers:", allVouchers);  
+
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
