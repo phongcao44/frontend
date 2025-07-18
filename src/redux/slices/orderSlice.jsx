@@ -4,6 +4,7 @@ import {
   fetchOrderDetail,
   updateOrderStatus,
   deleteOrder,
+  fetchPaginatedOrders,
 } from "../../services/orderService";
 
 export const loadOrders = createAsyncThunk(
@@ -54,10 +55,43 @@ export const removeOrder = createAsyncThunk(
   }
 );
 
+export const loadPaginatedOrders = createAsyncThunk(
+  "order/loadPaginatedOrders",
+  async (
+    {
+      page = 0,
+      limit = 10,
+      sortBy = "createdAt",
+      orderBy = "desc",
+      status = "",
+      keyword = "",
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const data = await fetchPaginatedOrders({
+        page,
+        limit,
+        sortBy,
+        orderBy,
+        status,
+        keyword,
+      });
+      return data;
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: "order",
   initialState: {
-    list: [],
+    list: {
+      content: [],
+      totalElements: 0,
+      totalPages: 1,
+    },
     currentOrder: null,
     loading: false,
     error: null,
@@ -69,14 +103,17 @@ const orderSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-
       .addCase(loadOrders.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(loadOrders.fulfilled, (state, action) => {
         state.loading = false;
-        state.list = action.payload;
+        state.list = {
+          content: action.payload,
+          totalElements: action.payload.length,
+          totalPages: 1,
+        };
       })
       .addCase(loadOrders.rejected, (state, action) => {
         state.loading = false;
@@ -104,11 +141,9 @@ const orderSlice = createSlice({
       .addCase(editOrderStatus.fulfilled, (state, action) => {
         state.loading = false;
         const updated = action.payload;
-
-        state.list = state.list.map((order) =>
+        state.list.content = state.list.content.map((order) =>
           order.orderId === updated.id ? { ...order, ...updated } : order
         );
-
         if (state.currentOrder?.orderId === updated.id) {
           state.currentOrder = { ...state.currentOrder, ...updated };
         }
@@ -118,7 +153,6 @@ const orderSlice = createSlice({
         state.error = action.payload;
       })
 
-      // REMOVE ORDER
       .addCase(removeOrder.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -126,9 +160,27 @@ const orderSlice = createSlice({
       .addCase(removeOrder.fulfilled, (state, action) => {
         state.loading = false;
         const id = action.payload;
-        state.list = state.list.filter((o) => o.orderId !== id);
+        state.list.content = state.list.content.filter((o) => o.orderId !== id);
+        state.list.totalElements -= 1;
       })
       .addCase(removeOrder.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(loadPaginatedOrders.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadPaginatedOrders.fulfilled, (state, action) => {
+        state.loading = false;
+        state.list = {
+          content: action.payload.content || [],
+          totalElements: action.payload.totalElements || 0,
+          totalPages: action.payload.totalPages || 1,
+        };
+      })
+      .addCase(loadPaginatedOrders.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 export default function EditProfileForm() {
   const [formData, setFormData] = useState({
@@ -99,7 +99,9 @@ export default function EditProfileForm() {
               type="password"
               placeholder="Current Password"
               value={formData.currentPassword}
-              onChange={(e) => handleInputChange("currentPassword", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("currentPassword", e.target.value)
+              }
               className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-500"
             />
             <input
@@ -113,7 +115,9 @@ export default function EditProfileForm() {
               type="password"
               placeholder="Confirm New Password"
               value={formData.confirmPassword}
-              onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("confirmPassword", e.target.value)
+              }
               className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-500"
             />
           </div>

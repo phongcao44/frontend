@@ -9,6 +9,7 @@ import {
 } from "../../../redux/slices/addressSlice";
 import AddressSelect from "./AddressSelect";
 import Swal from "sweetalert2";
+import { MapPin, Edit, Trash2 } from "lucide-react";
 
 const AddressSection = ({ formData, setFormData, setError }) => {
   const dispatch = useDispatch();
@@ -29,11 +30,28 @@ const AddressSection = ({ formData, setFormData, setError }) => {
   useEffect(() => {
     dispatch(getAddresses())
       .unwrap()
+      .then((fetchedAddresses) => {
+        if (fetchedAddresses && fetchedAddresses.length > 0) {
+          const firstAddress = fetchedAddresses[0];
+          setSelectedAddressId(firstAddress.addressId.toString());
+          setUseSavedAddress(true);
+          setFormData({
+            addressId: firstAddress.addressId.toString(),
+            recipientName: firstAddress.recipientName || "",
+            phone: firstAddress.phone || "",
+            fullAddress: firstAddress.fullAddress || "",
+            province: firstAddress.provinceName || "",
+            district: firstAddress.districtName || "",
+            ward: firstAddress.wardName || "",
+            useSavedAddress: true,
+          });
+        }
+      })
       .catch((err) => {
         console.error("Failed to fetch addresses:", err);
         setError("Unable to load addresses. Please try again.");
       });
-  }, [dispatch, setError]);
+  }, [dispatch, setError, setFormData]);
 
   useEffect(() => {
     if (reduxError) {
@@ -52,10 +70,9 @@ const AddressSection = ({ formData, setFormData, setError }) => {
           recipientName: selectedAddress.recipientName || "",
           phone: selectedAddress.phone || "",
           fullAddress: selectedAddress.fullAddress || "",
-          provinceName: selectedAddress.provinceName || "",
-          districtName: selectedAddress.districtName || "",
-          wardName: selectedAddress.wardName || "",
-          saveInfo: false,
+          province: selectedAddress.provinceName || "",
+          district: selectedAddress.districtName || "",
+          ward: selectedAddress.wardName || "",
           useSavedAddress: true,
         });
       } else {
@@ -72,6 +89,7 @@ const AddressSection = ({ formData, setFormData, setError }) => {
 
   const handleAddAddress = async (payload) => {
     try {
+      console.log(payload);
       const result = await dispatch(createAddress(payload)).unwrap();
       await dispatch(getAddresses());
       await Swal.fire({
@@ -99,7 +117,7 @@ const AddressSection = ({ formData, setFormData, setError }) => {
 
     if (result.isConfirmed) {
       try {
-        await dispatch(editAddress({ id, ...payload })).unwrap();
+        await dispatch(editAddress({ id, payload })).unwrap();
         await dispatch(getAddresses());
         Swal.fire("Đã lưu!", "", "success");
         setIsEditingAddress(false);
@@ -112,10 +130,9 @@ const AddressSection = ({ formData, setFormData, setError }) => {
           recipientName: payload.recipientName,
           phone: payload.phone,
           fullAddress: payload.fullAddress,
-          provinceName: payload.province,
-          districtName: payload.district,
-          wardName: payload.ward,
-          saveInfo: false,
+          province: payload.province,
+          district: payload.district,
+          ward: payload.ward,
           useSavedAddress: true,
         });
       } catch (err) {
@@ -154,10 +171,10 @@ const AddressSection = ({ formData, setFormData, setError }) => {
 
   const handleInputChange = (e) => {
     try {
-      const { name, value, type, checked } = e.target;
+      const { name, value } = e.target;
       setFormData((prev) => ({
         ...prev,
-        [name]: type === "checkbox" ? checked : value,
+        [name]: value,
       }));
     } catch (err) {
       console.error("Error in input change:", err);
@@ -174,10 +191,9 @@ const AddressSection = ({ formData, setFormData, setError }) => {
         recipientName: address.recipientName || "",
         phone: address.phone || "",
         fullAddress: address.fullAddress || "",
-        provinceName: address.provinceName || "",
-        districtName: address.districtName || "",
-        wardName: address.wardName || "",
-        saveInfo: false,
+        province: address.provinceName || "",
+        district: address.districtName || "",
+        ward: address.wardName || "",
         useSavedAddress: true,
       });
       setShowAddressModal(false);
@@ -198,10 +214,9 @@ const AddressSection = ({ formData, setFormData, setError }) => {
         recipientName: "",
         phone: "",
         fullAddress: "",
-        provinceName: "",
-        districtName: "",
-        wardName: "",
-        saveInfo: false,
+        province: "",
+        district: "",
+        ward: "",
         useSavedAddress: false,
       });
       setIsEditingAddress(false);
@@ -222,10 +237,9 @@ const AddressSection = ({ formData, setFormData, setError }) => {
         recipientName: "",
         phone: "",
         fullAddress: "",
-        provinceName: "",
-        districtName: "",
-        wardName: "",
-        saveInfo: false,
+        province: "",
+        district: "",
+        ward: "",
         useSavedAddress: false,
       });
       setIsAddingNewAddress(true);
@@ -248,10 +262,9 @@ const AddressSection = ({ formData, setFormData, setError }) => {
         recipientName: address.recipientName || "",
         phone: address.phone || "",
         fullAddress: address.fullAddress || "",
-        provinceName: address.provinceName || "",
-        districtName: address.districtName || "",
-        wardName: address.wardName || "",
-        saveInfo: false,
+        province: address.provinceName || "",
+        district: address.districtName || "",
+        ward: address.wardName || "",
         useSavedAddress: false,
       });
       setShowAddressModal(true);
@@ -268,7 +281,6 @@ const AddressSection = ({ formData, setFormData, setError }) => {
       setUseSavedAddress(false);
       setFormData((prev) => ({
         ...prev,
-        saveInfo: false,
         useSavedAddress: false,
       }));
     } catch (err) {
@@ -283,38 +295,37 @@ const AddressSection = ({ formData, setFormData, setError }) => {
         !formData.recipientName ||
         !formData.phone ||
         !formData.fullAddress ||
-        !formData.provinceName ||
-        !formData.districtName ||
-        !formData.wardName
+        !formData.province ||
+        !formData.district ||
+        !formData.ward
       ) {
         setError("Please fill in all required address fields.");
         return;
       }
 
-      const addressPayload = {
+      const payload = {
         recipientName: formData.recipientName,
         phone: formData.phone,
         fullAddress: formData.fullAddress,
-        province: formData.provinceName,
-        district: formData.districtName,
-        ward: formData.wardName,
+        province: formData.province,
+        district: formData.district,
+        ward: formData.ward,
       };
 
       if (isEditingAddress) {
-        await handleEditAddress(editingAddressId, addressPayload);
+        await handleEditAddress(editingAddressId, payload);
       } else {
-        const result = await handleAddAddress(addressPayload);
+        const result = await handleAddAddress(payload);
         setUseSavedAddress(true);
         setSelectedAddressId(result?.addressId?.toString());
         setFormData({
           addressId: result?.addressId?.toString(),
-          recipientName: addressPayload.recipientName,
-          phone: addressPayload.phone,
-          fullAddress: addressPayload.fullAddress,
-          provinceName: addressPayload.province,
-          districtName: addressPayload.district,
-          wardName: addressPayload.ward,
-          saveInfo: false,
+          recipientName: payload.recipientName,
+          phone: payload.phone,
+          fullAddress: payload.fullAddress,
+          province: payload.province,
+          district: payload.district,
+          ward: payload.ward,
           useSavedAddress: true,
         });
         setShowAddressModal(false);
@@ -351,7 +362,21 @@ const AddressSection = ({ formData, setFormData, setError }) => {
         </label>
         <div className="mb-4">
           {selectedAddress ? (
-            <div className="border border-gray-300 rounded-md p-3 w-full">
+            <div className="border border-gray-300 rounded-md p-3 w-full relative">
+              <div className="absolute top-3 right-3 flex gap-2">
+                <button
+                  onClick={() => setShowAddressModal(true)}
+                  className="text-gray-400 hover:text-orange-600 p-1"
+                >
+                  <MapPin className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={handleStartEditMainForm}
+                  className="text-gray-400 hover:text-blue-600 p-1"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">
                   {selectedAddress.recipientName || "N/A"}
@@ -374,26 +399,6 @@ const AddressSection = ({ formData, setFormData, setError }) => {
                 {selectedAddress.districtName || "N/A"},{" "}
                 {selectedAddress.provinceName || "N/A"}
               </p>
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => setShowAddressModal(true)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 text-sm font-medium"
-                >
-                  Change
-                </button>
-                <button
-                  onClick={handleClearSelection}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200 text-sm font-medium"
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={handleStartEditMainForm}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
-                >
-                  Edit
-                </button>
-              </div>
             </div>
           ) : (
             <div className="border-2 border-dashed border-gray-300 rounded-md p-3 w-full text-center">
@@ -442,16 +447,16 @@ const AddressSection = ({ formData, setFormData, setError }) => {
 
       <AddressSelect
         value={{
-          provinceName: formData.provinceName,
-          districtName: formData.districtName,
-          wardName: formData.wardName,
+          provinceName: formData.province,
+          districtName: formData.district,
+          wardName: formData.ward,
         }}
         onChange={(address) =>
           setFormData((prev) => ({
             ...prev,
-            provinceName: address.provinceName,
-            districtName: address.districtName,
-            wardName: address.wardName,
+            province: address.provinceName,
+            district: address.districtName,
+            ward: address.wardName,
           }))
         }
         disabled={useSavedAddress && !isEditingAddress && !isAddingNewAddress}
@@ -471,67 +476,49 @@ const AddressSection = ({ formData, setFormData, setError }) => {
         />
       </div>
 
-      <div className="flex items-center">
-        <input
-          type="checkbox"
-          name="saveInfo"
-          checked={formData.saveInfo || false}
-          onChange={handleInputChange}
-          className="h-4 w-4 border-gray-300 rounded"
-          disabled={useSavedAddress && !isEditingAddress && !isAddingNewAddress}
-        />
-        <label className="ml-2 block text-sm text-gray-700">
-          Save this information for faster check-out next time
-        </label>
-      </div>
-
-      {(!useSavedAddress || isEditingAddress || isAddingNewAddress) &&
-        formData.saveInfo && (
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={handleSaveAddress}
-              className="flex-1 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
-              disabled={
-                !formData.recipientName ||
-                !formData.phone ||
-                !formData.fullAddress ||
-                !formData.provinceName ||
-                !formData.districtName ||
-                !formData.wardName
+      {(isEditingAddress || isAddingNewAddress) && (
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={handleSaveAddress}
+            className="flex-1 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
+            disabled={
+              !formData.recipientName ||
+              !formData.phone ||
+              !formData.fullAddress ||
+              !formData.province ||
+              !formData.district ||
+              !formData.ward
+            }
+          >
+            {isEditingAddress ? "Update Address" : "Save Address"}
+          </button>
+          <button
+            onClick={() => {
+              setIsEditingAddress(false);
+              setIsAddingNewAddress(false);
+              setEditingAddressId(null);
+              if (selectedAddress) {
+                setUseSavedAddress(true);
+                setFormData({
+                  addressId: selectedAddress.addressId.toString(),
+                  recipientName: selectedAddress.recipientName || "",
+                  phone: selectedAddress.phone || "",
+                  fullAddress: selectedAddress.fullAddress || "",
+                  province: selectedAddress.provinceName || "",
+                  district: selectedAddress.districtName || "",
+                  ward: selectedAddress.wardName || "",
+                  useSavedAddress: true,
+                });
+              } else {
+                handleClearSelection();
               }
-            >
-              {isEditingAddress ? "Update Address" : "Save Address"}
-            </button>
-            {(isEditingAddress || isAddingNewAddress) && (
-              <button
-                onClick={() => {
-                  setIsEditingAddress(false);
-                  setIsAddingNewAddress(false);
-                  setEditingAddressId(null);
-                  if (selectedAddress) {
-                    setUseSavedAddress(true);
-                    setFormData({
-                      addressId: selectedAddress.addressId.toString(),
-                      recipientName: selectedAddress.recipientName || "",
-                      phone: selectedAddress.phone || "",
-                      fullAddress: selectedAddress.fullAddress || "",
-                      provinceName: selectedAddress.provinceName || "",
-                      districtName: selectedAddress.districtName || "",
-                      wardName: selectedAddress.wardName || "",
-                      saveInfo: false,
-                      useSavedAddress: true,
-                    });
-                  } else {
-                    handleClearSelection();
-                  }
-                }}
-                className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        )}
+            }}
+            className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Address Selection Modal */}
       {showAddressModal && (
@@ -559,10 +546,9 @@ const AddressSection = ({ formData, setFormData, setError }) => {
                         recipientName: selectedAddress.recipientName || "",
                         phone: selectedAddress.phone || "",
                         fullAddress: selectedAddress.fullAddress || "",
-                        provinceName: selectedAddress.provinceName || "",
-                        districtName: selectedAddress.districtName || "",
-                        wardName: selectedAddress.wardName || "",
-                        saveInfo: false,
+                        province: selectedAddress.provinceName || "",
+                        district: selectedAddress.districtName || "",
+                        ward: selectedAddress.wardName || "",
                         useSavedAddress: true,
                       });
                     } else {
@@ -593,13 +579,43 @@ const AddressSection = ({ formData, setFormData, setError }) => {
                     addresses.map((address, index) => (
                       <div
                         key={address.addressId || index}
-                        className={`p-4 border rounded-md transition-all ${
+                        className={`border rounded-md p-3 relative transition-all ${
                           selectedAddressId === address.addressId.toString()
                             ? "border-red-600 bg-red-50"
                             : "border-gray-300 hover:border-red-300"
                         }`}
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="absolute top-3 right-3 flex gap-2">
+                          <button
+                            onClick={() => handleStartEditAddress(address)}
+                            className="text-gray-400 hover:text-blue-600 p-1"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDeleteAddress(address.addressId)
+                            }
+                            className="text-gray-400 hover:text-red-600 p-1"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          {selectedAddressId ===
+                            address.addressId.toString() && (
+                            <svg
+                              className="w-5 h-5 text-red-600 mt-1"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
                           <div
                             className="flex-1 cursor-pointer"
                             onClick={() =>
@@ -629,36 +645,6 @@ const AddressSection = ({ formData, setFormData, setError }) => {
                               {address.provinceName || "N/A"}
                             </p>
                           </div>
-                          <div className="flex gap-2 ml-4">
-                            <button
-                              onClick={() => handleStartEditAddress(address)}
-                              className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleDeleteAddress(address.addressId)
-                              }
-                              className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 text-sm font-medium"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                          {selectedAddressId ===
-                            address.addressId.toString() && (
-                            <svg
-                              className="w-5 h-5 text-red-600 mt-1"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          )}
                         </div>
                       </div>
                     ))
@@ -718,16 +704,16 @@ const AddressSection = ({ formData, setFormData, setError }) => {
 
                   <AddressSelect
                     value={{
-                      provinceName: formData.provinceName,
-                      districtName: formData.districtName,
-                      wardName: formData.wardName,
+                      provinceName: formData.province,
+                      districtName: formData.district,
+                      wardName: formData.ward,
                     }}
                     onChange={(address) =>
                       setFormData((prev) => ({
                         ...prev,
-                        provinceName: address.provinceName,
-                        districtName: address.districtName,
-                        wardName: address.wardName,
+                        province: address.provinceName,
+                        district: address.districtName,
+                        ward: address.wardName,
                       }))
                     }
                   />
@@ -744,64 +730,48 @@ const AddressSection = ({ formData, setFormData, setError }) => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-md"
                     />
                   </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="saveInfo"
-                      checked={formData.saveInfo || false}
-                      onChange={handleInputChange}
-                      className="h-4 w-4 border-gray-300 rounded"
-                    />
-                    <label className="ml-2 block text-sm text-gray-700">
-                      Save this information for faster check-out next time
-                    </label>
-                  </div>
-                  {formData.saveInfo && (
-                    <div className="flex space-x-4">
-                      <button
-                        onClick={handleSaveAddress}
-                        className="flex-1 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
-                        disabled={
-                          !formData.recipientName ||
-                          !formData.phone ||
-                          !formData.fullAddress ||
-                          !formData.provinceName ||
-                          !formData.districtName ||
-                          !formData.wardName
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={handleSaveAddress}
+                      className="flex-1 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
+                      disabled={
+                        !formData.recipientName ||
+                        !formData.phone ||
+                        !formData.fullAddress ||
+                        !formData.province ||
+                        !formData.district ||
+                        !formData.ward
+                      }
+                    >
+                      {isEditingAddress ? "Update Address" : "Save Address"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsAddingNewAddress(false);
+                        setIsEditingAddress(false);
+                        setEditingAddressId(null);
+                        if (selectedAddress) {
+                          setUseSavedAddress(true);
+                          setFormData({
+                            addressId: selectedAddress.addressId.toString(),
+                            recipientName: selectedAddress.recipientName || "",
+                            phone: selectedAddress.phone || "",
+                            fullAddress: selectedAddress.fullAddress || "",
+                            province: selectedAddress.provinceName || "",
+                            district: selectedAddress.districtName || "",
+                            ward: selectedAddress.wardName || "",
+                            useSavedAddress: true,
+                          });
+                        } else {
+                          handleClearSelection();
                         }
-                      >
-                        {isEditingAddress ? "Update Address" : "Save Address"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsAddingNewAddress(false);
-                          setIsEditingAddress(false);
-                          setEditingAddressId(null);
-                          if (selectedAddress) {
-                            setUseSavedAddress(true);
-                            setFormData({
-                              addressId: selectedAddress.addressId.toString(),
-                              recipientName:
-                                selectedAddress.recipientName || "",
-                              phone: selectedAddress.phone || "",
-                              fullAddress: selectedAddress.fullAddress || "",
-                              provinceName: selectedAddress.provinceName || "",
-                              districtName: selectedAddress.districtName || "",
-                              wardName: selectedAddress.wardName || "",
-                              saveInfo: false,
-                              useSavedAddress: true,
-                            });
-                          } else {
-                            handleClearSelection();
-                          }
-                          setShowAddressModal(false);
-                        }}
-                        className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
+                        setShowAddressModal(false);
+                      }}
+                      className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
