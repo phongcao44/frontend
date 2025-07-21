@@ -1,6 +1,7 @@
 import { Divider } from "antd";
 import "swiper/css";
 import "swiper/css/pagination";
+import GeminiChatButton from "./home/GeminiChatButton";
 
 import { categories } from "./home/data";
 
@@ -14,6 +15,7 @@ import CategorySection from "./home/CategorySection";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { loadMergedProducts } from "../../redux/slices/productSlice";
+import Cookies from "js-cookie";
 
 const Home = () => {
   const divider = (
@@ -43,6 +45,8 @@ const Home = () => {
 
       {divider}
       <NewArrival />
+
+      <GeminiChatButton />
     </section>
   );
 };
