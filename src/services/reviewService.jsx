@@ -40,3 +40,8 @@ export const editReview = async (reviewData) => {
   const response = await axiosInstance.patch(`/user/review/edit`, reviewData);
   return response.data;
 };
+
+export const getRatingSummaryByProduct = async () => {
+  const response = await axiosInstance.get(`/admin/review/list`);
+  return response.data;
+}
