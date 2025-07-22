@@ -33,6 +33,7 @@ import BannerManagement from "../pages/admin/banner/BannerManagement";
 // Reviews & Support
 import ReviewManagement from "../pages/admin/ReviewManagement";
 import Support from "../pages/admin/Support";
+import AdminProductReviewDetail from "../pages/admin/ReviewProductDetail";
 
 import FlashSaleManagement from "../pages/admin/flash_Sale/FlashSaleManagement";
 import FlashSaleItemManagement from "../pages/admin/flash_Sale/FlashSaleItemManagement";
@@ -96,7 +97,8 @@ export default function AdminRoutes() {
       {/* Reviews & Support */}
       <Route path="/admin/reviews" element={<ReviewManagement />} />
       <Route path="/admin/support" element={<Support />} />
-
+      <Route path="/admin/reviews/:productId" element={<AdminProductReviewDetail />} />
+      
       {/* Fallback */}
       <Route path="/admin/*" element={<ErrorPage />} />
     </Route>
