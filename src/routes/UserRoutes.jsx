@@ -41,7 +41,7 @@ const UserRoutes = () => {
         <Route path="products/search" element={<ProductSearch />} />
         <Route path="products/category/:id" element={<ProductListing />} />
         <Route path="product/:id" element={<ProductDetail />} />
-        \
+        
         <Route path="categories/:id" element={<CategoryPage />} />
 
 

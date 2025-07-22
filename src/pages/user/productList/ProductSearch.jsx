@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loadProductsPaginate } from '../../../redux/slices/productSlice'; 
+import { useSearchParams } from 'react-router-dom';
 
 function ProductSearch() {
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+  const keyword = searchParams.get("keyword");
   const paginatedProducts = useSelector((state) => state.products.paginated);
   const loading = useSelector((state) => state.products.loading);
   const error = useSelector((state) => state.products.error);
 
-  // State cho các bộ lọc
   const [activeFilter, setActiveFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPriceRange, setSelectedPriceRange] = useState('all');
   const [selectedRating, setSelectedRating] = useState('all');
   const [sortBy, setSortBy] = useState('popular');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1); // State cho phân trang
+  const [page, setPage] = useState(0); // Start page from 0
+
+  console.warn(`Searching for: ${keyword}`);
 
   const priceRanges = [
     { id: 'all', label: 'Tất cả giá', min: 0, max: Infinity },
@@ -39,11 +42,8 @@ function ProductSearch() {
     { id: 'sports', name: 'Thể thao', count: 28 },
   ];
 
-  // Ánh xạ sortBy thành sortBy và orderBy cho API
   const mapSortBy = (sortBy) => {
     switch (sortBy) {
-      case 'popular':
-        return { sortBy: 'createdAt', orderBy: 'desc' };
       case 'newest':
         return { sortBy: 'createdAt', orderBy: 'desc' };
       case 'price-low':
@@ -59,11 +59,11 @@ function ProductSearch() {
   const getPriceRange = () => {
     const range = priceRanges.find((r) => r.id === selectedPriceRange);
     if (range.id === 'all') {
-      return { priceMin: '', priceMax: '' }; 
+      return { priceMin: null, priceMax: null }; // Use null instead of empty string
     }
     return {
-      priceMin: range.min === 0 ? '' : range.min,
-      priceMax: range.max === Infinity ? '' : range.max, 
+      priceMin: range.min === 0 ? null : range.min,
+      priceMax: range.max === Infinity ? null : range.max,
     };
   };
 
@@ -73,31 +73,27 @@ function ProductSearch() {
     const minRating = ratingOptions.find((r) => r.id === selectedRating).value;
 
     const params = {
-      page,
+      page, // Page starts from 0
       limit: 8, // Số sản phẩm mỗi trang
       sortBy: apiSortBy,
       orderBy,
-      keyword: searchQuery || '', // Gửi chuỗi rỗng nếu không có từ khóa
-      categoryId: activeFilter === 'all' ? '' : activeFilter, // Gửi chuỗi rỗng nếu chọn "Tất cả"
-      status: '', // Có thể thêm logic để lọc trạng thái
-      brandName: '', // Có thể thêm logic để lọc thương hiệu
-      priceMin, // Chuỗi rỗng nếu chọn "Tất cả giá"
-      priceMax, // Chuỗi rỗng nếu chọn "Tất cả giá"
-      minRating: minRating === 0 ? '' : minRating, // Gửi chuỗi rỗng nếu chọn "Tất cả đánh giá"
+      keyword: keyword || null, // Use null if no keyword
+      categoryId: activeFilter === 'all' ? null : activeFilter, // Use null if "all"
+      status: null, // Use null instead of empty string
+      brandName: null, // Use null instead of empty string
+      priceMin, // null if not applicable
+      priceMax, // null if not applicable
+      minRating: minRating === 0 ? null : minRating, // Use null if 0
     };
 
-    dispatch(loadProductsPaginate(params));
-  }, [dispatch, page, activeFilter, selectedPriceRange, selectedRating, sortBy, searchQuery]);
+    console.warn("Fetching products with params:", params);
 
-  // Xử lý tìm kiếm
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    setPage(1); // Reset về trang 1 khi tìm kiếm
-  };
+    dispatch(loadProductsPaginate(params));
+  }, [dispatch, page, activeFilter, selectedPriceRange, selectedRating, sortBy, keyword]);
 
   // Xử lý chuyển trang
   const handleLoadMore = () => {
-    if (page < paginatedProducts?.totalPages) {
+    if (page < paginatedProducts?.totalPages - 1) { // Adjust for zero-based paging
       setPage((prev) => prev + 1);
     }
   };
@@ -107,12 +103,11 @@ function ProductSearch() {
     setSelectedPriceRange('all');
     setSelectedRating('all');
     setSortBy('popular');
-    setSearchQuery('');
     setActiveFilter('all');
-    setPage(1);
+    setPage(0); // Reset to page 0
   };
 
-  if (loading && page === 1) return <div className="text-center py-10">Loading...</div>;
+  if (loading && page === 0) return <div className="text-center py-10">Loading...</div>;
   if (error) return <div className="text-center py-10 text-red-500">Error: {error}</div>;
 
   return (
@@ -131,17 +126,6 @@ function ProductSearch() {
           <p className="text-gray-600">Tìm kiếm những sản phẩm yêu thích của bạn</p>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={handleSearch}
-            placeholder="Tìm kiếm sản phẩm..."
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
         {/* Category Pills */}
         <div className="flex flex-wrap justify-center gap-3 mb-8">
           {categories.map((category) => (
@@ -149,7 +133,7 @@ function ProductSearch() {
               key={category.id}
               onClick={() => {
                 setActiveFilter(category.id);
-                setPage(1); // Reset về trang 1 khi thay đổi danh mục
+                setPage(0); // Reset to page 0 when changing category
               }}
               className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
                 activeFilter === category.id
@@ -180,7 +164,7 @@ function ProductSearch() {
               value={sortBy}
               onChange={(e) => {
                 setSortBy(e.target.value);
-                setPage(1); // Reset về trang 1 khi thay đổi sắp xếp
+                setPage(0); // Reset to page 0 when changing sort
               }}
               className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
@@ -209,7 +193,7 @@ function ProductSearch() {
                         key={range.id}
                         onClick={() => {
                           setSelectedPriceRange(range.id);
-                          setPage(1); // Reset về trang 1
+                          setPage(0); // Reset to page 0
                         }}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
                           selectedPriceRange === range.id
@@ -235,7 +219,7 @@ function ProductSearch() {
                         key={option.id}
                         onClick={() => {
                           setSelectedRating(option.id);
-                          setPage(1); // Reset về trang 1
+                          setPage(0); // Reset to page 0
                         }}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
                           selectedRating === option.id
@@ -353,12 +337,13 @@ function ProductSearch() {
         </div>
 
         {/* Load More Button */}
-        {paginatedProducts?.totalPages > page && (
+        {paginatedProducts?.totalPages > page + 1 && (
           <div className="text-center">
             <button
               onClick={handleLoadMore}
               disabled={loading}
-              className="px-8 py-3 bg-white border border-gray-200 text-gray-700 rounded-full hover:border-blue-300 hover:text-blue-600 transition-all duration-200 font-medium cursor-pointer whitespace-nowrap !rounded-button disabled:opacity-50"
+              className="px-8 py-3 bg-white border border-gray-200 text-gray-700 rounded-full h
+              over:border-blue-300 hover:text-blue-600 transition-all duration-200 font-medium cursor-pointer whitespace-nowrap !rounded-button disabled:opacity-50"
             >
               {loading ? 'Đang tải...' : 'Xem thêm sản phẩm'}
             </button>
