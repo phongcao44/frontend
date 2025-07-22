@@ -1,6 +1,7 @@
 // notification/firebase.jsx
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken } from "firebase/messaging";
+import Cookies from "js-cookie";
 
 // ✅ Cấu hình Firebase (dữ liệu của bạn)
 const firebaseConfig = {
@@ -30,12 +31,16 @@ export const generateToken = async () => {
       });
 
       if (token) {
-        console.log("✅ FCM Token:", token);
+        console.log("✅ FCM Token ...:", token);
+
+        const accessToken = Cookies.get("access_token") || "";
 
         // 👇 Lấy token từ localStorage
-        const accessToken = localStorage.getItem("accessToken");
+        const userInfoRaw = Cookies.get("user");
+        console.log("Raw user info:", userInfoRaw);
 
-        // 👇 Gửi token về backend
+        console.log("Access Token:", accessToken);
+
         await fetch("http://localhost:8080/api/v1/fcm-token", {
           method: "POST",
           headers: {
