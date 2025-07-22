@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import OrderCard from './OrderCard';
 
-export default function Orders() {
+export default function OrderSection({ onOrderSelect }) {
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');

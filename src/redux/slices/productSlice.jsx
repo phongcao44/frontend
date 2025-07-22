@@ -36,6 +36,7 @@ export const loadProductDetail = createAsyncThunk(
   }
 );
 
+// ------
 export const loadProducts = createAsyncThunk(
   "products/loadAll",
   fetchAllProducts

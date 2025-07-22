@@ -24,8 +24,8 @@ import OrderDetail from "../pages/admin/OrderDetail";
 import CategoryManagement from "../pages/admin/CategoryManagement";
 
 // Users
-import UserManagement from "../pages/admin/UserManagement";
-import UserDetail from "../pages/admin/User/UserDetail";
+import UserManagement from "../pages/admin/User/userManagement/UserManagement";
+import UserDetail from "../pages/admin/User/userDetail/UserDetail";
 
 // Banners
 import BannerManagement from "../pages/admin/banner/BannerManagement";

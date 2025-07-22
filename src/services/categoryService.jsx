@@ -10,7 +10,7 @@ import axiosInstance from "../utils/axiosInstance";
  */
 export const fetchParentCategories = async (
   page = 0,
-  limit = 3,
+  limit = 999,
   sortBy = "id",
   orderBy = "asc"
 ) => {

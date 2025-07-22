@@ -21,7 +21,7 @@ export const fetchBanners = async () => {
  */
 export const addBanner = async (formData) => {
   try {
-    const response = await axiosInstance.post("/admin/banner", formData, {
+    const response = await axiosInstance.post("/admin/banners", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;

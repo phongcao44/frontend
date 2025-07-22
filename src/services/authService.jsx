@@ -29,6 +29,8 @@ export const logout = async () => {
     const response = await axiosInstance.post("/auth/logout");
     Cookies.remove("access_token", { path: "/" });
     Cookies.remove("user", { path: "/" });
+    Cookies.remove("access_token");
+    Cookies.remove("user");
     return response.data;
   } catch (err) {
     console.error("Logout failed:", err);

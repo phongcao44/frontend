@@ -23,6 +23,7 @@ import {
   editProduct,
   removeProduct,
   loadProductDetail,
+  loadProductById,
 } from "../../../redux/slices/productSlice";
 import {
   addProductVariant,
@@ -71,11 +72,9 @@ const ProductForm = () => {
   console.log(product);
   const { current: specificationData } = useSelector((state) => state.productSpecification);
 
-  console.log(fileList);
-
   useEffect(() => {
     if (productId) {
-      dispatch(loadProductDetail(productId));
+      dispatch(loadProductById(productId));
       dispatch(getProductSpecificationById(productId));
     }
   }, [dispatch, productId]);
@@ -189,6 +188,8 @@ const ProductForm = () => {
       console.log("Submitting product:", productData);
       const productResponse = await dispatch(addProduct(productData)).unwrap();
       const newProductId = productResponse.data.id;
+
+      console.log("New product variants:", formData.variants);
 
       for (const variant of formData.variants) {
         const productVariant = {

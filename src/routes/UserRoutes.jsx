@@ -3,7 +3,7 @@ import MainLayout from "../layouts/UserLayout";
 
 // --- Pages ---
 import Home from "../pages/user/Home";
-import ProductListingPage from "../pages/user/productList/ProductListingPage";
+import ProductListing from "../pages/user/productList/ProductListing";
 import ProductDetail from "../pages/user/productDetail/ProductDetail";
 import WishList from "../pages/user/WishList";
 import Cart from "../pages/user/Cart";
@@ -26,6 +26,8 @@ import EditProfileForm from "../pages/user/account/EditProfileForm";
 import AddressBook from "../pages/user/account/AddressBook";
 import Orders from "../pages/user/account/Orders";
 import OrderSuccessPage from "../pages/user/checkout/OrderSuccessPage";
+import CategoryPage from "../pages/user/categoryPage/CategoryPage";
+import ProductSearch from "../pages/user/productList/ProductSearch";
 
 const UserRoutes = () => {
   return (
@@ -35,9 +37,13 @@ const UserRoutes = () => {
         <Route index element={<Home />} />
 
         {/* Product Listing & Detail */}
-        <Route path="products" element={<ProductListingPage />} />
-        <Route path="products/category/:id" element={<ProductListingPage />} />
+        <Route path="products" element={<ProductListing />} />
+        <Route path="products/search" element={<ProductSearch />} />
+        <Route path="products/category/:id" element={<ProductListing />} />
         <Route path="product/:id" element={<ProductDetail />} />
+        \
+        <Route path="categories/:id" element={<CategoryPage />} />
+
 
         {/* Flash Sale & Best Selling */}
         {/* <Route path="flash-sale" element={<FlashSalePage />} />

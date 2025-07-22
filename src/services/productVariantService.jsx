@@ -22,7 +22,30 @@ export const fetchAllProductVariants = async () => {
 export const fetchProductVariantsByProductId = async (productId) => {
   try {
     const response = await axiosInstance.get(`/product-variants/${productId}`);
-    return response.data.data;
+
+    const variants = Array.isArray(response.data.data)
+      ? response.data.data
+      : [];
+
+    const mergedVariants = await Promise.all(
+      variants.map(async (v) => {
+        if (!v.colorName || !v.colorHex) {
+          const detail = await fetchProductVariantDetail(v.id);
+
+          return {
+            ...v,
+            colorName: v.colorName || detail.colorName,
+            colorHex: v.colorHex || detail.colorHex,
+            productDescription: detail.productDescription,
+            brand: detail.brand,
+            sizeDescription: detail.sizeDescription,
+          };
+        } else {
+          return v; 
+        }
+      })
+    );
+    return mergedVariants;
   } catch (error) {
     console.error(
       `fetchProductVariantsByProductId error (ProductID: ${productId}):`,
@@ -31,6 +54,7 @@ export const fetchProductVariantsByProductId = async (productId) => {
     throw extractApiError(error);
   }
 };
+
 
 /**
  * Create a new product variant

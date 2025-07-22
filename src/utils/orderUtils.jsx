@@ -1,4 +1,3 @@
-
 export const getStatusColor = (status) => {
   switch (status) {
     case "PENDING":
@@ -11,6 +10,8 @@ export const getStatusColor = (status) => {
       return "bg-green-100 text-green-800";
     case "CANCELLED":
       return "bg-red-100 text-red-800";
+    case "RETURNED":
+      return "bg-purple-100 text-purple-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -28,6 +29,8 @@ export const translateStatus = (status) => {
       return "Đã giao hàng";
     case "CANCELLED":
       return "Đã hủy";
+    case "RETURNED":
+      return "Đã trả hàng";
     default:
       return "Không rõ";
   }

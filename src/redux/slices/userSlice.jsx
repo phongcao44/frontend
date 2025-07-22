@@ -6,14 +6,9 @@ import {
   deleteUserRole,
   changeUserStatus,
   getAllUsersPaginateAndFilter,
+  getUserDetail,
+  updateUserDetail,
 } from "../../services/userService";
-
-
-const initialState = {
-  users: [],
-  loading: false,
-  error: null,
-};
 
 export const getUsers = createAsyncThunk(
   "users/getUsers",
@@ -55,7 +50,6 @@ export const removeUserRole = createAsyncThunk(
   "users/removeUserRole",
   async ({ userId, roleId }, { rejectWithValue }) => {
     try {
-      // eslint-disable-next-line no-unused-vars
       const data = await deleteUserRole(userId, roleId);
       return { userId, roleId };
     } catch (error) {
@@ -83,7 +77,37 @@ export const fetchUsersPaginateAndFilter = createAsyncThunk(
       const data = await getAllUsersPaginateAndFilter(params);
       return data;
     } catch (error) {
-      return rejectWithValue(error || "Failed to fetch paginated users");
+      return rejectWithValue(
+        error.message || error.toString() || "Failed to fetch paginated users"
+      );
+    }
+  }
+);
+
+export const fetchUserDetail = createAsyncThunk(
+  "users/fetchUserDetail",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const data = await getUserDetail(userId);
+      return data;
+    } catch (error) {
+      return rejectWithValue(
+        error.message || error.toString() || "Failed to fetch user detail"
+      );
+    }
+  }
+);
+
+export const updateUserDetailThunk = createAsyncThunk(
+  "users/updateUserDetail",
+  async (userDetailRequest, { rejectWithValue }) => {
+    try {
+      const data = await updateUserDetail(userDetailRequest);
+      return data;
+    } catch (error) {
+      return rejectWithValue(
+        error.message || error.toString() || "Failed to update user detail"
+      );
     }
   }
 );
@@ -91,10 +115,18 @@ export const fetchUsersPaginateAndFilter = createAsyncThunk(
 // User slice
 const userSlice = createSlice({
   name: "users",
-  initialState,
+  initialState: {
+    users: [],
+    userDetail: null,
+    loading: false,
+    error: null,
+  },
   reducers: {
     clearError: (state) => {
       state.error = null;
+    },
+    clearUserDetail: (state) => {
+      state.userDetail = null;
     },
   },
   extraReducers: (builder) => {
@@ -112,6 +144,7 @@ const userSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+
       // Create user
       .addCase(createUser.pending, (state) => {
         state.loading = true;
@@ -125,6 +158,7 @@ const userSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+
       // Update user role
       .addCase(updateUserRole.pending, (state) => {
         state.loading = true;
@@ -138,11 +172,18 @@ const userSlice = createSlice({
             ? { ...user, roles: updatedUser.roles }
             : user
         );
+        if (
+          state.userDetail &&
+          state.userDetail.userId === updatedUser.userId
+        ) {
+          state.userDetail = { ...state.userDetail, roles: updatedUser.roles };
+        }
       })
       .addCase(updateUserRole.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
       // Remove user role
       .addCase(removeUserRole.pending, (state) => {
         state.loading = true;
@@ -155,15 +196,24 @@ const userSlice = createSlice({
           user.id === userId
             ? {
                 ...user,
-                roles: user.roles.filter((role) => role.id !== roleId),
+                roles: (user.roles || []).filter((role) => role.id !== roleId),
               }
             : user
         );
+        if (state.userDetail && state.userDetail.userId === userId) {
+          state.userDetail = {
+            ...state.userDetail,
+            roles: (state.userDetail.roles || []).filter(
+              (role) => role.id !== roleId
+            ),
+          };
+        }
       })
       .addCase(removeUserRole.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
       // Update user status
       .addCase(updateUserStatus.pending, (state) => {
         state.loading = true;
@@ -175,27 +225,63 @@ const userSlice = createSlice({
         state.users = state.users.map((user) =>
           user.id === userId ? { ...user, status } : user
         );
+        if (state.userDetail && state.userDetail.userId === userId) {
+          state.userDetail = { ...state.userDetail, status };
+        }
       })
       .addCase(updateUserStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
 
-       // Fetch users with pagination and filter
+      // Fetch users with pagination and filter
       .addCase(fetchUsersPaginateAndFilter.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchUsersPaginateAndFilter.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload.data; 
+        state.users = action.payload.data;
       })
       .addCase(fetchUsersPaginateAndFilter.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Get user detail
+      .addCase(fetchUserDetail.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserDetail.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userDetail = action.payload;
+      })
+      .addCase(fetchUserDetail.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Update user detail
+      .addCase(updateUserDetailThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateUserDetailThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userDetail = action.payload;
+        state.users = state.users.map((user) =>
+          user.id === action.payload.userId
+            ? { ...user, ...action.payload }
+            : user
+        );
+      })
+      .addCase(updateUserDetailThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
   },
 });
 
-export const { clearError } = userSlice.actions;
+export const { clearError, clearUserDetail } = userSlice.actions;
 export default userSlice.reducer;
