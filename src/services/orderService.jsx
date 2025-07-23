@@ -1,5 +1,30 @@
 import axiosInstance from "../utils/axiosInstance";
 
+export const fetchPaginatedOrders = async ({
+  page = 0,
+  limit = 10,
+  sortBy = "createdAt",
+  orderBy = "desc",
+  status = "",
+  keyword = "",
+}) => {
+  try {
+    const response = await axiosInstance.get("/admin/order/paginate", {
+      params: {
+        page,
+        limit,
+        sortBy,
+        orderBy,
+        status,
+        keyword,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 export const fetchOrders = async () => {
   try {
     const response = await axiosInstance.get("/admin/order/list");
@@ -11,10 +36,10 @@ export const fetchOrders = async () => {
 
 export const updateOrderStatus = async (id, status) => {
   try {
-    const response = await axiosInstance.put(`.admin/order/edit/${id}`, {
+    const response = await axiosInstance.put(`admin/order/edit/${id}`, {
       status,
     });
-   
+
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;

@@ -30,6 +30,7 @@ StarRating.propTypes = {
 
 const ProductCard = ({ product, showDiscountLabel = false, onRemove }) => {
   const [hovered, setHovered] = useState(false);
+  const [notification, setNotification] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -39,6 +40,7 @@ const ProductCard = ({ product, showDiscountLabel = false, onRemove }) => {
     id,
     name,
     images,
+    imageUrl,
     price,
     originalPrice,
     discountPercentage,
@@ -64,14 +66,17 @@ const ProductCard = ({ product, showDiscountLabel = false, onRemove }) => {
       const variantId = res?.[0]?.id;
 
       if (!variantId) {
-        alert("Không tìm thấy variant!");
+        setNotification({ type: 'error', message: 'Không tìm thấy variant!' });
+        setTimeout(() => setNotification(null), 3000);
         return;
       }
 
       await dispatch(addItemToCart({ variantId, quantity: 1 })).unwrap();
-      alert("Đã thêm vào giỏ hàng!");
+      setNotification({ type: 'success', message: 'Đã thêm vào giỏ hàng!' });
+      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
-      alert("Thêm giỏ hàng thất bại!");
+      setNotification({ type: 'error', message: 'Thêm giỏ hàng thất bại!' });
+      setTimeout(() => setNotification(null), 3000);
     }
   };
 
@@ -90,7 +95,7 @@ const ProductCard = ({ product, showDiscountLabel = false, onRemove }) => {
 
   return (
     <div
-      className="p-2 transform hover:scale-105 transition-transform duration-200 z-10"
+      className="p-2 transform hover:scale-105 transition-transform duration-200 z-10 relative"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -100,7 +105,7 @@ const ProductCard = ({ product, showDiscountLabel = false, onRemove }) => {
       >
         <div className="relative w-full pt-[100%]">
           <img
-            src={image}
+            src={imageUrl || image}
             alt={name}
             className="absolute top-0 left-0 w-full h-full object-cover"
           />
@@ -166,6 +171,12 @@ const ProductCard = ({ product, showDiscountLabel = false, onRemove }) => {
           </div>
         </div>
       </div>
+      {notification && (
+        <div className={`absolute top-0 left-0 right-0 mx-2 mt-2 p-2 rounded-md text-white text-center text-sm font-medium
+          ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+          {notification.message}
+        </div>
+      )}
     </div>
   );
 };

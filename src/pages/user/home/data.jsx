@@ -1,22 +1,3 @@
-import {
-  MobileOutlined,
-  DesktopOutlined,
-  ClockCircleOutlined,
-  CameraOutlined,
-  AudioOutlined,
-} from "@ant-design/icons";
-import { FaGamepad } from "react-icons/fa";
-
-export const categories = [
-  { icon: <MobileOutlined />, name: "Phones", active: false },
-  { icon: <DesktopOutlined />, name: "Computers", active: false },
-  { icon: <ClockCircleOutlined />, name: "SmartWatch", active: false },
-  { icon: <CameraOutlined />, name: "Camera", active: true },
-  { icon: <AudioOutlined />, name: "HeadPhones", active: false },
-  { icon: <FaGamepad />, name: "Gaming", active: false },
-];
-// Banner carousel
-
 // New Arrival Products
 export const productCards = [
   {

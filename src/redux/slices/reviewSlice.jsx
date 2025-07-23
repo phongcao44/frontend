@@ -7,6 +7,7 @@ import {
   getAdminReviews,
   deleteReview,
   editReview,
+  getRatingSummaryByProduct
 } from "../../services/reviewService";
 
 // CREATE review
@@ -100,12 +101,27 @@ export const editReviewThunk = createAsyncThunk(
   }
 );
 
+// GET review summary by product
+export const fetchReviewSummaryByProduct = createAsyncThunk(
+  "review/fetchReviewSummaryByProduct",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await   getRatingSummaryByProduct();
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+
 const reviewSlice = createSlice({
   name: "review",
   initialState: {
     reviews: [],
     averageRating: null,
     ratingSummary: null,
+    reviewSummary: [],
     loading: false,
     error: null,
   },
@@ -200,7 +216,19 @@ const reviewSlice = createSlice({
       .addCase(editReviewThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
+      })
+      .addCase(fetchReviewSummaryByProduct.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchReviewSummaryByProduct.fulfilled, (state, action) => {
+        state.loading = false;
+        state.reviewSummary = action.payload;
+      })
+      .addCase(fetchReviewSummaryByProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      ;
   },
 });
 

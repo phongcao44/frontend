@@ -15,8 +15,8 @@ import {
   message,
 } from "antd";
 import { useDispatch } from "react-redux";
-import { createColor } from "../../redux/slices/colorSlice";
-import { createSize } from "../../redux/slices/sizeSlice";
+import { createColor } from "../../../redux/slices/colorSlice";
+import { createSize } from "../../../redux/slices/sizeSlice";
 
 const { Title } = Typography;
 const { Option } = Select;

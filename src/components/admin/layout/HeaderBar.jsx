@@ -30,7 +30,6 @@ import {
   ShareAltOutlined,
 } from "@ant-design/icons";
 import { logoutUser } from "../../../redux/slices/authSlice";
-import Cookies from "js-cookie";
 
 const { Header } = Layout;
 const { Text, Title } = Typography;
@@ -44,9 +43,6 @@ const HeaderBar = ({ collapsed, setCollapsed }) => {
   const dispatch = useDispatch();
 
   const handleLogout = () => {
-    Cookies.remove("access_token", { path: "/" });
-    Cookies.remove("user", { path: "/" });
-
     dispatch(logoutUser());
     navigate("/login");
   };

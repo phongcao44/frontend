@@ -12,12 +12,12 @@ import {
   Divider,
   Row,
   Col,
-  Input,
   Avatar,
   Badge,
   Spin,
   Alert,
   message,
+  Select,
 } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import {
@@ -27,12 +27,13 @@ import {
 } from "../../redux/slices/orderSlice";
 
 const { Text } = Typography;
+const { Option } = Select;
 
 export default function OrderDetail() {
-  const [note, setNote] = useState("Ghi chú mặc định");
   const dispatch = useDispatch();
   const { orderId } = useParams();
   const { currentOrder, loading, error } = useSelector((state) => state.order);
+  const [selectedStatus, setSelectedStatus] = useState("");
 
   useEffect(() => {
     dispatch(loadOrderDetail(Number(orderId)));
@@ -41,19 +42,22 @@ export default function OrderDetail() {
     };
   }, [dispatch, orderId]);
 
-  console.log(currentOrder);
-
-  const handleConfirm = async () => {
+  const handleStatusChange = async () => {
+    if (!selectedStatus) {
+      message.warning("Vui lòng chọn trạng thái");
+      return;
+    }
     try {
+      console.log(selectedStatus)
       await dispatch(
         editOrderStatus({
           id: currentOrder.orderId,
-          status: "CONFIRMED",
+          status: selectedStatus,
         })
       ).unwrap();
-      message.success("Đã xác nhận đơn hàng");
+      message.success(`Đã cập nhật trạng thái đơn hàng thành ${translateStatus(selectedStatus)}`);
     } catch (err) {
-      message.error("Xác nhận thất bại");
+      message.error("Cập nhật trạng thái thất bại");
     }
   };
 
@@ -94,6 +98,7 @@ export default function OrderDetail() {
       </div>
     );
   }
+
   const getStatusColor = (status) => {
     switch (status) {
       case "PENDING":
@@ -277,7 +282,7 @@ export default function OrderDetail() {
     <div
       style={{ padding: 24, backgroundColor: "#f5f5f5", minHeight: "100vh" }}
     >
-      {/* Header section - Updated to match the image */}
+      {/* Header section */}
       <Card style={{ marginBottom: 16 }}>
         <Row
           style={{
@@ -402,36 +407,17 @@ export default function OrderDetail() {
             </Row>
 
             <Divider />
-
-            <Space>
-              <Badge status="default" />
-              <Text>Thanh toán đã nhập trả một phần</Text>
-            </Space>
-
+                
             <Row gutter={24} style={{ marginTop: 24 }}>
               <Col span={12}>
-                <Text strong>Ghi chú đơn hàng</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Input
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    style={{ width: "100%", marginBottom: 8 }}
-                  />
-                  <Button type="primary">Cập nhật</Button>
-                  <br />
-
-                  <br />
-                  <Button
-                    type="default"
-                    onClick={() => handleDownloadPDF(currentOrder.orderId)}
-                    style={{ marginBottom: 16 }}
-                  >
-                    Tải PDF đơn hàng
-                  </Button>
-
-                </div>
-              </Col >
-
+                <Button
+                  type="default"
+                  onClick={() => handleDownloadPDF(currentOrder.orderId)}
+                  style={{ marginBottom: 16 }}
+                >
+                  Tải PDF đơn hàng
+                </Button>
+              </Col>
               <Col span={12}>
                 <Card>
                   {summaryData.map((item, index) => (
@@ -464,22 +450,33 @@ export default function OrderDetail() {
           {/* RIGHT */}
           <Col span={8}>
             <Card style={{ marginBottom: 16 }}>
-              <Text strong>Xác nhận đơn hàng</Text>
+              <Text strong>Cập nhật trạng thái đơn hàng</Text>
               <div style={{ marginTop: 8 }}>
-                <Text type="secondary">Vui lòng xác nhận đơn hàng</Text>
+                <Text type="secondary">Chọn trạng thái đơn hàng</Text>
                 <br />
+                <Select
+                  style={{ width: "100%", marginTop: 8 }}
+                  placeholder="Chọn trạng thái"
+                  onChange={(value) => setSelectedStatus(value)}
+                >
+                  <Option value="PENDING">Chờ xử lý</Option>
+                  <Option value="CONFIRMED">Đã xác nhận</Option>
+                  <Option value="SHIPPED">Đã gửi hàng</Option>
+                  <Option value="DELIVERED">Đã giao hàng</Option>
+                  <Option value="CANCELLED">Đã hủy</Option>
+                </Select>
                 <Button
                   type="primary"
                   block
                   style={{ marginTop: 8 }}
-                  onClick={handleConfirm}
+                  onClick={handleStatusChange}
                 >
-                  Xác nhận đơn hàng
+                  Cập nhật trạng thái
                 </Button>
               </div>
             </Card>
 
-            <Card style={{ marginBottom: 16 }}>
+            <Card>
               <Text strong>Thông tin người mua</Text>
               <div style={{ marginTop: 8 }}>
                 <Button type="link" style={{ padding: 0 }}>
@@ -512,27 +509,6 @@ export default function OrderDetail() {
               <div style={{ marginTop: 8 }}>
                 <Text>{currentOrder.shippingAddress?.fulladdress || ""}</Text>
               </div>
-            </Card>
-
-            <Card>
-              <Row justify="space-between">
-                <Col>
-                  <Text strong>Kho bán</Text>
-                  <br />
-                  <Button type="link" style={{ padding: 0 }}>
-                    Kho Chính
-                  </Button>
-                </Col>
-                <Col>
-                  <Space>
-                    <Button>Nhận</Button>
-                    <Button>Tất cả nhận</Button>
-                  </Space>
-                </Col>
-              </Row>
-              <Button type="primary" block style={{ marginTop: 16 }}>
-                Lưu
-              </Button>
             </Card>
           </Col>
         </Row>

@@ -10,6 +10,8 @@ import {
   StarOutlined,
   ThunderboltOutlined,
   GiftOutlined,
+  FileTextOutlined, 
+  RetweetOutlined, 
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -101,11 +103,15 @@ const SidebarMenu = () => {
           icon: <GiftOutlined />,
           label: "Quản lý voucher",
         },
-
         {
           key: "/admin/return",
-          icon: <GiftOutlined />,
+          icon: <RetweetOutlined />, 
           label: "Quản lý đổi trả",
+        },
+        {
+          key: "/admin/posts",
+          icon: <FileTextOutlined />, 
+          label: "Quản lý bài viết",
         },
       ]}
     />

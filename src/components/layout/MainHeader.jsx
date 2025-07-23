@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import NavMenu from "./NavMenu";
 import TopBanner from "./TopBanner";
 import AccountDropdown from "./AccountDropdown";
@@ -10,6 +10,8 @@ const MainHeader = () => {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
   const activePath = location.pathname;
 
   const token = Cookies.get("access_token");
@@ -20,6 +22,13 @@ const MainHeader = () => {
 
   const showDrawer = () => setDrawerVisible(true);
   const closeDrawer = () => setDrawerVisible(false);
+
+  const handleSearch = () => {
+    const trimmed = searchTerm.trim();
+    if (trimmed) {
+      navigate(`/products/search?keyword=${encodeURIComponent(trimmed)}`);
+    }
+  };
 
   return (
     <>
@@ -61,8 +70,12 @@ const MainHeader = () => {
                 placeholder="What are you looking for?"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
                 className="w-36 sm:w-44 md:w-64 bg-gray-100 rounded-md border-none py-1.5 px-3 sm:py-2 sm:px-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+
               <svg
                 className="w-5 h-5 -ml-8 text-gray-500"
                 fill="none"

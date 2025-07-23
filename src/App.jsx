@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import AppRouter from "./routes/AppRouter";
 import { generateToken, messaging } from "./notification/firebase"; // điều chỉnh path nếu cần
 import { onMessage } from "firebase/messaging";
+import Cookies from "js-cookie";
 
 const App = () => {
   useEffect(() => {
