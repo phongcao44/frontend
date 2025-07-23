@@ -14,7 +14,6 @@ export const loginUser = createAsyncThunk(
   async (formLogin, { rejectWithValue }) => {
     try {
       const data = await login(formLogin);
-      console.log("login", data);
 
       const userInfo = {
         id: data?.data?.user?.id || "",
@@ -88,7 +87,7 @@ export const resetPasswordUser = createAsyncThunk(
   async ({ token, request }, { rejectWithValue }) => {
     try {
       const data = await resetPassword(token, request);
-      return data;
+      return data;zz
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -158,8 +157,6 @@ const authSlice = createSlice({
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
         state.isLoggedIn = false;
-        Cookies.remove("access_token");
-        Cookies.remove("user");
       })
 
       // Forgot Password

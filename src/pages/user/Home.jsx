@@ -2,8 +2,6 @@ import { Divider } from "antd";
 import "swiper/css";
 import "swiper/css/pagination";
 
-import { categories } from "./home/data";
-
 import BestSelling from "./home/BestSelling";
 import Promo from "./home/Promo";
 import ExploreProducts from "./home/ExploreProducts";
@@ -33,7 +31,7 @@ const Home = () => {
       <FlashSale />
 
       {divider}
-      <CategorySection categories={categories} />
+      <CategorySection />
 
       {divider}
       <BestSelling />

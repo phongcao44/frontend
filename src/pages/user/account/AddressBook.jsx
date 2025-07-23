@@ -1,35 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Swal from "sweetalert2";
-import Select from "react-select";
 import {
-  fetchProvinces,
-  fetchDistricts,
-  fetchWards,
-} from "../../../services/ghnService";
+  getAddresses,
+  createAddress,
+  editAddress,
+  removeAddress,
+} from "../../../redux/slices/addressSlice";
 
 export default function AddressBook() {
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      recipientName: "John Doe Hi",
-      phone: "123-456-7890",
-      fullAddress: "123 Main St",
-      provinceName: "Hưng Yên",
-      districtName: "Huyện Phù Cừ",
-      wardName: "Xã Tống Phan",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      recipientName: "John Doe",
-      phone: "098-765-4321",
-      fullAddress: "456 Office Rd",
-      provinceName: "Hưng Yên",
-      districtName: "Huyện Phù Cừ",
-      wardName: "Xã Minh Tiến",
-      isDefault: false,
-    },
-  ]);
+  const dispatch = useDispatch();
+  const { addresses, loading, error } = useSelector((state) => state.address);
+
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -41,96 +23,46 @@ export default function AddressBook() {
     provinceName: "",
     districtName: "",
     wardName: "",
-    saveInfo: false,
   });
-  const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
 
-  // Fetch provinces on component mount
+  // Fetch addresses on component mount
   useEffect(() => {
-    fetchProvinces()
-      .then((data) => {
-        const provinceOptions = (data || []).map((p) => ({
-          value: p.ProvinceID,
-          label: p.ProvinceName,
-        }));
-        setProvinces(provinceOptions);
-      })
-      .catch((err) => console.error("Failed to fetch provinces:", err));
-  }, []);
-
-  // Fetch districts when province changes
-  useEffect(() => {
-    if (formData.provinceName) {
-      const found = provinces.find((p) => p.label === formData.provinceName);
-      if (found) {
-        fetchDistricts(found.value)
-          .then((data) => {
-            const districtOptions = (data || []).map((d) => ({
-              value: d.DistrictID,
-              label: d.DistrictName,
-            }));
-            setDistricts(districtOptions);
-          })
-          .catch((err) => console.error("Failed to fetch districts:", err));
-      }
-    } else {
-      setDistricts([]);
-    }
-    setWards([]);
-  }, [formData.provinceName, provinces]);
-
-  // Fetch wards when district changes
-  useEffect(() => {
-    if (formData.districtName && districts.length > 0) {
-      const found = districts.find((d) => d.label === formData.districtName);
-      if (found) {
-        fetchWards(found.value)
-          .then((data) => {
-            const wardOptions = (data || []).map((w) => ({
-              value: w.WardCode,
-              label: w.WardName,
-            }));
-            setWards(wardOptions);
-          })
-          .catch((err) => console.error("Failed to fetch wards:", err));
-      }
-    } else {
-      setWards([]);
-    }
-  }, [formData.districtName, districts]);
+    dispatch(getAddresses());
+  }, [dispatch]);
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
   };
 
-  const handleProvinceChange = (selected) => {
-    setFormData((prev) => ({
-      ...prev,
-      provinceName: selected ? selected.label : "",
-      districtName: "",
-      wardName: "",
-    }));
+  const handleEditAddress = (address) => {
+    setIsEditing(true);
+    setIsAddingNew(false);
+    setEditingAddressId(address.addressId);
+    setFormData({
+      recipientName: address.recipientName,
+      phone: address.phone,
+      fullAddress: address.fullAddress,
+      provinceName: address.provinceName,
+      districtName: address.districtName,
+      wardName: address.wardName,
+    });
+    setShowModal(true);
   };
 
-  const handleDistrictChange = (selected) => {
-    setFormData((prev) => ({
-      ...prev,
-      districtName: selected ? selected.label : "",
-      wardName: "",
-    }));
-  };
-
-  const handleWardChange = (selected) => {
-    setFormData((prev) => ({
-      ...prev,
-      wardName: selected ? selected.label : "",
-    }));
+  const handleDeleteAddress = async (id) => {
+    try {
+      await dispatch(removeAddress(id)).unwrap();
+      await Swal.fire("Success!", "Address deleted successfully.", "success");
+      setShowModal(false);
+      setIsEditing(false);
+      setIsAddingNew(false);
+    } catch (error) {
+      await Swal.fire("Error!", "Failed to delete address.", "error");
+    }
   };
 
   const handleSaveAddress = async () => {
@@ -146,45 +78,44 @@ export default function AddressBook() {
       return;
     }
 
-    const newAddress = {
-      id: isEditing ? editingAddressId : Date.now(),
+    const addressData = {
       recipientName: formData.recipientName,
       phone: formData.phone,
       fullAddress: formData.fullAddress,
       provinceName: formData.provinceName,
       districtName: formData.districtName,
       wardName: formData.wardName,
-      isDefault: isEditing
-        ? addresses.find((a) => a.id === editingAddressId).isDefault
-        : false,
     };
 
-    if (isEditing) {
-      setAddresses(
-        addresses.map((addr) =>
-          addr.id === editingAddressId ? newAddress : addr
-        )
+    try {
+      if (isEditing) {
+        await dispatch(
+          editAddress({ id: editingAddressId, payload: addressData })
+        ).unwrap();
+        await Swal.fire("Success!", "Address updated successfully.", "success");
+      } else {
+        await dispatch(createAddress(addressData)).unwrap();
+        await Swal.fire("Success!", "Address added successfully.", "success");
+      }
+      setShowModal(false);
+      setIsEditing(false);
+      setIsAddingNew(false);
+      setFormData({
+        recipientName: "",
+        phone: "",
+        fullAddress: "",
+        provinceName: "",
+        districtName: "",
+        wardName: "",
+      });
+    } catch (error) {
+      await Swal.fire(
+        "Error!",
+        `Failed to ${isEditing ? "update" : "add"} address.`,
+        "error"
       );
-      await Swal.fire("Success!", "Address updated successfully.", "success");
-    } else {
-      setAddresses([...addresses, newAddress]);
-      await Swal.fire("Success!", "Address added successfully.", "success");
     }
-
-    setShowModal(false);
-    setIsEditing(false);
-    setIsAddingNew(false);
-    setFormData({
-      recipientName: "",
-      phone: "",
-      fullAddress: "",
-      provinceName: "",
-      districtName: "",
-      wardName: "",
-      saveInfo: false,
-    });
   };
-
 
   const handleNewAddress = () => {
     setIsAddingNew(true);
@@ -196,40 +127,18 @@ export default function AddressBook() {
       provinceName: "",
       districtName: "",
       wardName: "",
-      saveInfo: true,
     });
     setShowModal(true);
   };
 
-  const defaultAddress = addresses[0];
-
-  const customStyles = {
-    control: (provided) => ({
-      ...provided,
-      borderRadius: "0.375rem",
-      borderColor: "#d1d5db",
-      minHeight: "2.75rem",
-      paddingLeft: "0.75rem",
-      paddingRight: "0.75rem",
-      "&:hover": {
-        borderColor: "#dc2626",
-      },
-      boxShadow: "none",
-      backgroundColor: "white",
-    }),
-    placeholder: (provided) => ({
-      ...provided,
-      color: "#6b7280",
-    }),
-    menu: (provided) => ({
-      ...provided,
-      zIndex: 50,
-    }),
-  };
+  const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-8 max-w-2xl mx-auto">
+    <div className="bg-white rounded-lg shadow-sm p-8 mx-auto">
       <h2 className="text-xl font-medium text-red-500 mb-8">Address Book</h2>
+
+      {loading && <p>Loading...</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
 
       {/* Default Address Display */}
       {defaultAddress ? (
@@ -272,7 +181,7 @@ export default function AddressBook() {
       ) : (
         <ul className="space-y-4 mb-6">
           {addresses.map((address) => (
-            <li key={address.id} className="border-b pb-4">
+            <li key={address.addressId} className="border-b pb-4">
               <div className="flex justify-between">
                 <div>
                   <h3 className="text-sm font-medium text-gray-900">
@@ -362,58 +271,41 @@ export default function AddressBook() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 />
               </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Province/City*
-                  </label>
-                  <Select
-                    options={provinces}
-                    value={
-                      provinces.find(
-                        (p) => p.label === formData.provinceName
-                      ) || null
-                    }
-                    onChange={handleProvinceChange}
-                    placeholder="Select Province/City"
-                    styles={customStyles}
-                    isClearable
-                  />
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    District*
-                  </label>
-                  <Select
-                    options={districts}
-                    value={
-                      districts.find(
-                        (d) => d.label === formData.districtName
-                      ) || null
-                    }
-                    onChange={handleDistrictChange}
-                    placeholder="Select District"
-                    isDisabled={!formData.provinceName}
-                    styles={customStyles}
-                    isClearable
-                  />
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Ward*
-                  </label>
-                  <Select
-                    options={wards}
-                    value={
-                      wards.find((w) => w.label === formData.wardName) || null
-                    }
-                    onChange={handleWardChange}
-                    placeholder="Select Ward"
-                    isDisabled={!formData.districtName}
-                    styles={customStyles}
-                    isClearable
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Province/City*
+                </label>
+                <input
+                  type="text"
+                  name="provinceName"
+                  value={formData.provinceName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  District*
+                </label>
+                <input
+                  type="text"
+                  name="districtName"
+                  value={formData.districtName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ward*
+                </label>
+                <input
+                  type="text"
+                  name="wardName"
+                  value={formData.wardName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

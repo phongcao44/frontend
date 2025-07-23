@@ -90,6 +90,7 @@ const SignUp = () => {
         username: data.username,
         password: data.password,
       };
+      console.log("Registering user:", registerPayload);
       await dispatch(registerUser(registerPayload)).unwrap();
 
       const loginPayload = {

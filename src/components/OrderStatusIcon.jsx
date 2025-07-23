@@ -1,5 +1,4 @@
-
-import { Clock, CheckCircle, Truck, Package, XCircle } from "lucide-react";
+import { Clock, CheckCircle, Truck, Package, XCircle, RotateCcw } from "lucide-react";
 
 const OrderStatusIcon = ({ status, className = "h-4 w-4" }) => {
   switch (status) {
@@ -13,6 +12,8 @@ const OrderStatusIcon = ({ status, className = "h-4 w-4" }) => {
       return <Package className={className} />;
     case "CANCELLED":
       return <XCircle className={className} />;
+    case "RETURNED":
+      return <RotateCcw className={className} />;
     default:
       return <Clock className={className} />;
   }

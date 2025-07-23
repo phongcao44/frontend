@@ -34,9 +34,10 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
     setTimeout(() => setIsAdding(false), 500);
 
     const variantId = matchedVariant?.id;
+    console.log("j variantId:", variantId);
     // const cartQuantity =
     //   cart.items?.find((item) => item.variantId === variantId)?.quantity || 0;
-    const totalQuantity = quantity;
+ //   const totalQuantity = quantity;
     //
     // if (totalQuantity > maxQuantity) {
     //   message.warning(

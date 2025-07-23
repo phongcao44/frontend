@@ -110,6 +110,7 @@ export default function FlashSaleManagement() {
   const handleRefresh = () => {
     dispatch(fetchFlashSales());
   };
+  
 
   const handlePageChange = (page, newItemsPerPage) => {
     setCurrentPage(page);

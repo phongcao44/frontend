@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useState } from "react";
-import { Rate, Divider, Typography, Space, Button } from "antd";
+import { useEffect, useState, useMemo } from "react";
+import { Rate, Divider, Typography, Space, Button, Tag } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { loadProductDetail } from "../../../redux/slices/productSlice";
 import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice";
@@ -27,9 +27,112 @@ const VariantSelector = ({ productId, onVariantChange }) => {
     error: reviewError,
   } = useSelector((state) => state.review);
 
-  const [selectedColor, setSelectedColor] = useState(null);
-  const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColorId, setSelectedColorId] = useState(null);
+  const [selectedSizeId, setSelectedSizeId] = useState(null);
 
+  // Reset selections when productId changes
+  useEffect(() => {
+    setSelectedColorId(null);
+    setSelectedSizeId(null);
+  }, [productId]);
+
+  // Memoize valid variants
+  const validVariants = useMemo(
+    () => variants?.filter((v) => (v.colorId || v.sizeId) && v.stockQuantity > 0) || [],
+    [variants]
+  );
+
+  // Memoize colors
+  const colors = useMemo(
+    () => [
+      ...new Map(
+        validVariants
+          .filter((v) => v.colorId && v.colorName)
+          .map((v) => [
+            v.colorId,
+            {
+              id: v.colorId,
+              name: v.colorName,
+              hex_code: v.colorHex || "#000000",
+            },
+          ])
+      ).values(),
+    ],
+    [validVariants]
+  );
+
+  // Memoize sizes
+  const sizes = useMemo(
+    () => [
+      ...new Map(
+        validVariants
+          .filter((v) => v.sizeId && v.sizeName)
+          .map((v) => [
+            v.sizeId,
+            {
+              id: v.sizeId,
+              name: v.sizeName,
+            },
+          ])
+      ).values(),
+    ],
+    [validVariants]
+  );
+
+  // Memoize available options
+  const getAvailableOptions = (type, selectedValue) => {
+    if (type === "size") {
+      return sizes.filter((size) =>
+        validVariants.some(
+          (v) =>
+            v.sizeId === size.id &&
+            (!selectedValue || v.colorId === selectedValue || !v.colorId) &&
+            v.stockQuantity > 0
+        )
+      ).map((s) => s.id);
+    } else {
+      return colors.filter((color) =>
+        validVariants.some(
+          (v) =>
+            v.colorId === color.id &&
+            (!selectedValue || v.sizeId === selectedValue || !v.sizeId) &&
+            v.stockQuantity > 0
+        )
+      ).map((c) => c.id);
+    }
+  };
+
+  const availableSizes = useMemo(
+    () => getAvailableOptions("size", selectedColorId),
+    [sizes, selectedColorId, validVariants]
+  );
+  const availableColors = useMemo(
+    () => getAvailableOptions("color", selectedSizeId),
+    [colors, selectedSizeId, validVariants]
+  );
+
+  // Memoize matched variant
+  const matchedVariant = useMemo(
+    () =>
+      validVariants.find(
+        (v) =>
+          (selectedColorId ? v.colorId === selectedColorId : !v.colorId || v.colorId === null) &&
+          (selectedSizeId ? v.sizeId === selectedSizeId : !v.sizeId || v.sizeId === null)
+      ) || validVariants[0], // Fallback to first valid variant
+    [validVariants, selectedColorId, selectedSizeId]
+  );
+
+  // Call onVariantChange when selections or matchedVariant change
+  useEffect(() => {
+    onVariantChange({
+      matchedVariant,
+      maxQuantity: matchedVariant?.stockQuantity ?? 10,
+      selectedColorId,
+      selectedSizeId,
+    });
+  }, [selectedColorId, selectedSizeId, matchedVariant, onVariantChange]);
+
+  // Load data
   useEffect(() => {
     if (productId) {
       dispatch(fetchProductReviews(productId));
@@ -40,140 +143,76 @@ const VariantSelector = ({ productId, onVariantChange }) => {
     }
   }, [dispatch, productId]);
 
-  useEffect(() => {
-    const matchedVariant = variants?.find(
-      (v) => v.colorName === selectedColor && v.sizeName === selectedSize
-    );
-    const maxQuantity = matchedVariant?.stockQuantity ?? 10;
-    onVariantChange({
-      matchedVariant,
-      maxQuantity,
-      selectedColor,
-      selectedSize,
-    });
-  }, [selectedColor, selectedSize, variants, onVariantChange]);
-
-  if (reviewLoading || variantLoading)
-    return <div>Loading product details...</div>;
-  if (reviewError || variantError)
-    return <div>Error: {reviewError || variantError}</div>;
+  if (reviewLoading || variantLoading) return <div>Loading product details...</div>;
+  if (reviewError || variantError) return <div>Error: {reviewError || variantError}</div>;
   if (!product) return <div>Product not found</div>;
 
-  const colors = Array.from(
-    new Map(
-      variants?.map((v) => [
-        v.colorName,
-        { id: v.colorName, name: v.colorName },
-      ])
-    ).values()
-  ).filter((color) => color);
-  const sizes = Array.from(
-    new Map(
-      variants?.map((v) => [v.sizeName, { id: v.sizeName, name: v.sizeName }])
-    ).values()
-  ).filter((size) => size);
-
-  const availableSizes = sizes
-    .filter((size) =>
-      variants?.some(
-        (v) =>
-          v.sizeName === size.id &&
-          (selectedColor ? v.colorName === selectedColor : true) &&
-          v.stockQuantity > 0
-      )
-    )
-    .map((s) => s.id);
-
-  const availableColors = colors
-    .filter((color) =>
-      variants?.some(
-        (v) =>
-          v.colorName === color.id &&
-          (selectedSize ? v.sizeName === selectedSize : true) &&
-          v.stockQuantity > 0
-      )
-    )
-    .map((c) => c.id);
-
-  const matchedVariant = variants?.find(
-    (v) => v.colorName === selectedColor && v.sizeName === selectedSize
-  );
-
-  const fallbackPrice = product.price ?? 0;
-  const finalPrice =
-    matchedVariant?.finalPriceAfterDiscount ??
-    matchedVariant?.priceOverride ??
-    fallbackPrice;
-
-  const hasDiscount =
-    matchedVariant &&
-    matchedVariant.finalPriceAfterDiscount &&
-    matchedVariant.finalPriceAfterDiscount < product.price;
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("vi-VN", {
+  const formatPrice = (price) =>
+    new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(price);
-  };
+
+  const basePrice = matchedVariant?.priceOverride ?? product.price ?? 0;
+  const finalPrice = matchedVariant?.finalPriceAfterDiscount ?? basePrice;
+  const isFlashSale = matchedVariant?.discountOverrideByFlashSale > 0;
+  const hasDiscount = finalPrice < basePrice;
 
   const handleColorClick = (id) => {
-    setSelectedColor((prev) => (prev === id ? null : id));
-    setSelectedSize((prevSize) =>
-      variants?.some(
+    setSelectedColorId((prev) => (prev === id ? null : id));
+    if (
+      !validVariants.some(
         (v) =>
-          v.colorName === id && v.sizeName === prevSize && v.stockQuantity > 0
+          v.colorId === id &&
+          (selectedSizeId ? v.sizeId === selectedSizeId : !v.sizeId || v.sizeId === null) &&
+          v.stockQuantity > 0
       )
-        ? prevSize
-        : null
-    );
+    ) {
+      setSelectedSizeId(null);
+    }
   };
 
   const handleSizeClick = (id) => {
-    setSelectedSize((prev) => (prev === id ? null : id));
-    setSelectedColor((prevColor) =>
-      variants?.some(
+    setSelectedSizeId((prev) => (prev === id ? null : id));
+    if (
+      !validVariants.some(
         (v) =>
-          v.sizeName === id && v.colorName === prevColor && v.stockQuantity > 0
+          v.sizeId === id &&
+          (selectedColorId ? v.colorId === selectedColorId : !v.colorId || v.colorId === null) &&
+          v.stockQuantity > 0
       )
-        ? prevColor
-        : null
-    );
+    ) {
+      setSelectedColorId(null);
+    }
   };
 
   return (
-    <div>
-      <Title level={2} className="mb-4">
-        {product.name}
-      </Title>
+    <div className="p-4">
+      <Title level={2} className="mb-4">{product.name}</Title>
       <div className="flex items-center mb-4">
-        <Rate disabled defaultValue={averageRating} />
+        <Rate disabled value={averageRating} />
         <Text className="ml-2 text-gray-500">({reviews?.length} Reviews)</Text>
         <Divider type="vertical" className="mx-2" />
-        <Text
-          className={
-            product.status === "IN_STOCK" ? "text-green-500" : "text-red-500"
-          }
-        >
+        <Text className={product.status === "IN_STOCK" ? "text-green-500" : "text-red-500"}>
           {product.status === "IN_STOCK" ? "In Stock" : "Out of Stock"}
         </Text>
       </div>
 
-      {typeof finalPrice === "number" &&
-        (hasDiscount ? (
-          <div className="mb-6">
-            <Text delete className="text-lg text-gray-500 mr-3">
-              {formatPrice(product.price)}
-            </Text>
-            <Title level={3} className="text-red-500 inline-block">
-              {formatPrice(finalPrice)}
-            </Title>
-          </div>
+      <div className="mb-6">
+        {isFlashSale && (
+          <Tag color="red" className="mb-2">
+            Flash Sale: {matchedVariant.discountOverrideByFlashSale}% Off
+          </Tag>
+        )}
+        {hasDiscount ? (
+          <Space>
+            <Text delete className="text-lg text-gray-500">{formatPrice(basePrice)}</Text>
+            <Title level={3} className="text-red-500">{formatPrice(finalPrice)}</Title>
+          </Space>
         ) : (
-          <Title level={3} className="text-red-500 mb-6">
-            {formatPrice(finalPrice)}
-          </Title>
-        ))}
+          <Title level={3} className="text-red-500">{formatPrice(finalPrice)}</Title>
+        )}
+      </div>
 
       <Paragraph className="mb-6 text-gray-600 leading-relaxed">
         {product.description}
@@ -183,9 +222,7 @@ const VariantSelector = ({ productId, onVariantChange }) => {
 
       {colors.length > 0 && (
         <div className="mb-6">
-          <Text strong className="block mb-2">
-            Màu sắc:
-          </Text>
+          <Text strong className="block mb-2">Màu sắc:</Text>
           <Space>
             {colors.map((color) => {
               const disabled = !availableColors.includes(color.id);
@@ -193,21 +230,11 @@ const VariantSelector = ({ productId, onVariantChange }) => {
                 <div
                   key={color.id}
                   onClick={() => !disabled && handleColorClick(color.id)}
-                  className={`w-5 h-5 rounded-full border-2 ${
-                    selectedColor === color.id
-                      ? "border-red-500"
-                      : "border-gray-300"
-                  } cursor-${disabled ? "not-allowed" : "pointer"} opacity-${
-                    disabled ? "40" : "100"
-                  }`}
-                  style={{
-                    backgroundColor:
-                      color.name === "Đen"
-                        ? "#000000"
-                        : color.name === "Trắng"
-                        ? "#FFFFFF"
-                        : "#000000",
-                  }}
+                  className={`w-6 h-6 rounded-full border-2 ${
+                    selectedColorId === color.id ? "border-red-500" : "border-gray-300"
+                  } cursor-${disabled ? "not-allowed" : "pointer"} opacity-${disabled ? "50" : "100"}`}
+                  style={{ backgroundColor: color.hex_code }}
+                  title={color.name}
                 />
               );
             })}
@@ -217,9 +244,7 @@ const VariantSelector = ({ productId, onVariantChange }) => {
 
       {sizes.length > 0 && (
         <div className="mb-6">
-          <Text strong className="block mb-2">
-            Kích thước:
-          </Text>
+          <Text strong className="block mb-2">Kích thước:</Text>
           <Space>
             {sizes.map((size) => {
               const disabled = !availableSizes.includes(size.id);
@@ -227,11 +252,11 @@ const VariantSelector = ({ productId, onVariantChange }) => {
                 <Button
                   key={size.id}
                   size="small"
-                  type={selectedSize === size.id ? "primary" : "default"}
+                  type={selectedSizeId === size.id ? "primary" : "default"}
                   onClick={() => !disabled && handleSizeClick(size.id)}
                   disabled={disabled}
                   className={`min-w-[32px] h-8 ${
-                    selectedSize === size.id
+                    selectedSizeId === size.id
                       ? "bg-red-500 border-red-500"
                       : "bg-transparent border-gray-300"
                   } ${disabled ? "text-gray-500 opacity-50" : ""}`}
@@ -242,6 +267,10 @@ const VariantSelector = ({ productId, onVariantChange }) => {
             })}
           </Space>
         </div>
+      )}
+
+      {colors.length === 0 && sizes.length === 0 && (
+        <Text className="text-gray-500">No variant options available</Text>
       )}
     </div>
   );

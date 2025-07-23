@@ -24,15 +24,14 @@ export const createCodPayment = async (orderId) => {
  */
 export const createVnpayPayment = async (orderId) => {
   try {
-    const response = await axiosInstance.get(
-      `/payment/vnpay-payment/${orderId}`
-    );
+    const response = await axiosInstance.get(`/payment/vnpay-payment/${orderId}`);
     return response.data;
   } catch (error) {
     console.error(`createVnpayPayment error (OrderID: ${orderId}):`, error);
     throw extractApiError(error);
   }
 };
+
 
 /**
  * Get payment info (used for VNPAY callback)

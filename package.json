@@ -36,7 +36,7 @@
     "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
     "sweetalert2": "^11.22.2",
-    "swiper": "^11.2.8",
+    "swiper": "^11.2.10",
     "yup": "^1.6.1"
   },
   "devDependencies": {

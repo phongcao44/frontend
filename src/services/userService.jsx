@@ -23,7 +23,7 @@ export const addUser = async (userData) => {
 export const getAllUsersPaginateAndFilter = async (params) => {
   try {
     const response = await axiosInstance.get("/admin/users/paginate", {
-      params, // Tự động map query params
+      params, 
     });
     return response.data;
   } catch (error) {
@@ -108,6 +108,56 @@ export const changeUserStatus = async (userId, status) => {
     throw extractApiError(error);
   }
 };
+
+/**
+ * Get detail info of a user by ID (Admin)
+ * @param {number|string} userId
+ * @returns {Promise<any>}
+ */
+export const getUserDetail = async (userId) => {
+  try {
+    const response = await axiosInstance.get(`/admin/users/admin/getUsers/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`getUserDetail error (UserID: ${userId}):`, error);
+    throw extractApiError(error);
+  }
+};
+
+/**
+ * Update detail info of a user (requires auth)
+ * @param {Object} userDetailRequest
+ * @returns {Promise<any>}
+ */
+export const updateUserDetail = async (userDetailRequest) => {
+  try {
+    console.log('Request to API:', userDetailRequest);
+    const response = await axiosInstance.patch(`/admin/users/update`, userDetailRequest);
+    console.log('Response from API:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`updateUserDetail error:`, error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Get the current authenticated user's view info
+ * @returns {Promise<any>}
+ */
+export const getUserView = async () => {
+  try {
+    const response = await axiosInstance.get("/admin/users/view/");
+    return response.data;
+  } catch (error) {
+    console.error("getUserView error:", error);
+    throw extractApiError(error);
+  }
+};
+
 
 /**
  * Extract and format API error

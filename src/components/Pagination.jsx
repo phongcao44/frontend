@@ -198,10 +198,10 @@ const Pagination = ({
     return pages;
   };
 
-  // Don't render if there's only one page or less
-  if (totalPages <= 1) {
-    return null;
-  }
+  // // Don't render if there's only one page or less
+  // if (totalPages <= 1) {
+  //   return null;
+  // }
 
   return (
     <div className="w-full">

@@ -5,6 +5,8 @@ import {
   updateOrderStatus,
   deleteOrder,
   fetchPaginatedOrders,
+  getMyOrders,
+  getOrderDetail,
 } from "../../services/orderService";
 
 export const loadOrders = createAsyncThunk(
@@ -84,6 +86,30 @@ export const loadPaginatedOrders = createAsyncThunk(
   }
 );
 
+export const fetchMyOrders = createAsyncThunk(
+  "order/fetchMyOrders",
+  async (status = null, { rejectWithValue }) => {
+    try {
+      const data = await getMyOrders(status);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to fetch my orders");
+    }
+  }
+);
+
+export const fetchMyOrderDetail = createAsyncThunk(
+  "order/fetchMyOrderDetail",
+  async (orderId, { rejectWithValue }) => {
+    try {
+      const data = await getOrderDetail(orderId);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to fetch order detail");
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: "order",
   initialState: {
@@ -92,6 +118,7 @@ const orderSlice = createSlice({
       totalElements: 0,
       totalPages: 1,
     },
+    myOrders: [],
     currentOrder: null,
     loading: false,
     error: null,
@@ -181,6 +208,32 @@ const orderSlice = createSlice({
         };
       })
       .addCase(loadPaginatedOrders.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(fetchMyOrders.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchMyOrders.fulfilled, (state, action) => {
+        state.loading = false;
+        state.myOrders = action.payload;
+      })
+      .addCase(fetchMyOrders.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(fetchMyOrderDetail.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchMyOrderDetail.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentOrder = action.payload;
+      })
+      .addCase(fetchMyOrderDetail.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
