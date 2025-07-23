@@ -1,11 +1,10 @@
 /* eslint-disable react/prop-types */
 import { useState, useCallback } from "react";
-import { Tag, Input, InputNumber, Button, Select, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { editReturnPolicy } from "../../../redux/slices/returnPolicySlice";
-
-const { Option } = Select;
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ReturnPolicyEditor = ({ returnPolicy, productId, onChange }) => {
   const navigate = useNavigate();
@@ -37,15 +36,15 @@ const ReturnPolicyEditor = ({ returnPolicy, productId, onChange }) => {
 
   const handleSave = useCallback(async () => {
     if (!editedPolicy.title?.trim()) {
-      message.error("Vui lòng nhập tiêu đề chính sách");
+      toast.error("Vui lòng nhập tiêu đề chính sách");
       return;
     }
     if (!editedPolicy.content?.trim()) {
-      message.error("Vui lòng nhập nội dung chính sách");
+      toast.error("Vui lòng nhập nội dung chính sách");
       return;
     }
     if (editedPolicy.returnDays < 1) {
-      message.error("Số ngày đổi trả phải lớn hơn 0");
+      toast.error("Số ngày đổi trả phải lớn hơn 0");
       return;
     }
 
@@ -56,174 +55,148 @@ const ReturnPolicyEditor = ({ returnPolicy, productId, onChange }) => {
           requestDTO: editedPolicy,
         })
       ).unwrap();
-      message.success("Cập nhật chính sách thành công");
+      toast.success("Cập nhật chính sách thành công");
       setIsEditing(false);
       onChange?.(updatedPolicy);
     } catch (err) {
       console.error(err);
-      message.error("Cập nhật chính sách thất bại");
+      toast.error("Cập nhật chính sách thất bại");
     }
   }, [dispatch, editedPolicy, onChange]);
 
   return (
-    <div
-      style={{
-        marginTop: 24,
-        marginBottom: 24,
-        padding: 16,
-        borderRadius: 6,
-        border: "1px solid #e8e8e8",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 16,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              backgroundColor: "#722ed1",
-              color: "white",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginRight: 8,
-            }}
-          >
+    <div className="my-6 p-4 border border-gray-200 rounded-md bg-white">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="w-6 h-6 rounded-full bg-purple-600 text-white text-sm font-medium flex items-center justify-center mr-2">
             {returnPolicy ? 1 : 0}
           </div>
           <span
-            // onClick={() =>
-            //   navigate(`/admin/products/${productId}/return-policy`)
-            // }
-            style={{ fontWeight: 500, cursor: "pointer" }}
+            onClick={() => navigate(`/admin/products/${productId}/return-policy`)}
+            className="text-base font-medium text-gray-900 cursor-pointer hover:text-blue-500"
           >
             Chính sách đổi trả
           </span>
         </div>
         {returnPolicy && (
-          <Button type="link" onClick={handleEditToggle}>
+          <button
+            onClick={handleEditToggle}
+            className="text-blue-500 hover:text-blue-600 text-sm font-medium focus:outline-none"
+          >
             {isEditing ? "Hủy" : "Chỉnh sửa"}
-          </Button>
+          </button>
         )}
       </div>
 
       {returnPolicy ? (
         isEditing ? (
-          <div style={{ padding: "8px 0" }}>
-            <div style={{ marginBottom: 16 }}>
-              <label
-                style={{ display: "block", marginBottom: 4, fontWeight: 500 }}
-              >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tiêu đề chính sách
               </label>
-              <Input
+              <input
+                type="text"
                 value={editedPolicy.title}
                 onChange={(e) => handlePolicyChange("title", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="Nhập tiêu đề chính sách"
               />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label
-                style={{ display: "block", marginBottom: 4, fontWeight: 500 }}
-              >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nội dung chính sách
               </label>
-              <Input.TextArea
+              <textarea
                 value={editedPolicy.content}
                 onChange={(e) => handlePolicyChange("content", e.target.value)}
-                placeholder="Nhập nội dung chính sách"
                 rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                placeholder="Nhập nội dung chính sách"
               />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label
-                style={{ display: "block", marginBottom: 4, fontWeight: 500 }}
-              >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Số ngày đổi trả
               </label>
-              <InputNumber
-                value={editedPolicy.returnDays}
-                onChange={(value) => handlePolicyChange("returnDays", value)}
+              <input
+                type="number"
                 min={1}
-                style={{ width: "100%" }}
+                value={editedPolicy.returnDays}
+                onChange={(e) =>
+                  handlePolicyChange("returnDays", parseInt(e.target.value) || 7)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label
-                style={{ display: "block", marginBottom: 4, fontWeight: 500 }}
-              >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Trạng thái
               </label>
-              <Select
+              <select
                 value={editedPolicy.status}
-                onChange={(value) => handlePolicyChange("status", value)}
-                style={{ width: "100%" }}
+                onChange={(e) => handlePolicyChange("status", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
-                <Option value="ACTIVE">Hoạt động</Option>
-                <Option value="INACTIVE">Không hoạt động</Option>
-              </Select>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="INACTIVE">Không hoạt động</option>
+              </select>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "flex", alignItems: "center" }}>
+            <div>
+              <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={editedPolicy.allowReturnWithoutReason}
                   onChange={(e) =>
-                    handlePolicyChange(
-                      "allowReturnWithoutReason",
-                      e.target.checked
-                    )
+                    handlePolicyChange("allowReturnWithoutReason", e.target.checked)
                   }
-                  style={{ marginRight: 8 }}
+                  className="h-4 w-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500"
                 />
-                Cho phép đổi trả không cần lý do
+                <span className="ml-2 text-sm text-gray-700">
+                  Cho phép đổi trả không cần lý do
+                </span>
               </label>
             </div>
-            <Button type="primary" onClick={handleSave}>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            >
               Lưu chính sách
-            </Button>
+            </button>
           </div>
         ) : (
           <div
-            onClick={() =>
-              navigate(`/admin/products/${productId}/return-policy`)
-            }
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "8px 0",
-              borderBottom: "1px solid #eee",
-              cursor: "pointer",
-            }}
+            onClick={() => navigate(`/admin/products/${productId}/return-policy`)}
+            className="flex justify-between items-center p-2 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
           >
-            <div style={{ display: "flex", gap: 8 }}>
-              <Tag color="blue">Tiêu đề: {returnPolicy.title}</Tag>
-              <Tag color="purple">Số ngày: {returnPolicy.returnDays}</Tag>
-              <Tag color={returnPolicy.status === "ACTIVE" ? "green" : "red"}>
-                {returnPolicy.status === "ACTIVE"
-                  ? "Hoạt động"
-                  : "Không hoạt động"}
-              </Tag>
+            <div className="flex gap-2 flex-wrap">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                Tiêu đề: {returnPolicy.title}
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                Số ngày: {returnPolicy.returnDays}
+              </span>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  returnPolicy.status === "ACTIVE"
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                } border`}
+              >
+                {returnPolicy.status === "ACTIVE" ? "Hoạt động" : "Không hoạt động"}
+              </span>
             </div>
-            <div style={{ display: "flex", gap: 16 }}>
-              <Tag color="orange">
+            <div className="flex gap-4">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
                 {returnPolicy.allowReturnWithoutReason
                   ? "Cho phép đổi trả không lý do"
                   : "Yêu cầu lý do đổi trả"}
-              </Tag>
+              </span>
             </div>
           </div>
         )
       ) : (
-        <div style={{ padding: "8px 0", color: "#888" }}>
+        <div className="p-2 text-gray-500 text-sm">
           Chưa có chính sách đổi trả được chọn
         </div>
       )}

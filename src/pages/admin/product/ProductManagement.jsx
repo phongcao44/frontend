@@ -16,6 +16,28 @@ const debounce = (func, wait) => {
   };
 };
 
+// Mock helper functions (replace with actual implementations)
+const mapSortBy = (sortBy) => ({
+  sortBy: sortBy || "price",
+  orderBy: "asc"
+});
+
+const getPriceRange = (selectedPriceRange) => {
+  const ranges = {
+    "0-50": { priceMin: 0, priceMax: 50 },
+    "50-100": { priceMin: 50, priceMax: 100 },
+    "100-200": { priceMin: 100, priceMax: 200 }
+  };
+  return ranges[selectedPriceRange] || { priceMin: null, priceMax: null };
+};
+
+const ratingOptions = [
+  { id: "0", value: 0 },
+  { id: "3", value: 3 },
+  { id: "4", value: 4 },
+  { id: "5", value: 5 }
+];
+
 export default function ProductManagement() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -25,8 +47,16 @@ export default function ProductManagement() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(null);
+  const [selectedPriceRange, setSelectedPriceRange] = useState("");
+  const [selectedRating, setSelectedRating] = useState("0");
+  const [selectedBrand, setSelectedBrand] = useState("all");
+  const [sortBy, setSortBy] = useState("price");
+  const id = null; // Category ID, replace with actual value or prop
+
+  console.log("ProductManagement rendered", paginated?.data?.content);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -47,15 +77,38 @@ export default function ProductManagement() {
 
   useEffect(() => {
     setIsLoading(true);
-    dispatch(loadProductsPaginate({
+    const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
+    const { priceMin, priceMax } = getPriceRange(selectedPriceRange);
+    const minRating = ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
+
+    const params = {
       page: currentPage,
       limit: itemsPerPage,
-      sortBy: "price",
-      orderBy: "asc",
-      keyword: debouncedSearchTerm,
-      status: statusFilter === "true" ? "IN_STOCK" : statusFilter === "false" ? "OUT_OF_STOCK" : "",
-    })).finally(() => setTimeout(() => setIsLoading(false), 500));
-  }, [dispatch, currentPage, itemsPerPage, debouncedSearchTerm, statusFilter]);
+      sortBy: apiSortBy,
+      orderBy,
+      categoryId: selectedSubcategoryId || id,
+      status: statusFilter === "true" ? "IN_STOCK" : statusFilter === "false" ? "OUT_OF_STOCK" : null,
+      brandName: selectedBrand === "all" ? null : selectedBrand,
+      priceMin: priceMin || null,
+      priceMax: priceMax || null,
+      minRating: minRating === 0 ? null : minRating,
+      keyword: debouncedSearchTerm || null
+    };
+
+    dispatch(loadProductsPaginate(params)).finally(() => setTimeout(() => setIsLoading(false), 500));
+  }, [
+    dispatch,
+    currentPage,
+    itemsPerPage,
+    id,
+    selectedSubcategoryId,
+    selectedPriceRange,
+    selectedRating,
+    selectedBrand,
+    sortBy,
+    debouncedSearchTerm,
+    statusFilter
+  ]);
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -65,7 +118,7 @@ export default function ProductManagement() {
       showCancelButton: true,
       confirmButtonText: "Xóa",
       cancelButtonText: "Hủy",
-      reverseButtons: true,
+      reverseButtons: true
     });
 
     if (result.isConfirmed) {
@@ -73,13 +126,22 @@ export default function ProductManagement() {
         await dispatch(removeProduct(id)).unwrap();
         await Swal.fire("Đã xóa!", "Sản phẩm đã được xóa.", "success");
         // Refresh the product list
+        const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
+        const { priceMin, priceMax } = getPriceRange(selectedPriceRange);
+        const minRating = ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
+
         dispatch(loadProductsPaginate({
           page: currentPage,
           limit: itemsPerPage,
-          sortBy: "price",
-          orderBy: "asc",
-          keyword: debouncedSearchTerm,
-          status: statusFilter === "true" ? "IN_STOCK" : statusFilter === "false" ? "OUT_OF_STOCK" : "",
+          sortBy: apiSortBy,
+          orderBy,
+          categoryId: selectedSubcategoryId || id,
+          status: statusFilter === "true" ? "IN_STOCK" : statusFilter === "false" ? "OUT_OF_STOCK" : null,
+          brandName: selectedBrand === "all" ? null : selectedBrand,
+          priceMin: priceMin || null,
+          priceMax: priceMax || null,
+          minRating: minRating === 0 ? null : minRating,
+          keyword: debouncedSearchTerm || null
         }));
       } catch (err) {
         await Swal.fire(
@@ -103,7 +165,7 @@ export default function ProductManagement() {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedItems(paginated?.content?.map((product) => product.id) || []);
+      setSelectedItems(paginated?.data?.content?.map((product) => product.id) || []);
     } else {
       setSelectedItems([]);
     }
@@ -117,19 +179,28 @@ export default function ProductManagement() {
 
   const handleRefresh = () => {
     setIsLoading(true);
+    const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
+    const { priceMin, priceMax } = getPriceRange(selectedPriceRange);
+    const minRating = ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
+
     dispatch(loadProductsPaginate({
       page: currentPage,
       limit: itemsPerPage,
-      sortBy: "price",
-      orderBy: "asc",
-      keyword: debouncedSearchTerm,
-      status: statusFilter === "true" ? "IN_STOCK" : statusFilter === "false" ? "OUT_OF_STOCK" : "",
+      sortBy: apiSortBy,
+      orderBy,
+      categoryId: selectedSubcategoryId || id,
+      status: statusFilter === "true" ? "IN_STOCK" : statusFilter === "false" ? "OUT_OF_STOCK" : null,
+      brandName: selectedBrand === "all" ? null : selectedBrand,
+      priceMin: priceMin || null,
+      priceMax: priceMax || null,
+      minRating: minRating === 0 ? null : minRating,
+      keyword: debouncedSearchTerm || null
     })).finally(() => setTimeout(() => setIsLoading(false), 500));
   };
 
-  const totalProducts = paginated?.totalElements || 0;
-  const inStockProducts = paginated?.content?.filter((product) => product.status === "IN_STOCK").length || 0;
-  const outOfStockProducts = paginated?.content?.filter((product) => product.status === "OUT_OF_STOCK").length || 0;
+  const totalProducts = paginated?.data?.totalElements || 0;
+  const inStockProducts = paginated?.data?.content?.filter((product) => product.status === "IN_STOCK").length || 0;
+  const outOfStockProducts = paginated?.data?.content?.filter((product) => product.status === "OUT_OF_STOCK").length || 0;
 
   const handlePageChange = (page, newItemsPerPage) => {
     setCurrentPage(page);
@@ -227,6 +298,47 @@ export default function ProductManagement() {
                 <option value="true">Còn hàng</option>
                 <option value="false">Hết hàng</option>
               </select>
+              <select
+                value={selectedPriceRange}
+                onChange={(e) => {
+                  setSelectedPriceRange(e.target.value);
+                  setCurrentPage(0);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading || isLoading}
+              >
+                <option value="">Tất cả giá</option>
+                <option value="0-50">0 - 50</option>
+                <option value="50-100">50 - 100</option>
+                <option value="100-200">100 - 200</option>
+              </select>
+              <select
+                value={selectedRating}
+                onChange={(e) => {
+                  setSelectedRating(e.target.value);
+                  setCurrentPage(0);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading || isLoading}
+              >
+                <option value="0">Tất cả đánh giá</option>
+                <option value="3">3 sao trở lên</option>
+                <option value="4">4 sao trở lên</option>
+                <option value="5">5 sao</option>
+              </select>
+              <select
+                value={selectedBrand}
+                onChange={(e) => {
+                  setSelectedBrand(e.target.value);
+                  setCurrentPage(0);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading || isLoading}
+              >
+                <option value="all">Tất cả thương hiệu</option>
+                <option value="BrandA">Brand A</option>
+                <option value="BrandB">Brand B</option>
+              </select>
             </div>
             <div className="relative flex items-center">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -257,7 +369,7 @@ export default function ProductManagement() {
           </div>
         )}
 
-        {!loading && !isLoading && !error && (!paginated?.content || paginated.content.length === 0) && (
+        {!loading && !isLoading && !error && (!paginated?.data?.content || paginated.data.content.length === 0) && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
             <p className="text-sm text-gray-600">
               Không tìm thấy sản phẩm nào.
@@ -265,7 +377,7 @@ export default function ProductManagement() {
           </div>
         )}
 
-        {!loading && !isLoading && !error && paginated?.content?.length > 0 && (
+        {!loading && !isLoading && !error && paginated?.data?.content?.length > 0 && (
           <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden lg:block">
               <div className="overflow-x-auto">
@@ -276,7 +388,7 @@ export default function ProductManagement() {
                         <input
                           type="checkbox"
                           className="rounded border-gray-300"
-                          checked={selectedItems.length === paginated.content.length}
+                          checked={selectedItems.length === paginated?.data?.content?.length}
                           onChange={handleSelectAll}
                         />
                       </th>
@@ -307,7 +419,7 @@ export default function ProductManagement() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginated.content.map((product) => (
+                    {paginated.data.content.map((product) => (
                       <tr
                         key={product.id}
                         className="hover:bg-gray-50 transition-colors"
@@ -380,7 +492,7 @@ export default function ProductManagement() {
             </div>
 
             <div className="lg:hidden space-y-4">
-              {paginated.content.map((product) => (
+              {paginated.data.content.map((product) => (
                 <div
                   key={product.id}
                   className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
@@ -463,7 +575,7 @@ export default function ProductManagement() {
 
             <Pagination
               currentPage={currentPage}
-              totalItems={paginated?.totalElements || 0}
+              totalItems={paginated?.data?.totalElements || 0}
               itemsPerPage={itemsPerPage}
               onPageChange={(page, newItemsPerPage) => {
                 handlePageChange(page, newItemsPerPage || itemsPerPage);

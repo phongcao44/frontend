@@ -166,6 +166,7 @@ export default function Orders() {
                 <OrderCard
                   key={order.id}
                   order={order}
+                  onSelect={() => onOrderSelect(order)}
                   getStatusColor={getStatusColor}
                   getStatusText={getStatusText}
                 />

@@ -126,3 +126,8 @@ const extractApiError = (error) => {
     "Unknown error";
   return new Error(message);
 };
+
+export const getRatingSummaryByProduct = async () => {
+  const response = await axiosInstance.get(`/admin/review/list`);
+  return response.data;
+}

@@ -26,8 +26,7 @@ const MainHeader = () => {
   const handleSearch = () => {
     const trimmed = searchTerm.trim();
     if (trimmed) {
-      console.warn(`Searching for: ${trimmed}`);
-    //  navigate(`/search?keyword=${encodeURIComponent(trimmed)}`);
+      navigate(`/products/search?keyword=${encodeURIComponent(trimmed)}`);
     }
   };
 

@@ -1,34 +1,70 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
 import { Form, Select, Input } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import { loadCategoryTree } from "../../../redux/slices/categorySlice";
+import {
+  loadCategoryTree,
+  loadParentLine,
+} from "../../../redux/slices/categorySlice";
 
 const { Option } = Select;
 
-// eslint-disable-next-line react/prop-types
 const CategorySelector = ({ form }) => {
   const dispatch = useDispatch();
   const [selectedParentId, setSelectedParentId] = useState(null);
   const [selectedChildId, setSelectedChildId] = useState(null);
 
+  const parentLine = useSelector((state) => state.category.parentLine);
   const categoryTree = useSelector((state) => state.category.categoryTree);
   const loadingTree = useSelector((state) => state.category.loadingTree);
+  const CategoryId = form.getFieldValue("category_id");
 
   useEffect(() => {
     dispatch(loadCategoryTree());
-  }, [dispatch]);
+    if (CategoryId) {
+      dispatch(loadParentLine(CategoryId));
+    }
+  }, [dispatch, CategoryId]);
+
+  useEffect(() => {
+    if (parentLine?.length > 0) {
+      const level3 = parentLine.find((item) => item.level === 3);
+      const level2 = parentLine.find((item) => item.level === 2);
+      const level1 = parentLine.find((item) => item.level === 1);
+
+      form.setFieldsValue({
+        parent_category_id: level1?.id,
+        child_category_id: level2?.id,
+        category_id: level3?.id,
+      });
+
+      setSelectedParentId(level1?.id || null);
+      setSelectedChildId(level2?.id || null);
+    }
+  }, [parentLine, form]);
 
   const handleParentChange = (parentId) => {
     setSelectedParentId(parentId);
     setSelectedChildId(null);
-    // eslint-disable-next-line react/prop-types
-    form.setFieldsValue({ child_category_id: undefined, category_id: undefined });
+    form.setFieldsValue({
+      parent_category_id: parentId,
+      child_category_id: undefined,
+      category_id: undefined,
+    });
   };
 
   const handleChildChange = (childId) => {
     setSelectedChildId(childId);
-    // eslint-disable-next-line react/prop-types
-    form.setFieldsValue({ category_id: undefined });
+    form.setFieldsValue({
+      child_category_id: childId,
+      category_id: undefined,
+    });
+  };
+
+  const handleGrandChildChange = (grandChildId) => {
+    form.setFieldsValue({
+      category_id: grandChildId,
+    });
   };
 
   const childCategories = selectedParentId
@@ -41,9 +77,8 @@ const CategorySelector = ({ form }) => {
 
   return (
     <>
-     
       <Form.Item
-        label="Ngành hàng (Danh mục cha)"
+        label="Ngành hàng (Cấp 1)"
         name="parent_category_id"
         rules={[{ required: true, message: "Vui lòng chọn ngành hàng" }]}
       >
@@ -61,9 +96,8 @@ const CategorySelector = ({ form }) => {
         </Select>
       </Form.Item>
 
-    
       <Form.Item
-        label="Danh mục con"
+        label="Danh mục con (Cấp 2)"
         name="child_category_id"
         rules={[{ required: true, message: "Vui lòng chọn danh mục con" }]}
       >
@@ -84,7 +118,7 @@ const CategorySelector = ({ form }) => {
       </Form.Item>
 
       <Form.Item
-        label="Danh mục chi tiết"
+        label="Danh mục chi tiết (Cấp 3)"
         name="category_id"
         rules={[{ required: true, message: "Vui lòng chọn danh mục chi tiết" }]}
       >
@@ -94,6 +128,7 @@ const CategorySelector = ({ form }) => {
               ? "Chọn danh mục chi tiết"
               : "Chọn danh mục con trước"
           }
+          onChange={handleGrandChildChange}
           disabled={!selectedChildId}
           allowClear
         >
