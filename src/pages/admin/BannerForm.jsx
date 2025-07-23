@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
-import { Modal, Input, Switch } from "antd";
+import { Modal, Input, Switch, Select } from "antd";
 import { X, Upload as UploadIcon } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -8,6 +8,9 @@ import {
   createBanner,
   editBanner,
 } from "../../redux/slices/bannerSlice";
+import {
+  loadProducts,
+} from "../../redux/slices/productSlice";
 
 export default function BannerFormModal({ open, onClose, id }) {
   const dispatch = useDispatch();
@@ -21,10 +24,16 @@ export default function BannerFormModal({ open, onClose, id }) {
     status: true,
     timeStart: "",
     timeEnd: "",
+    targetUrl: "",
   });
 
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const { list: products } = useSelector((state) => state.products);
+
+  useEffect(() => {
+    dispatch(loadProducts());
+  }, [dispatch]);
 
   useEffect(() => {
     if (id && banners.length === 0) {
@@ -42,6 +51,7 @@ export default function BannerFormModal({ open, onClose, id }) {
           ? editingBanner.startAt.slice(0, 16)
           : "",
         timeEnd: editingBanner.endAt ? editingBanner.endAt.slice(0, 16) : "",
+        targetUrl: editingBanner.targetUrl || "",
       });
       setImagePreview(editingBanner.bannerUrl || null);
     } else {
@@ -87,7 +97,7 @@ export default function BannerFormModal({ open, onClose, id }) {
     form.append("title", formData.title);
     form.append("position", formData.position);
     form.append("status", formData.status ? "true" : "false");
-
+    form.append("targetUrl", formData.targetUrl);
     const isoStart = new Date(formData.timeStart).toISOString();
     const isoEnd = new Date(formData.timeEnd).toISOString();
     form.append("startAt", isoStart);
@@ -105,6 +115,7 @@ export default function BannerFormModal({ open, onClose, id }) {
             title: formData.title,
             position: formData.position,
             status: formData.status,
+            targetUrl: formData.targetUrl,
             image: selectedFile,
             timeStart: formData.timeStart,
             timeEnd: formData.timeEnd,
@@ -125,6 +136,7 @@ export default function BannerFormModal({ open, onClose, id }) {
       status: true,
       timeStart: "",
       timeEnd: "",
+      targetUrl: "",
     });
     setImagePreview(null);
     setSelectedFile(null);
@@ -134,6 +146,7 @@ export default function BannerFormModal({ open, onClose, id }) {
     handleReset();
     onClose();
   };
+  console.log("Products:", products);
 
   return (
     <Modal
@@ -154,6 +167,29 @@ export default function BannerFormModal({ open, onClose, id }) {
           required
         />
       </div>
+      <div className="mb-4">
+        <label className="block mb-1 font-medium">Chọn sản phẩm</label>
+        <Select
+          showSearch
+          placeholder="Chọn sản phẩm"
+          optionFilterProp="children"
+          onChange={(value) => setFormData(prev => ({
+            ...prev,
+            targetUrl: `/product/${value}`
+          }))}
+          filterOption={(input, option) =>
+            option.children.toLowerCase().includes(input.toLowerCase())
+          }
+          className="w-full"
+        >
+          {products.map((product) => (
+            <Select.Option key={product.id} value={product.id}>
+              {product.name}
+            </Select.Option>
+          ))}
+        </Select>
+      </div>
+
 
       <div className="mb-4">
         <label className="block mb-1 font-medium">Vị trí</label>
