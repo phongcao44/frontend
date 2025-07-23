@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   fetchLeastViewedProducts,
-  fetchMergedProducts,
   fetchProductDetailById,
   fetchProductsByCategory,
   fetchTopBestSellingProducts,
@@ -19,14 +18,6 @@ import {
   changeProductStatus,
   searchProducts,
 } from "../../services/productServices";
-
-export const loadMergedProducts = createAsyncThunk(
-  "products/loadMerged",
-  async ({ page = 0, limit = 10 }) => {
-    const data = await fetchMergedProducts(page, limit);
-    return data;
-  }
-);
 
 export const loadProductDetail = createAsyncThunk(
   "products/loadDetail",
@@ -112,7 +103,6 @@ const productSlice = createSlice({
   initialState: {
     list: [],
     paginated: null,
-    mergedProducts: [],
     productDetail: null,
     topBestSelling: [],
     topLeastSelling: [],
@@ -129,21 +119,6 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Load danh sách sản phẩm
-      .addCase(loadMergedProducts.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(loadMergedProducts.fulfilled, (state, action) => {
-        state.mergedProducts = action.payload;
-        state.loading = false;
-      })
-      .addCase(loadMergedProducts.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message;
-      })
-
-      // Load chi tiết sản phẩm
       .addCase(loadProductDetail.pending, (state) => {
         state.loading = true;
         state.error = null;

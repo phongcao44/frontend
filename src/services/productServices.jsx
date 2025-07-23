@@ -38,11 +38,6 @@ export const fetchProductsPaginate = async ({
       minRating,
     },
   });
-
-  console.log("Full URL test:",
-  `${axiosInstance.defaults.baseURL}/paginate?page=${page}&limit=${limit}&sortBy=${sortBy}&orderBy=${orderBy}&keyword=${keyword}&categoryId=${categoryId}&status=${status}&brandName=${brandName}&priceMin=${priceMin}&priceMax=${priceMax}&minRating=${minRating}`
-);
-
   return res.data;
 };
 

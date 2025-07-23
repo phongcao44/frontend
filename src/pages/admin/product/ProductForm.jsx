@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect, useCallback } from "react";
 import {
   Input,
@@ -22,7 +23,6 @@ import {
   addProduct,
   editProduct,
   removeProduct,
-  loadProductDetail,
   loadProductById,
 } from "../../../redux/slices/productSlice";
 import {
@@ -43,7 +43,6 @@ import ReturnPolicyEditor from "./ReturnPolicyEditor";
 import ReturnPolicySection from "./ReturnPolicySection";
 import ProductSpecificationSection from "./ProductSpecificationSection";
 import ProductSpecificationEditor from "./ProductSpecificationEditor";
-
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -69,8 +68,9 @@ const ProductForm = () => {
   const errorProduct = useSelector((state) => state.products.error);
   const errorPolicy = useSelector((state) => state.returnPolicy.error);
 
-  console.log(product);
-  const { current: specificationData } = useSelector((state) => state.productSpecification);
+  const { current: specificationData } = useSelector(
+    (state) => state.productSpecification
+  );
 
   useEffect(() => {
     if (productId) {
@@ -78,13 +78,6 @@ const ProductForm = () => {
       dispatch(getProductSpecificationById(productId));
     }
   }, [dispatch, productId]);
-
-  useEffect(() => {
-    console.log(product);
-    if (productId && product?.returnPolicy?.id) {
-      dispatch(getReturnPolicyById(product.returnPolicy.id));
-    }
-  }, [dispatch, productId, product]);
 
   useEffect(() => {
     if (specificationData && Array.isArray(specificationData)) {
@@ -106,18 +99,23 @@ const ProductForm = () => {
         description: product.description,
         sellingPrice: product.price,
         brand: product.brand,
-        category_id: product.category?.id,
+        category_id: product.categoryId,
+        return_policy_id: product.returnPolicyId || null,
       });
       setShippingEnabled(product.status === "IN_STOCK");
       setFormData((prev) => {
         if (
           prev.variants !== product.variants ||
-          prev.returnPolicy?.id !== product.returnPolicy?.id
+          prev.returnPolicy?.id !== product.returnPolicyId
         ) {
           return {
             ...prev,
             variants: Array.isArray(product.variants) ? product.variants : [],
-            returnPolicy: product.returnPolicy || null,
+            returnPolicy: {
+            id: product.returnPolicyId,
+            title: product.returnPolicyTitle,
+            content: product.returnPolicyContent,
+          },
           };
         }
         return prev;
@@ -144,7 +142,6 @@ const ProductForm = () => {
 
   const handleReturnPolicyChange = useCallback((policy) => {
     setFormData((prev) => {
-      console.log("handleReturnPolicyChange", policy);
       const newReturnPolicy = policy || null;
       if (prev.returnPolicy?.id !== newReturnPolicy?.id) {
         return {
@@ -171,7 +168,7 @@ const ProductForm = () => {
     }
     if (!formData.specifications || formData.specifications.length === 0) {
       message.error("Vui lòng chọn một thông số kỹ thuật");
-      return
+      return;
     }
 
     const productData = {
@@ -185,11 +182,9 @@ const ProductForm = () => {
     };
 
     try {
-      console.log("Submitting product:", productData);
       const productResponse = await dispatch(addProduct(productData)).unwrap();
       const newProductId = productResponse.data.id;
 
-      console.log("New product variants:", formData.variants);
 
       for (const variant of formData.variants) {
         const productVariant = {
@@ -202,16 +197,14 @@ const ProductForm = () => {
         await dispatch(addProductVariant(productVariant)).unwrap();
       }
 
-      // 2. Chuẩn hoá specifications
       const normalizedSpecs = formData.specifications
         .map((spec) => ({
           productId: newProductId,
           specKey: spec.key || spec.name,
           specValue: spec.value,
         }))
-        .filter((spec) => spec.specKey && spec.specValue); // bỏ thông số rỗng
+        .filter((spec) => spec.specKey && spec.specValue);
 
-      // 3. Gửi từng specification lên backend
       for (const spec of normalizedSpecs) {
         await dispatch(addProductSpecification(spec)).unwrap();
       }
@@ -223,21 +216,18 @@ const ProductForm = () => {
       message.error("Thêm sản phẩm thất bại!");
     }
   };
-
+  
   const handleUpdate = async () => {
     const values = await form.validateFields();
-    if (!formData.variants || formData.variants.length === 0) {
-      message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
-      return;
-    }
-    if (!formData.returnPolicy?.id) {
-      message.error("Vui lòng chọn một chính sách đổi trả");
-      return;
-    }
-    // if (!formData.specifications || formData.specifications.length == 0) {
-    //   message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
+    // if (!formData.variants || formData.variants.length === 0) {
+    //   message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
     //   return;
     // }
+    // if (!formData.returnPolicy?.id) {
+    //   message.error("Vui lòng chọn một chính sách đổi trả");
+    //   return;
+    // }
+
 
     const updatedProduct = {
       name: values.productName,
@@ -246,15 +236,16 @@ const ProductForm = () => {
       brand: values.brand || "",
       status: shippingEnabled ? "IN_STOCK" : "OUT_OF_STOCK",
       categoryId: values.category_id,
-      return_policy_id: formData.returnPolicy.id,
+      return_policy_id: formData.returnPolicyId,
     };
 
+    console.log("Cập nhật sản phẩm với dữ liệu:", updatedProduct);
+
     try {
-      await dispatch(
-        editProduct({ id: productId, productData: updatedProduct })
-      ).unwrap();
+      // await dispatch(
+      //   editProduct({ id: productId, productData: updatedProduct })
+      // ).unwrap();
       message.success("Cập nhật sản phẩm thành công");
-      dispatch(loadProductDetail(productId));
     } catch (err) {
       console.error(err);
       message.error("Cập nhật sản phẩm thất bại");
@@ -262,33 +253,29 @@ const ProductForm = () => {
   };
 
   const handleDelete = async () => {
-  try {
-    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    try {
+      const variants = Array.isArray(product?.variants) ? product.variants : [];
 
-    // Xoá tất cả biến thể sản phẩm
-    if (variants.length > 0) {
-      for (const variant of variants) {
-        await dispatch(removeProductVariant(variant.id)).unwrap();
+      if (variants.length > 0) {
+        for (const variant of variants) {
+          await dispatch(removeProductVariant(variant.id)).unwrap();
+        }
       }
-    }
 
-    // Xoá tất cả thông số kỹ thuật (ProductSpecification)
-    if (Array.isArray(specificationData) && specificationData.length > 0) {
-      for (const spec of specificationData) {
-        await dispatch(removeProductSpecification(spec.id)).unwrap();
+      if (Array.isArray(specificationData) && specificationData.length > 0) {
+        for (const spec of specificationData) {
+          await dispatch(removeProductSpecification(spec.id)).unwrap();
+        }
       }
+
+      await dispatch(removeProduct(productId)).unwrap();
+      message.success("Xóa sản phẩm thành công");
+      navigate("/admin/products");
+    } catch (err) {
+      console.error(err);
+      message.error("Xóa sản phẩm thất bại");
     }
-
-    // Xoá sản phẩm
-    await dispatch(removeProduct(productId)).unwrap();
-    message.success("Xóa sản phẩm thành công");
-    navigate("/admin/products");
-  } catch (err) {
-    console.error(err);
-    message.error("Xóa sản phẩm thất bại");
-  }
-};
-
+  };
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
@@ -386,20 +373,21 @@ const ProductForm = () => {
           </div>
         </Card>
 
-        {!productId && (
+        {/* {!productId && ( */}
           <ReturnPolicySection
             onChange={handleReturnPolicyChange}
             defaultPolicyId={formData.returnPolicy?.id}
+            productId={productId}
           />
-        )}
+        {/* )} */}
 
-        {productId && product && !loadingProduct && !loadingPolicy && (
+        {/* {productId && product && !loadingProduct && !loadingPolicy && (
           <ReturnPolicyEditor
             returnPolicy={formData.returnPolicy}
             productId={productId}
             onChange={handleReturnPolicyChange}
           />
-        )}
+        )} */}
 
         {!productId && (
           <VariantSection

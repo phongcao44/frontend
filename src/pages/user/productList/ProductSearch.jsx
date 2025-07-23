@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { loadProductsPaginate } from '../../../redux/slices/productSlice'; 
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { loadProductsPaginate } from "../../../redux/slices/productSlice";
+import { useSearchParams } from "react-router-dom";
+import { loadParentCategories } from "../../../redux/slices/categorySlice";
+import ProductCardList from "./ProductCardList";
 
 function ProductSearch() {
   const dispatch = useDispatch();
@@ -11,54 +13,58 @@ function ProductSearch() {
   const loading = useSelector((state) => state.products.loading);
   const error = useSelector((state) => state.products.error);
 
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedPriceRange, setSelectedPriceRange] = useState('all');
-  const [selectedRating, setSelectedRating] = useState('all');
-  const [sortBy, setSortBy] = useState('popular');
-  const [page, setPage] = useState(0); // Start page from 0
+  const [selectedPriceRange, setSelectedPriceRange] = useState("all");
+  const [selectedRating, setSelectedRating] = useState("all");
+  const [sortBy, setSortBy] = useState("popular");
+  const [page, setPage] = useState(0);
 
-  console.warn(`Searching for: ${keyword}`);
+  const { parentList } = useSelector((state) => state.category);
+  const [activeCategoryId, setActiveCategoryId] = useState(null);
+
+  useEffect(() => {
+    dispatch(
+      loadParentCategories({
+        page: 0,
+        limit: 8,
+        sortBy: "name",
+        orderBy: "asc",
+      })
+    );
+  }, [dispatch]);
 
   const priceRanges = [
-    { id: 'all', label: 'Tất cả giá', min: 0, max: Infinity },
-    { id: 'under-500', label: 'Dưới 500K', min: 0, max: 500000 },
-    { id: '500-1000', label: '500K - 1 triệu', min: 500000, max: 1000000 },
-    { id: 'above-1000', label: 'Trên 1 triệu', min: 1000000, max: Infinity },
+    { id: "all", label: "Tất cả giá", min: "", max: "" },
+    { id: "under-500", label: "Dưới 500K", min: 0, max: 500000 },
+    { id: "500-1000", label: "500K - 1 triệu", min: 500000, max: 1000000 },
+    { id: "above-1000", label: "Trên 1 triệu", min: 1000000, max: 999999999 },
   ];
 
   const ratingOptions = [
-    { id: 'all', label: 'Tất cả đánh giá', value: 0 },
-    { id: '4plus', label: '4 sao trở lên', value: 4 },
-    { id: '3plus', label: '3 sao trở lên', value: 3 },
-  ];
-
-  const categories = [
-    { id: 'all', name: 'Tất cả', count: 245 },
-    { id: 'fashion', name: 'Thời trang', count: 89 },
-    { id: 'electronics', name: 'Điện tử', count: 67 },
-    { id: 'beauty', name: 'Làm đẹp', count: 45 },
-    { id: 'home', name: 'Nhà cửa', count: 34 },
-    { id: 'sports', name: 'Thể thao', count: 28 },
+    { id: "all", label: "Tất cả đánh giá", value: 0 },
+    { id: "4plus", label: "4 sao trở lên", value: 4 },
+    { id: "3plus", label: "3 sao trở lên", value: 3 },
+    { id: "2plus", label: "2 sao trở lên", value: 2 },
   ];
 
   const mapSortBy = (sortBy) => {
     switch (sortBy) {
-      case 'newest':
-        return { sortBy: 'createdAt', orderBy: 'desc' };
-      case 'price-low':
-        return { sortBy: 'price', orderBy: 'asc' };
-      case 'price-high':
-        return { sortBy: 'price', orderBy: 'desc' };
+      case "newest":
+        return { sortBy: "createdAt", orderBy: "desc" };
+      case "price-low":
+        return { sortBy: "price", orderBy: "asc" };
+      case "price-high":
+        return { sortBy: "price", orderBy: "desc" };
       default:
-        return { sortBy: 'createdAt', orderBy: 'desc' };
+        return { sortBy: "createdAt", orderBy: "desc" };
     }
   };
 
   // Lấy khoảng giá từ selectedPriceRange
   const getPriceRange = () => {
     const range = priceRanges.find((r) => r.id === selectedPriceRange);
-    if (range.id === 'all') {
+    if (range.id === "all") {
       return { priceMin: null, priceMax: null }; // Use null instead of empty string
     }
     return {
@@ -78,7 +84,7 @@ function ProductSearch() {
       sortBy: apiSortBy,
       orderBy,
       keyword: keyword || null, // Use null if no keyword
-      categoryId: activeFilter === 'all' ? null : activeFilter, // Use null if "all"
+      categoryId: activeFilter === "all" ? "" : activeFilter, // Use null if "all"
       status: null, // Use null instead of empty string
       brandName: null, // Use null instead of empty string
       priceMin, // null if not applicable
@@ -89,26 +95,37 @@ function ProductSearch() {
     console.warn("Fetching products with params:", params);
 
     dispatch(loadProductsPaginate(params));
-  }, [dispatch, page, activeFilter, selectedPriceRange, selectedRating, sortBy, keyword]);
+  }, [
+    dispatch,
+    page,
+    activeFilter,
+    selectedPriceRange,
+    selectedRating,
+    sortBy,
+    keyword,
+  ]);
 
   // Xử lý chuyển trang
   const handleLoadMore = () => {
-    if (page < paginatedProducts?.totalPages - 1) { // Adjust for zero-based paging
+    if (page < paginatedProducts?.totalPages - 1) {
+      // Adjust for zero-based paging
       setPage((prev) => prev + 1);
     }
   };
 
   // Xử lý reset bộ lọc
   const handleResetFilters = () => {
-    setSelectedPriceRange('all');
-    setSelectedRating('all');
-    setSortBy('popular');
-    setActiveFilter('all');
+    setSelectedPriceRange("all");
+    setSelectedRating("all");
+    setSortBy("popular");
+    setActiveFilter("all");
     setPage(0); // Reset to page 0
   };
 
-  if (loading && page === 0) return <div className="text-center py-10">Loading...</div>;
-  if (error) return <div className="text-center py-10 text-red-500">Error: {error}</div>;
+  if (loading && page === 0)
+    return <div className="text-center py-10">Loading...</div>;
+  if (error)
+    return <div className="text-center py-10 text-red-500">Error: {error}</div>;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -122,26 +139,44 @@ function ProductSearch() {
 
         {/* Page Title */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Khám phá sản phẩm</h1>
-          <p className="text-gray-600">Tìm kiếm những sản phẩm yêu thích của bạn</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+            Khám phá sản phẩm
+          </h1>
+          <p className="text-gray-600">
+            Tìm kiếm những sản phẩm yêu thích của bạn
+          </p>
         </div>
 
         {/* Category Pills */}
         <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {categories.map((category) => (
+          <button
+            onClick={() => {
+              setActiveFilter(null);
+              setPage(0);
+            }}
+            className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
+              activeFilter === null
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:text-blue-600"
+            }`}
+          >
+            Tất cả
+          </button>
+
+          {parentList?.map((category) => (
             <button
               key={category.id}
               onClick={() => {
                 setActiveFilter(category.id);
-                setPage(0); // Reset to page 0 when changing category
+                setPage(0);
               }}
               className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
                 activeFilter === category.id
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:text-blue-600"
               }`}
             >
-              {category.name} ({category.count})
+              {category.name}
             </button>
           ))}
         </div>
@@ -197,8 +232,8 @@ function ProductSearch() {
                         }}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
                           selectedPriceRange === range.id
-                            ? 'bg-blue-50 text-blue-600 font-medium'
-                            : 'text-gray-600 hover:bg-gray-50'
+                            ? "bg-blue-50 text-blue-600 font-medium"
+                            : "text-gray-600 hover:bg-gray-50"
                         }`}
                       >
                         {range.label}
@@ -223,8 +258,8 @@ function ProductSearch() {
                         }}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
                           selectedRating === option.id
-                            ? 'bg-blue-50 text-blue-600 font-medium'
-                            : 'text-gray-600 hover:bg-gray-50'
+                            ? "bg-blue-50 text-blue-600 font-medium"
+                            : "text-gray-600 hover:bg-gray-50"
                         }`}
                       >
                         {option.label}
@@ -276,63 +311,97 @@ function ProductSearch() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
-          {paginatedProducts?.data?.content?.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
-            >
-              <div className="relative overflow-hidden">
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-64 object-cover object-top group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-3 right-3">
-                  <button className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-red-50 transition-colors cursor-pointer">
-                    <i className="far fa-heart text-gray-400 hover:text-red-500 text-sm"></i>
-                  </button>
-                </div>
-                {product.originalPrice > product.price && (
-                  <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                    -{Math.round((1 - product.price / product.originalPrice) * 100)}%
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                  {product.name}
-                </h3>
-                <div className="flex items-center space-x-1 mb-2">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <i
-                        key={i}
-                        className={`fas fa-star text-xs ${
-                          i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-200'
-                        }`}
-                      ></i>
-                    ))}
-                  </div>
-                  <span className="text-xs text-gray-500">({product.rating})</span>
-                  <span className="text-xs text-gray-400">• Đã bán {product.sold}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg font-bold text-gray-900">
-                      {product.price.toLocaleString('vi-VN')}đ
-                    </span>
-                    {product.originalPrice > product.price && (
-                      <span className="text-sm text-gray-400 line-through">
-                        {product.originalPrice.toLocaleString('vi-VN')}đ
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button className="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer whitespace-nowrap !rounded-button">
-                  Thêm vào giỏ
-                </button>
-              </div>
-            </div>
+          {paginatedProducts?.data?.content?.map((productData) => (
+            // <div
+            //   key={product.id}
+            //   className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
+            // >
+            //   <div className="relative overflow-hidden">
+            //     <img
+            //       src={product.imageUrl}
+            //       alt={product.name}
+            //       className="w-full h-64 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+            //     />
+            //     <div className="absolute top-3 right-3">
+            //       <button className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-red-50 transition-colors cursor-pointer">
+            //         <i className="far fa-heart text-gray-400 hover:text-red-500 text-sm"></i>
+            //       </button>
+            //     </div>
+            //     {product.originalPrice > product.price && (
+            //       <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+            //         -
+            //         {Math.round(
+            //           (1 - product.price / product.originalPrice) * 100
+            //         )}
+            //         %
+            //       </div>
+            //     )}
+            //   </div>
+            //   <div className="p-4">
+            //     <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            //       {product.name}
+            //     </h3>
+            //     <div className="flex items-center space-x-1 mb-2">
+            //       <div className="flex items-center">
+            //         {[...Array(5)].map((_, i) => {
+            //           const whole = Math.floor(product.averageRating);
+            //           const decimal = product.averageRating - whole;
+
+            //           if (i < whole) {
+            //             return (
+            //               <i
+            //                 key={i}
+            //                 className="fas fa-star text-yellow-400"
+            //               ></i>
+            //             );
+            //           } else if (i === whole) {
+            //             if (decimal >= 0.75) {
+            //               return (
+            //                 <i
+            //                   key={i}
+            //                   className="fas fa-star text-yellow-400"
+            //                 ></i>
+            //               );
+            //             } else if (decimal >= 0.25) {
+            //               return (
+            //                 <i
+            //                   key={i}
+            //                   className="fas fa-star-half-alt text-yellow-400"
+            //                 ></i>
+            //               );
+            //             }
+            //           }
+            //           return (
+            //             <i key={i} className="fas fa-star text-gray-200"></i>
+            //           );
+            //         })}
+            //       </div>
+            //       <span className="text-xs text-gray-500">
+            //         ({product.averageRating})
+            //       </span>
+            //       <span className="text-xs text-gray-400">
+            //         {" "}
+            //         {product.totalReviews}
+            //       </span>
+            //     </div>
+            //     <div className="flex items-center justify-between">
+            //       <div className="flex items-center space-x-2">
+            //         <span className="text-lg font-bold text-gray-900">
+            //           {product.price.toLocaleString("vi-VN")}đ
+            //         </span>
+            //         {product.originalPrice > product.price && (
+            //           <span className="text-sm text-gray-400 line-through">
+            //             {product.originalPrice.toLocaleString("vi-VN")}đ
+            //           </span>
+            //         )}
+            //       </div>
+            //     </div>
+            //     <button className="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer whitespace-nowrap !rounded-button">
+            //       Thêm vào giỏ
+            //     </button>
+            //   </div>
+            // </div>
+              <ProductCardList key={productData.id} product={productData} />
           ))}
         </div>
 
@@ -345,7 +414,7 @@ function ProductSearch() {
               className="px-8 py-3 bg-white border border-gray-200 text-gray-700 rounded-full h
               over:border-blue-300 hover:text-blue-600 transition-all duration-200 font-medium cursor-pointer whitespace-nowrap !rounded-button disabled:opacity-50"
             >
-              {loading ? 'Đang tải...' : 'Xem thêm sản phẩm'}
+              {loading ? "Đang tải..." : "Xem thêm sản phẩm"}
             </button>
           </div>
         )}

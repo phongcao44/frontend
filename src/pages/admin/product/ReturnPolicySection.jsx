@@ -10,16 +10,16 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PolicyModal from "./PolicyModal";
 
-const ReturnPolicySection = ({ onChange, defaultPolicyId = null }) => {
+const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = null }) => {
   const dispatch = useDispatch();
   const returnPolicies = useSelector((state) => state.returnPolicy.items || []);
   const loading = useSelector((state) => state.returnPolicy.loading);
   const error = useSelector((state) => state.returnPolicy.error);
 
-  const [hasReturnPolicy, setHasReturnPolicy] = useState(!!defaultPolicyId);
   const [selectedPolicyId, setSelectedPolicyId] = useState(defaultPolicyId);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [formData, setFormData] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(!productId);
 
   useEffect(() => {
     dispatch(getAllReturnPolicies());
@@ -32,7 +32,15 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null }) => {
   }, [error]);
 
   useEffect(() => {
-    if (
+    if (returnPolicies.length === 0) return;
+
+    const productPolicy = returnPolicies.find((p) => p.id === defaultPolicyId);
+    
+    if (productId && productPolicy && selectedPolicyId !== productPolicy.id) {
+      setSelectedPolicyId(productPolicy.id);
+      setFormData({ ...productPolicy });
+      onChange?.(productPolicy);
+    } else if (
       selectedPolicyId &&
       !returnPolicies.find((p) => p.id === selectedPolicyId)
     ) {
@@ -42,14 +50,19 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null }) => {
     } else if (selectedPolicyId) {
       const policy = returnPolicies.find((p) => p.id === selectedPolicyId);
       if (policy && (!formData || formData.id !== policy.id)) {
-        setFormData({ ...policy });
-        onChange?.(policy);
+        if (
+          !formData ||
+          JSON.stringify(formData) !== JSON.stringify(policy)
+        ) {
+          setFormData({ ...policy });
+          onChange?.(policy);
+        }
       }
-    } else if (formData || selectedPolicyId) {
+    } else if (formData) {
       setFormData(null);
       onChange?.(null);
     }
-  }, [returnPolicies, selectedPolicyId, formData, onChange]);
+  }, [returnPolicies, selectedPolicyId, defaultPolicyId, productId, onChange]);
 
   const handlePolicySelect = useCallback(
     (value) => {
@@ -63,6 +76,7 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null }) => {
           setFormData({ ...selectedPolicy });
           onChange?.(selectedPolicy);
         } else {
+          setFormData(null);
           onChange?.(null);
         }
       }
@@ -167,211 +181,192 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null }) => {
           </svg>
         </div>
       )}
-      <label className="flex items-center mb-4">
-        <input
-          type="checkbox"
-          checked={hasReturnPolicy}
-          onChange={(e) => {
-            setHasReturnPolicy(e.target.checked);
-            if (!e.target.checked) {
-              setSelectedPolicyId(null);
-              setFormData(null);
-              onChange?.(null);
-            }
-          }}
-          className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-          disabled={loading}
-        />
-        <span className="ml-2 text-sm">Sản phẩm này có chính sách đổi trả</span>
-      </label>
+      <div className="flex items-end gap-4 mb-6">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Chọn chính sách
+          </label>
+          <select
+            value={selectedPolicyId ?? ""}
+            onChange={(e) => handlePolicySelect(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            disabled={loading}
+          >
+            <option value="" disabled>
+              {loading ? "Đang tải chính sách..." : "Chọn chính sách"}
+            </option>
+            {returnPolicies.length > 0 ? (
+              returnPolicies.map((policy) => (
+                <option key={policy.id} value={policy.id}>
+                  {policy.title}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>
+                Không có chính sách
+              </option>
+            )}
+            <option value="not_satisfied">Không hài lòng</option>
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setAddModalVisible(true)}
+            className="text-blue-600 hover:text-blue-800 flex items-center"
+            disabled={loading}
+          >
+            <svg
+              className="h-4 w-4 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Thêm chính sách mới
+          </button>
+        </div>
+      </div>
 
-      {hasReturnPolicy && (
-        <>
-          <div className="flex items-end gap-4 mb-6">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chọn chính sách
+      <div className="mb-6 p-4 border border-gray-300 rounded-md">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">
+          Chi tiết chính sách
+        </h3>
+        {formData ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tiêu đề chính sách
+              </label>
+              <input
+                type="text"
+                value={formData.title || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    title: e.target.value,
+                  }))
+                }
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mô tả chi tiết
+              </label>
+              <textarea
+                value={formData.content || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    content: e.target.value,
+                  }))
+                }
+                rows={4}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Số ngày đổi trả
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={formData.returnDays || 7}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    returnDays: parseInt(e.target.value) || 7,
+                  }))
+                }
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cho phép đổi trả không cần lý do
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.allowReturnWithoutReason || false}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      allowReturnWithoutReason: e.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                  disabled={loading}
+                />
+                <span className="ml-2 text-sm">
+                  Cho phép đổi trả không cần lý do
+                </span>
+              </label>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Trạng thái
               </label>
               <select
-                value={selectedPolicyId ?? ""}
-                onChange={(e) => handlePolicySelect(e.target.value)}
+                value={formData.status || "ACTIVE"}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    status: e.target.value,
+                  }))
+                }
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               >
-                <option value="" disabled>
-                  {loading ? "Đang tải chính sách..." : "Chọn chính sách"}
-                </option>
-                {returnPolicies.length > 0 ? (
-                  returnPolicies.map((policy) => (
-                    <option key={policy.id} value={policy.id}>
-                      {policy.title}
-                    </option>
-                  ))
-                ) : (
-                  <option value="" disabled>
-                    Không có chính sách
-                  </option>
-                )}
-                <option value="not_satisfied">Không hài lòng</option>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="INACTIVE">Không hoạt động</option>
               </select>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setAddModalVisible(true)}
-                className="text-blue-600 hover:text-blue-800 flex items-center"
-                disabled={loading}
-              >
-                <svg
-                  className="h-4 w-4 mr-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
+            {selectedPolicyDetails && (
+              <div className="flex gap-4 mt-2">
+                <button
+                  onClick={handleSavePolicy}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={loading}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Thêm chính sách mới
-              </button>
-            </div>
+                  Lưu
+                </button>
+                <button
+                  onClick={() => removePolicy(selectedPolicyDetails.id)}
+                  className="text-red-600 hover:text-red-800 text-sm"
+                  disabled={loading}
+                >
+                  Xóa
+                </button>
+              </div>
+            )}
           </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Không tìm thấy chính sách, vui lòng chọn hoặc thêm mới
+          </p>
+        )}
+      </div>
 
-          {selectedPolicyId && selectedPolicyId !== "not_satisfied" && (
-            <div className="mb-6 p-4 border border-gray-300 rounded-md">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Chi tiết chính sách
-              </h3>
-              {selectedPolicyDetails && formData ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tiêu đề chính sách
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
-                      }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      disabled={loading}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mô tả chi tiết
-                    </label>
-                    <textarea
-                      value={formData.content}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          content: e.target.value,
-                        }))
-                      }
-                      rows={4}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      disabled={loading}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Số ngày đổi trả
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={formData.returnDays}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          returnDays: parseInt(e.target.value) || 7,
-                        }))
-                      }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      disabled={loading}
-                    />
-                  </div>
-                  <div>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.allowReturnWithoutReason}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            allowReturnWithoutReason: e.target.checked,
-                          }))
-                        }
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                        disabled={loading}
-                      />
-                      <span className="ml-2 text-sm">
-                        Cho phép đổi trả không cần lý do
-                      </span>
-                    </label>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Trạng thái
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          status: e.target.value,
-                        }))
-                      }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                      disabled={loading}
-                    >
-                      <option value="ACTIVE">Hoạt động</option>
-                      <option value="INACTIVE">Không hoạt động</option>
-                    </select>
-                  </div>
-                  <div className="flex gap-4 mt-2">
-                    <button
-                      onClick={handleSavePolicy}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      disabled={loading}
-                    >
-                      Lưu
-                    </button>
-                    <button
-                      onClick={() => removePolicy(selectedPolicyDetails.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                      disabled={loading}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  Không tìm thấy chính sách
-                </p>
-              )}
-            </div>
-          )}
-
-          <PolicyModal
-            isOpen={addModalVisible}
-            onClose={() => {
-              setAddModalVisible(false);
-            }}
-            onSubmit={handleCreatePolicy}
-            loading={loading}
-          />
-        </>
-      )}
+      <PolicyModal
+        isOpen={addModalVisible}
+        onClose={() => {
+          setAddModalVisible(false);
+        }}
+        onSubmit={handleCreatePolicy}
+        loading={loading}
+      />
     </div>
   );
 };
