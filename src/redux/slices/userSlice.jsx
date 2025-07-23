@@ -8,6 +8,7 @@ import {
   getAllUsersPaginateAndFilter,
   getUserDetail,
   updateUserDetail,
+  getUserView,
 } from "../../services/userService";
 
 export const getUsers = createAsyncThunk(
@@ -105,12 +106,24 @@ export const updateUserDetailThunk = createAsyncThunk(
       const data = await updateUserDetail(userDetailRequest);
       return data;
     } catch (error) {
-      return rejectWithValue(
-        error.message || error.toString() || "Failed to update user detail"
-      );
+      console.error('Error in updateUserDetailThunk:', error);
+      return rejectWithValue(error.response?.data || error.message || "Failed to update user detail");
     }
   }
 );
+
+export const fetchUserView = createAsyncThunk(
+  "users/fetchUserView",
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await getUserView();
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to fetch user view");
+    }
+  }
+);
+
 
 // User slice
 const userSlice = createSlice({
@@ -214,6 +227,21 @@ const userSlice = createSlice({
         state.error = action.payload;
       })
 
+            // Get authenticated user's view
+      .addCase(fetchUserView.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserView.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userDetail = action.payload;
+      })
+      .addCase(fetchUserView.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+
       // Update user status
       .addCase(updateUserStatus.pending, (state) => {
         state.loading = true;
@@ -270,7 +298,8 @@ const userSlice = createSlice({
       .addCase(updateUserDetailThunk.fulfilled, (state, action) => {
         state.loading = false;
         state.userDetail = action.payload;
-        state.users = state.users.map((user) =>
+        // Cập nhật user trong danh sách nếu có
+        state.users = state.users.map(user =>
           user.id === action.payload.userId
             ? { ...user, ...action.payload }
             : user

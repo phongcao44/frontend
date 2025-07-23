@@ -19,6 +19,7 @@ import returnRequestReducer from "./slices/returnRequestSlice";
 import returnPolicyReducer from "./slices/returnPolicySlice";
 import voucherReducer from "./slices/voucherSlice";
 import productSpecificationReducer from "./slices/productSpecificationSlice";
+import wishlistReducer from "./slices/wishlistSlice";
 
 export const store = configureStore({
   reducer: {
@@ -42,5 +43,6 @@ export const store = configureStore({
     returnPolicy: returnPolicyReducer,
     voucher: voucherReducer,
     productSpecification: productSpecificationReducer,
+    wishlist: wishlistReducer,
   },
 });

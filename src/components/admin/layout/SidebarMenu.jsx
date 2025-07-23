@@ -40,14 +40,14 @@ const SidebarMenu = () => {
               key: "/admin/products",
               label: "Tất cả sản phẩm",
             },
-            {
-              key: "/admin/products/groups",
-              label: "Nhóm sản phẩm",
-            },
-            {
-              key: "/admin/products/pricing",
-              label: "Bảng giá",
-            },
+            // {
+            //   key: "/admin/products/groups",
+            //   label: "Nhóm sản phẩm",
+            // },
+            // {
+            //   key: "/admin/products/pricing",
+            //   label: "Bảng giá",
+            // },
             {
               key: "/admin/products/stock",
               label: "Tồn kho",
@@ -68,8 +68,8 @@ const SidebarMenu = () => {
               label: "Tất cả đơn hàng",
             },
             {
-              key: "/admin/orders/groups",
-              label: "Chưa hoàn tất",
+              key: "/admin/orders/ordercancel",
+              label: "Đơn hàng đã hủy",
             },
           ],
         },
