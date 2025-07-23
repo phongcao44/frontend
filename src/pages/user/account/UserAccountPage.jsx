@@ -1,297 +1,243 @@
-import React, { useState } from 'react';
-import { User, Package, MapPin, Settings, Heart, LogOut, Edit, Eye, Truck, CheckCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { User, Package, MapPin, Settings, Heart, LogOut, Edit, Trash2 } from 'lucide-react';
+import { fetchUserView } from '../../../redux/slices/userSlice';
+import { removeAddress } from '../../../redux/slices/addressSlice';
+import { useNavigate } from 'react-router-dom';
+import { logoutUser } from '../../../redux/slices/authSlice';
+import OrderSection from './OrderSection';
+import EditProfileForm from './EditProfileForm';
+import AddressForm from './AddressForm';
+import WishList from '../WishList';
 
-const UserAccountPage = () => {
+export default function UserAccountPage() {
   const [activeTab, setActiveTab] = useState('profile');
-  const [userInfo, setUserInfo] = useState({
-    name: 'Nguyễn Văn An',
-    email: 'nguyenvanan@email.com',
-    phone: '0987654321',
-    birthDate: '1990-05-15',
-    gender: 'male'
-  });
+  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { userDetail, loading } = useSelector((state) => state.users);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(null);
 
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      name: 'Nhà riêng',
-      fullName: 'Nguyễn Văn An',
-      phone: '0987654321',
-      address: '123 Đường Nguyễn Huệ, Quận 1, TP.HCM',
-      isDefault: true
-    },
-    {
-      id: 2,
-      name: 'Văn phòng',
-      fullName: 'Nguyễn Văn An',
-      phone: '0987654321',
-      address: '456 Đường Lê Lợi, Quận 3, TP.HCM',
-      isDefault: false
-    }
-  ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setError(null);
+        await dispatch(fetchUserView()).unwrap();
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+        setError(error.message || 'Có lỗi xảy ra khi tải thông tin người dùng');
+      }
+    };
+    fetchData();
+  }, [dispatch]);
 
-  const [orders] = useState([
-    {
-      id: 'DH001',
-      date: '2024-07-15',
-      status: 'delivered',
-      total: 850000,
-      items: 3,
-      image: 'https://via.placeholder.com/60x60'
-    },
-    {
-      id: 'DH002',
-      date: '2024-07-18',
-      status: 'shipping',
-      total: 650000,
-      items: 2,
-      image: 'https://via.placeholder.com/60x60'
-    },
-    {
-      id: 'DH003',
-      date: '2024-07-20',
-      status: 'pending',
-      total: 1200000,
-      items: 1,
-      image: 'https://via.placeholder.com/60x60'
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      setError('Có lỗi xảy ra khi đăng xuất');
     }
-  ]);
+  };
+
+  const handleAddAddress = () => {
+    setSelectedAddress(null);
+    setIsAddressFormOpen(true);
+  };
+
+  const handleEditAddress = (address) => {
+    setSelectedAddress(address);
+    setIsAddressFormOpen(true);
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) return;
+
+    try {
+      await dispatch(removeAddress(addressId)).unwrap();
+      await dispatch(fetchUserView());
+    } catch (err) {
+      console.error('Error deleting address:', err);
+      setError('Có lỗi xảy ra khi xóa địa chỉ');
+    }
+  };
 
   const menuItems = [
     { id: 'profile', label: 'Thông tin cá nhân', icon: User },
     { id: 'orders', label: 'Đơn hàng của tôi', icon: Package },
-    { id: 'addresses', label: 'Sổ địa chỉ', icon: MapPin },
-    { id: 'wishlist', label: 'Danh sách yêu thích', icon: Heart },
-    { id: 'settings', label: 'Cài đặt tài khoản', icon: Settings },
+    { id: 'addresses', label: 'Địa chỉ', icon: MapPin },
+    { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart },
   ];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'delivered': return 'text-green-600 bg-green-100';
-      case 'shipping': return 'text-blue-600 bg-blue-100';
-      case 'pending': return 'text-orange-600 bg-orange-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'delivered': return 'Đã giao';
-      case 'shipping': return 'Đang giao';
-      case 'pending': return 'Chờ xử lý';
-      default: return 'Không xác định';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'delivered': return CheckCircle;
-      case 'shipping': return Truck;
-      case 'pending': return Clock;
-      default: return Clock;
-    }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
-  };
-
-  const renderProfile = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Thông tin cá nhân</h2>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Edit className="w-4 h-4" />
-          Chỉnh sửa
-        </button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên</label>
-          <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">{userInfo.name}</div>
+  const renderProfile = () => {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">Thông tin cá nhân</h2>
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Edit className="w-4 h-4" />
+            Chỉnh sửa
+          </button>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-          <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">{userInfo.email}</div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại</label>
-          <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">{userInfo.phone}</div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh</label>
-          <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">{userInfo.birthDate}</div>
-        </div>
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Giới tính</label>
-          <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
-            {userInfo.gender === 'male' ? 'Nam' : 'Nữ'}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên</label>
+            <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
+              {userDetail?.userName}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
+              {userDetail?.userEmail}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái tài khoản</label>
+            <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
+              {userDetail?.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm khóa'}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hạng thành viên</label>
+            <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
+              {userDetail?.rank || 'Chưa có hạng'}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ngày tạo tài khoản</label>
+            <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
+              {new Date(userDetail?.createTime).toLocaleDateString('vi-VN')}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cập nhật lần cuối</label>
+            <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
+              {new Date(userDetail?.updateTime).toLocaleDateString('vi-VN')}
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Điểm tích lũy</label>
+            <div className="p-3 bg-white rounded-lg text-gray-900 border border-gray-100">
+              <div className="flex justify-between items-center">
+                <span>Tổng điểm: {userDetail?.address?.[0]?.user?.userPoint?.totalPoints?.toLocaleString('vi-VN') || 0} điểm</span>
+                <span>Điểm hạng: {userDetail?.address?.[0]?.user?.userPoint?.rankPoints?.toLocaleString('vi-VN') || 0} điểm</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-
-  const renderOrders = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Đơn hàng của tôi</h2>
-      
-      <div className="space-y-4">
-        {orders.map((order) => {
-          const StatusIcon = getStatusIcon(order.status);
-          return (
-            <div key={order.id} className="rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={order.image} 
-                    alt="Sản phẩm" 
-                    className="w-12 h-12 rounded-lg object-cover"
-                  />
-                  <div>
-                    <p className="font-medium text-gray-900">Đơn hàng #{order.id}</p>
-                    <p className="text-sm text-gray-500">{order.date}</p>
-                  </div>
-                </div>
-                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                  <StatusIcon className="w-4 h-4" />
-                  {getStatusText(order.status)}
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  {order.items} sản phẩm • {formatPrice(order.total)}
-                </div>
-                <div className="flex gap-2">
-                  <button className="flex items-center gap-1 px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                    <Eye className="w-4 h-4" />
-                    Xem chi tiết
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderAddresses = () => (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Sổ địa chỉ</h2>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <h2 className="text-xl font-semibold text-gray-900">Thông tin địa chỉ</h2>
+        <button
+          onClick={handleAddAddress}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
           Thêm địa chỉ mới
         </button>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {addresses.map((address) => (
-          <div key={address.id} className="rounded-lg p-4 border border-gray-100">
+
+      <div className="space-y-4">
+        {userDetail?.address?.map((addr) => (
+          <div key={addr.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-3">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium text-gray-900">{address.name}</h3>
-                {address.isDefault && (
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                    Mặc định
-                  </span>
-                )}
+              <div>
+                <h3 className="font-medium text-gray-900">{addr.recipientName}</h3>
+                <p className="text-gray-600">{addr.phone}</p>
               </div>
-              <button className="text-blue-600 hover:text-blue-700">
-                <Edit className="w-4 h-4" />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEditAddress(addr)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteAddress(addr.id)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            
-            <div className="space-y-1 text-sm text-gray-600">
-              <p>{address.fullName}</p>
-              <p>{address.phone}</p>
-              <p>{address.address}</p>
+            <div className="text-gray-600">
+              <p>{addr.fullAddress}</p>
+              <p>{addr.ward}, {addr.district}, {addr.province}</p>
             </div>
-            
-            {!address.isDefault && (
-              <button className="mt-3 text-sm text-blue-600 hover:text-blue-700">
-                Đặt làm mặc định
-              </button>
-            )}
           </div>
         ))}
-      </div>
-    </div>
-  );
-
-  const renderWishlist = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Danh sách yêu thích</h2>
-      <div className="text-center py-12">
-        <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 mb-4">Bạn chưa có sản phẩm yêu thích nào</p>
-        <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          Khám phá sản phẩm
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderSettings = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Cài đặt tài khoản</h2>
-      
-      <div className="space-y-6">
-        <div className="flex items-center justify-between py-3">
-          <div>
-            <h3 className="font-medium text-gray-900">Thông báo email</h3>
-            <p className="text-sm text-gray-600">Nhận thông báo về đơn hàng và khuyến mãi</p>
+        {(!userDetail?.address || userDetail.address.length === 0) && (
+          <div className="text-center py-8 text-gray-500">
+            Bạn chưa có địa chỉ nào. Hãy thêm địa chỉ mới.
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" defaultChecked />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-        
-        <div className="flex items-center justify-between py-3">
-          <div>
-            <h3 className="font-medium text-gray-900">Thông báo SMS</h3>
-            <p className="text-sm text-gray-600">Nhận tin nhắn về trạng thái đơn hàng</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-        
-        <div className="py-3">
-          <button className="w-full md:w-auto px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-            Đổi mật khẩu
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'profile': return renderProfile();
-      case 'orders': return renderOrders();
-      case 'addresses': return renderAddresses();
-      case 'wishlist': return renderWishlist();
-      case 'settings': return renderSettings();
-      default: return renderProfile();
+      case 'profile':
+        return isEditing ? (
+          <EditProfileForm onClose={() => setIsEditing(false)} />
+        ) : (
+          renderProfile()
+        );
+      case 'orders':
+        return <OrderSection />;
+      case 'addresses':
+        return renderAddresses();
+      case 'wishlist':
+        return <WishList />;
+      default:
+        return null;
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Đang tải thông tin...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="text-red-600">{error}</div>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Tải lại trang
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Tài khoản của tôi</h1>
-            <button className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+            <button 
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
               <LogOut className="w-4 h-4" />
               Đăng xuất
             </button>
@@ -301,7 +247,6 @@ const UserAccountPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center gap-3 pb-6 border-b border-gray-100">
@@ -309,8 +254,12 @@ const UserAccountPage = () => {
                   <User className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">{userInfo.name}</p>
-                  <p className="text-sm text-gray-600">{userInfo.email}</p>
+                  <p className="font-medium text-gray-900">
+                    {userDetail?.userName}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {userDetail?.userEmail}
+                  </p>
                 </div>
               </div>
               
@@ -339,14 +288,21 @@ const UserAccountPage = () => {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3">
             {renderContent()}
           </div>
         </div>
       </div>
+
+      {isAddressFormOpen && (
+        <AddressForm
+          address={selectedAddress}
+          onClose={() => {
+            setIsAddressFormOpen(false);
+            setSelectedAddress(null);
+          }}
+        />
+      )}
     </div>
   );
-};
-
-export default UserAccountPage;
+}

@@ -63,3 +63,31 @@ export const fetchOrderDetail = async (id) => {
     throw error.response?.data || error.message;
   }
 };
+
+export const getMyOrders = async (status = null) => {
+  try {
+    const response = await axiosInstance.get("/user/order/list", {
+      params: { status }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("getMyOrders error:", error);
+    throw error.response?.data || "Có lỗi xảy ra khi tải danh sách đơn hàng";
+  }
+};
+
+export const getOrderDetail = async (orderId) => {
+  try {
+    const response = await axiosInstance.get(`/user/order/detail/${orderId}`);
+    return response.data;
+  } catch (error) {
+    console.error("getOrderDetail error:", error);
+    if (error.response?.status === 404) {
+      throw new Error("Không tìm thấy đơn hàng");
+    }
+    if (error.response?.status === 403) {
+      throw new Error("Bạn không có quyền xem đơn hàng này");
+    }
+    throw error.response?.data || "Có lỗi xảy ra khi tải chi tiết đơn hàng";
+  }
+};

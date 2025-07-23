@@ -19,6 +19,7 @@ import StockManagement from "../pages/admin/StockManagement";
 // Orders
 import OrderManagement from "../pages/admin/OrderManagement";
 import OrderDetail from "../pages/admin/OrderDetail";
+import OrderCancelled from "../pages/admin/OrderCancelled";
 
 // Categories
 import CategoryManagement from "../pages/admin/CategoryManagement";
@@ -69,6 +70,7 @@ export default function AdminRoutes() {
 
       {/* Orders */}
       <Route path="/admin/orders" element={<OrderManagement />} />
+      <Route path="/admin/orders/ordercancel" element={<OrderCancelled />} />
       <Route path="/admin/orders/:orderId" element={<OrderDetail />} />
 
       {/* Categories */}

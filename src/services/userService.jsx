@@ -131,13 +131,33 @@ export const getUserDetail = async (userId) => {
  */
 export const updateUserDetail = async (userDetailRequest) => {
   try {
+    console.log('Request to API:', userDetailRequest);
     const response = await axiosInstance.patch(`/admin/users/update`, userDetailRequest);
+    console.log('Response from API:', response.data);
     return response.data;
   } catch (error) {
     console.error(`updateUserDetail error:`, error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Get the current authenticated user's view info
+ * @returns {Promise<any>}
+ */
+export const getUserView = async () => {
+  try {
+    const response = await axiosInstance.get("/admin/users/view/");
+    return response.data;
+  } catch (error) {
+    console.error("getUserView error:", error);
     throw extractApiError(error);
   }
 };
+
 
 /**
  * Extract and format API error
