@@ -34,13 +34,10 @@ import {
   getProductSpecificationById,
   removeProductSpecification,
 } from "../../../redux/slices/productSpecificationSlice";
-
-import { getReturnPolicyById } from "../../../redux/slices/returnPolicySlice";
+import ReturnPolicySection from "./ReturnPolicySection";
 import VariantSection from "./VariantSection";
 import CategorySelector from "./CategorySelector";
 import VariantEditor from "./VariantEditor";
-import ReturnPolicyEditor from "./ReturnPolicyEditor";
-import ReturnPolicySection from "./ReturnPolicySection";
 import ProductSpecificationSection from "./ProductSpecificationSection";
 import ProductSpecificationEditor from "./ProductSpecificationEditor";
 
@@ -58,11 +55,11 @@ const ProductForm = () => {
     specifications: [],
   });
 
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { id: productId } = useParams();
   const product = useSelector((state) => state.products.productDetail);
-  const returnPolicy = useSelector((state) => state.returnPolicy.policy);
   const loadingProduct = useSelector((state) => state.products.loading);
   const loadingPolicy = useSelector((state) => state.returnPolicy.loading);
   const errorProduct = useSelector((state) => state.products.error);
@@ -78,6 +75,8 @@ const ProductForm = () => {
       dispatch(getProductSpecificationById(productId));
     }
   }, [dispatch, productId]);
+  
+  console.log("ProductForm initialized with formData:", specificationData);
 
   useEffect(() => {
     if (specificationData && Array.isArray(specificationData)) {
@@ -112,10 +111,10 @@ const ProductForm = () => {
             ...prev,
             variants: Array.isArray(product.variants) ? product.variants : [],
             returnPolicy: {
-            id: product.returnPolicyId,
-            title: product.returnPolicyTitle,
-            content: product.returnPolicyContent,
-          },
+              id: product.returnPolicyId,
+              title: product.returnPolicyTitle,
+              content: product.returnPolicyContent,
+            },
           };
         }
         return prev;
@@ -144,6 +143,7 @@ const ProductForm = () => {
     setFormData((prev) => {
       const newReturnPolicy = policy || null;
       if (prev.returnPolicy?.id !== newReturnPolicy?.id) {
+        form.setFieldsValue({ return_policy_id: newReturnPolicy?.id || null });
         return {
           ...prev,
           returnPolicy: newReturnPolicy,
@@ -151,7 +151,7 @@ const ProductForm = () => {
       }
       return prev;
     });
-  }, []);
+  }, [form]);
 
   const handleSpecificationChange = (newSpecs) => {
     setFormData((prev) => ({ ...prev, specifications: newSpecs }));
@@ -185,7 +185,6 @@ const ProductForm = () => {
       const productResponse = await dispatch(addProduct(productData)).unwrap();
       const newProductId = productResponse.data.id;
 
-
       for (const variant of formData.variants) {
         const productVariant = {
           productId: newProductId,
@@ -210,44 +209,47 @@ const ProductForm = () => {
       }
 
       message.success("Thêm sản phẩm thành công!");
-      navigate("/admin/products");
+      // navigate("/admin/products");
     } catch (err) {
       console.error("Lỗi khi thêm sản phẩm:", err);
       message.error("Thêm sản phẩm thất bại!");
     }
   };
-  
+
   const handleUpdate = async () => {
-    const values = await form.validateFields();
-    // if (!formData.variants || formData.variants.length === 0) {
-    //   message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
-    //   return;
-    // }
-    // if (!formData.returnPolicy?.id) {
-    //   message.error("Vui lòng chọn một chính sách đổi trả");
-    //   return;
-    // }
-
-
-    const updatedProduct = {
-      name: values.productName,
-      description: values.description || "",
-      price: values.sellingPrice || 0,
-      brand: values.brand || "",
-      status: shippingEnabled ? "IN_STOCK" : "OUT_OF_STOCK",
-      categoryId: values.category_id,
-      return_policy_id: formData.returnPolicyId,
-    };
-
-    console.log("Cập nhật sản phẩm với dữ liệu:", updatedProduct);
-
     try {
-      // await dispatch(
-      //   editProduct({ id: productId, productData: updatedProduct })
-      // ).unwrap();
+      const values = await form.validateFields();
+
+      if (!formData.variants || formData.variants.length === 0) {
+        message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
+        return;
+      }
+      if (!formData.returnPolicy?.id) {
+        message.error("Vui lòng chọn một chính sách đổi trả");
+        return;
+      }
+      // if (!formData.specifications || formData.specifications.length === 0) {
+      //   message.error("Vui lòng chọn một thông số kỹ thuật");
+      //   return;
+      // }
+
+      const updatedProduct = {
+        name: values.productName,
+        description: values.description || "",
+        price: values.sellingPrice || 0,
+        brand: values.brand || "",
+        status: shippingEnabled ? "IN_STOCK" : "OUT_OF_STOCK",
+        categoryId: values.category_id,
+        return_policy_id: formData.returnPolicy.id,
+      };
+
+      await dispatch(
+        editProduct({ id: productId, productData: updatedProduct })
+      ).unwrap();
       message.success("Cập nhật sản phẩm thành công");
+      navigate("/admin/products");
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi khi cập nhật sản phẩm:", err);
       message.error("Cập nhật sản phẩm thất bại");
     }
   };
@@ -272,7 +274,7 @@ const ProductForm = () => {
       message.success("Xóa sản phẩm thành công");
       navigate("/admin/products");
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi khi xóa sản phẩm:", err);
       message.error("Xóa sản phẩm thất bại");
     }
   };
@@ -373,21 +375,13 @@ const ProductForm = () => {
           </div>
         </Card>
 
-        {/* {!productId && ( */}
+         <Form.Item name="return_policy_id" noStyle>
           <ReturnPolicySection
             onChange={handleReturnPolicyChange}
             defaultPolicyId={formData.returnPolicy?.id}
             productId={productId}
           />
-        {/* )} */}
-
-        {/* {productId && product && !loadingProduct && !loadingPolicy && (
-          <ReturnPolicyEditor
-            returnPolicy={formData.returnPolicy}
-            productId={productId}
-            onChange={handleReturnPolicyChange}
-          />
-        )} */}
+        </Form.Item>
 
         {!productId && (
           <VariantSection
@@ -419,14 +413,8 @@ const ProductForm = () => {
           />
         )}
 
-        {!productId && (
-          <Button type="primary" size="large" htmlType="submit">
-            Lưu sản phẩm
-          </Button>
-        )}
-
-        {productId && (
-          <Space>
+        <Space>
+          {productId && (
             <Popconfirm
               title="Xóa sản phẩm?"
               okText="Xóa"
@@ -435,12 +423,16 @@ const ProductForm = () => {
             >
               <Button danger>Xóa sản phẩm</Button>
             </Popconfirm>
+          )}
 
-            <Button type="primary" onClick={handleUpdate}>
-              Cập nhật sản phẩm
-            </Button>
-          </Space>
-        )}
+          <Button
+            type="primary"
+            size="large"
+            onClick={productId ? handleUpdate : () => form.submit()}
+          >
+            {productId ? "Cập nhật sản phẩm" : "Lưu sản phẩm"}
+          </Button>
+        </Space>
       </Form>
     </div>
   );

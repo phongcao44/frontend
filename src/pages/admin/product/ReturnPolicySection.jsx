@@ -10,7 +10,11 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PolicyModal from "./PolicyModal";
 
-const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = null }) => {
+const ReturnPolicySection = ({
+  onChange,
+  defaultPolicyId = null,
+  productId = null,
+}) => {
   const dispatch = useDispatch();
   const returnPolicies = useSelector((state) => state.returnPolicy.items || []);
   const loading = useSelector((state) => state.returnPolicy.loading);
@@ -20,6 +24,7 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = nul
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [formData, setFormData] = useState(null);
   const [isEditMode, setIsEditMode] = useState(!productId);
+  const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(true);
 
   useEffect(() => {
     dispatch(getAllReturnPolicies());
@@ -32,10 +37,15 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = nul
   }, [error]);
 
   useEffect(() => {
-    if (returnPolicies.length === 0) return;
+    if (returnPolicies.length === 0) {
+      setSelectedPolicyId(null);
+      setFormData(null);
+      onChange?.(null);
+      return;
+    }
 
     const productPolicy = returnPolicies.find((p) => p.id === defaultPolicyId);
-    
+
     if (productId && productPolicy && selectedPolicyId !== productPolicy.id) {
       setSelectedPolicyId(productPolicy.id);
       setFormData({ ...productPolicy });
@@ -49,14 +59,9 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = nul
       onChange?.(null);
     } else if (selectedPolicyId) {
       const policy = returnPolicies.find((p) => p.id === selectedPolicyId);
-      if (policy && (!formData || formData.id !== policy.id)) {
-        if (
-          !formData ||
-          JSON.stringify(formData) !== JSON.stringify(policy)
-        ) {
-          setFormData({ ...policy });
-          onChange?.(policy);
-        }
+      if (policy && (!formData || formData.id !== policy.id || JSON.stringify(formData) !== JSON.stringify(policy))) {
+        setFormData({ ...policy });
+        onChange?.(policy);
       }
     } else if (formData) {
       setFormData(null);
@@ -86,9 +91,16 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = nul
 
   const handleCreatePolicy = useCallback(
     async (formData) => {
+      const payload = {
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        returnDays: formData.returnDays,
+        allowReturnWithoutReason: formData.allowReturnWithoutReason ?? false,
+        status: formData.status ?? "ACTIVE",
+      };
       try {
         const createdPolicy = await dispatch(
-          addReturnPolicy(formData)
+          addReturnPolicy(payload)
         ).unwrap();
         toast.success("Đã thêm chính sách mới");
         setSelectedPolicyId(createdPolicy.id);
@@ -116,11 +128,21 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = nul
       toast.error("Số ngày đổi trả phải lớn hơn 0");
       return;
     }
+
+    const payload = {
+      title: formData.title.trim(),
+      content: formData.content.trim(),
+      returnDays: formData.returnDays,
+      allowReturnWithoutReason: formData.allowReturnWithoutReason ?? false,
+      status: formData.status ?? "ACTIVE",
+    };
+
     try {
+      console.log("Saving return policy:", payload);
       const updatedPolicy = await dispatch(
         editReturnPolicy({
           id: selectedPolicyId,
-          requestDTO: formData,
+          requestDTO: payload,
         })
       ).unwrap();
       toast.success("Đã cập nhật chính sách");
@@ -235,127 +257,154 @@ const ReturnPolicySection = ({ onChange, defaultPolicyId = null, productId = nul
       </div>
 
       <div className="mb-6 p-4 border border-gray-300 rounded-md">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">
-          Chi tiết chính sách
-        </h3>
-        {formData ? (
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium text-gray-700">
+            Chi tiết chính sách
+          </h3>
+          <button
+            onClick={() => setIsDetailsCollapsed(!isDetailsCollapsed)}
+            className="text-gray-600 hover:text-gray-800 flex items-center"
+          >
+            <svg
+              className={`h-4 w-4 transition-transform duration-200 ${
+                isDetailsCollapsed ? "rotate-0" : "rotate-180"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        </div>
+        {!isDetailsCollapsed && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tiêu đề chính sách
-              </label>
-              <input
-                type="text"
-                value={formData.title || ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    title: e.target.value,
-                  }))
-                }
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mô tả chi tiết
-              </label>
-              <textarea
-                value={formData.content || ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    content: e.target.value,
-                  }))
-                }
-                rows={4}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Số ngày đổi trả
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={formData.returnDays || 7}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    returnDays: parseInt(e.target.value) || 7,
-                  }))
-                }
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cho phép đổi trả không cần lý do
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.allowReturnWithoutReason || false}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      allowReturnWithoutReason: e.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                  disabled={loading}
-                />
-                <span className="ml-2 text-sm">
-                  Cho phép đổi trả không cần lý do
-                </span>
-              </label>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Trạng thái
-              </label>
-              <select
-                value={formData.status || "ACTIVE"}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    status: e.target.value,
-                  }))
-                }
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                disabled={loading}
-              >
-                <option value="ACTIVE">Hoạt động</option>
-                <option value="INACTIVE">Không hoạt động</option>
-              </select>
-            </div>
-            {selectedPolicyDetails && (
-              <div className="flex gap-4 mt-2">
-                <button
-                  onClick={handleSavePolicy}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  disabled={loading}
-                >
-                  Lưu
-                </button>
-                <button
-                  onClick={() => removePolicy(selectedPolicyDetails.id)}
-                  className="text-red-600 hover:text-red-800 text-sm"
-                  disabled={loading}
-                >
-                  Xóa
-                </button>
-              </div>
+            {formData ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tiêu đề chính sách
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mô tả chi tiết
+                  </label>
+                  <textarea
+                    value={formData.content || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        content: e.target.value,
+                      }))
+                    }
+                    rows={4}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Số ngày đổi trả
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={formData.returnDays || 7}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        returnDays: parseInt(e.target.value) || 7,
+                      }))
+                    }
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cho phép đổi trả không cần lý do
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.allowReturnWithoutReason || false}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          allowReturnWithoutReason: e.target.checked,
+                        }))
+                      }
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      disabled={loading}
+                    />
+                    <span className="ml-2 text-sm">
+                      Cho phép đổi trả không cần lý do
+                    </span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Trạng thái
+                  </label>
+                  <select
+                    value={formData.status || "ACTIVE"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: e.target.value,
+                      }))
+                    }
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loading}
+                  >
+                    <option value="ACTIVE">Hoạt động</option>
+                    <option value="INACTIVE">Không hoạt động</option>
+                  </select>
+                </div>
+                {selectedPolicyDetails && (
+                  <div className="flex gap-4 mt-2">
+                    <button
+                      onClick={handleSavePolicy}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      disabled={loading}
+                    >
+                      Lưu
+                    </button>
+                    <button
+                      onClick={() => removePolicy(selectedPolicyDetails.id)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                      disabled={loading}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Không tìm thấy chính sách, vui lòng chọn hoặc thêm mới
+              </p>
             )}
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">
-            Không tìm thấy chính sách, vui lòng chọn hoặc thêm mới
-          </p>
         )}
       </div>
 
