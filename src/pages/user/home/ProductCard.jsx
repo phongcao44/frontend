@@ -1,18 +1,36 @@
-/* eslint-disable no-unused-vars */
-// 🗂️ Đúng imports
 import PropTypes from "prop-types";
-import { Card, Button, Typography, Rate, message } from "antd";
-import { HeartOutlined, EyeOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { Heart, Eye, Star, Trash2 } from "lucide-react";
 import { addItemToCart } from "../../../redux/slices/cartSlice";
 import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice";
 
-const { Title, Text } = Typography;
+const StarRating = ({ value, className }) => {
+  return (
+    <div className={`flex ${className}`}>
+      {[...Array(5)].map((_, i) => (
+        <Star
+          key={i}
+          className={`w-3 h-3 ${
+            i < Math.floor(value)
+              ? "text-yellow-400 fill-current"
+              : "text-gray-300"
+          }`}
+        />
+      ))}
+    </div>
+  );
+};
 
-const ProductCard = ({ product, showDiscountLabel = false }) => {
+StarRating.propTypes = {
+  value: PropTypes.number.isRequired,
+  className: PropTypes.string,
+};
+
+const ProductCard = ({ product, showDiscountLabel = false, onRemove }) => {
   const [hovered, setHovered] = useState(false);
+  const [notification, setNotification] = useState(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -22,11 +40,11 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
     id,
     name,
     images,
+    imageUrl,
     price,
     originalPrice,
     discountPercentage,
     discountAmount,
-    discountType,
     averageRating,
     totalReviews,
   } = product;
@@ -43,25 +61,32 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
   const handleAddToCart = async (e) => {
     e.stopPropagation();
 
-    const res = await dispatch(loadVariantsByProduct(product.id)).unwrap();
-    const variantId = res?.[0]?.id;
+    try {
+      const res = await dispatch(loadVariantsByProduct(product.id)).unwrap();
+      const variantId = res?.[0]?.id;
 
-    if (!variantId) {
-      message.error("Không tìm thấy variant!");
-      return;
+      if (!variantId) {
+        setNotification({ type: 'error', message: 'Không tìm thấy variant!' });
+        setTimeout(() => setNotification(null), 3000);
+        return;
+      }
+
+      await dispatch(addItemToCart({ variantId, quantity: 1 })).unwrap();
+      setNotification({ type: 'success', message: 'Đã thêm vào giỏ hàng!' });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Thêm giỏ hàng thất bại!' });
+      setTimeout(() => setNotification(null), 3000);
     }
-
-    dispatch(addItemToCart({ variantId, quantity: 1 }))
-      .unwrap()
-      .then(() => {
-        message.success("Đã thêm vào giỏ hàng!");
-      })
-      .catch(() => {
-        message.error("Thêm giỏ hàng thất bại!");
-      });
   };
 
-  // 👉 Xác định nhãn giảm giá
+  const handleRemove = (e) => {
+    e.stopPropagation();
+    if (onRemove) {
+      onRemove(product.id);
+    }
+  };
+
   const discountLabel = discountPercentage
     ? `-${discountPercentage}%`
     : discountAmount
@@ -70,173 +95,88 @@ const ProductCard = ({ product, showDiscountLabel = false }) => {
 
   return (
     <div
-      style={{ padding: "0 8px" }}
+      className="p-2 transform hover:scale-105 transition-transform duration-200 z-10 relative"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Card
-        hoverable
+      <div
+        className="bg-white rounded-md shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
         onClick={handleNavigate}
-        style={{
-          borderRadius: "4px",
-          overflow: "hidden",
-          position: "relative",
-        }}
-        styles={{
-          body: { padding: "16px" },
-        }}
-        cover={
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              paddingTop: "100%",
-            }}
-          >
-            <img
-              src={image}
-              alt={name}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              }}
-            />
-
-            {showDiscountLabel && discountLabel && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "10px",
-                  left: "10px",
-                  backgroundColor: "red",
-                  color: "white",
-                  padding: "2px 8px",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  borderRadius: "2px",
-                }}
-              >
-                {discountLabel}
-              </div>
-            )}
-
-            <div
-              style={{
-                position: "absolute",
-                top: "10px",
-                right: "10px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                type="text"
-                icon={<HeartOutlined />}
-                size="small"
-                style={{
-                  backgroundColor: "white",
-                  borderRadius: "50%",
-                  width: "32px",
-                  height: "32px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              />
-              <Button
-                type="text"
-                icon={<EyeOutlined />}
-                size="small"
-                style={{
-                  backgroundColor: "white",
-                  borderRadius: "50%",
-                  width: "32px",
-                  height: "32px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              />
+      >
+        <div className="relative w-full pt-[100%]">
+          <img
+            src={imageUrl || image}
+            alt={name}
+            className="absolute top-0 left-0 w-full h-full object-cover"
+          />
+          {showDiscountLabel && discountLabel && (
+            <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+              {discountLabel}
             </div>
-
-            {hovered && (
-              <Button
-                type="primary"
-                style={{
-                  position: "absolute",
-                  bottom: "10px",
-                  left: "10px",
-                  right: "10px",
-                  backgroundColor: "#000",
-                  borderColor: "#000",
-                  color: "#fff",
-                  fontWeight: 600,
-                  height: "40px",
-                  fontSize: "14px",
-                }}
-                onClick={handleAddToCart}
+          )}
+          <div
+            className="absolute top-2 right-2 flex flex-col gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {onRemove ? (
+              <button
+                className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-gray-100 transition-colors"
+                onClick={handleRemove}
               >
-                Add To Cart
-              </Button>
+                <Trash2 className="w-4 h-4 text-gray-800" />
+              </button>
+            ) : (
+              <>
+                <button className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-gray-100">
+                  <Heart className="w-4 h-4 text-gray-600" />
+                </button>
+                <button className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-gray-100">
+                  <Eye className="w-4 h-4 text-gray-600" />
+                </button>
+              </>
             )}
           </div>
-        }
-      >
-        <div style={{ minHeight: "120px" }}>
-          <Title level={5} style={{ margin: "0 0 8px 0", fontSize: "14px" }}>
+          {hovered && (
+            <button
+              className="absolute bottom-2 left-2 right-2 bg-black text-white font-semibold py-2 rounded-md hover:bg-gray-800"
+              onClick={handleAddToCart}
+            >
+              Add To Cart
+            </button>
+          )}
+        </div>
+        <div className="p-4 min-h-[120px]">
+          <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2">
             {name}
-          </Title>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              marginBottom: "8px",
-            }}
-          >
+          </h3>
+          <div className="flex items-center gap-2 mb-2">
             {discountLabel ? (
               <>
-                <Text
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: "600",
-                    color: "#ff4d4f",
-                  }}
-                >
+                <span className="text-sm font-bold text-red-600">
                   {price.toLocaleString("vi-VN")} VNĐ
-                </Text>
-                <Text delete style={{ fontSize: "14px", color: "#999" }}>
+                </span>
+                <span className="text-xs text-gray-500 line-through">
                   {originalPrice?.toLocaleString("vi-VN")} VNĐ
-                </Text>
+                </span>
               </>
             ) : (
-              <Text
-                style={{ fontSize: "16px", fontWeight: "600", color: "#000" }}
-              >
+              <span className="text-sm font-bold text-gray-800">
                 {price.toLocaleString("vi-VN")} VNĐ
-              </Text>
+              </span>
             )}
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <Rate
-              disabled
-              defaultValue={averageRating || 0}
-              style={{ fontSize: "12px" }}
-            />
-            <Text style={{ fontSize: "12px", color: "#999" }}>
-              ({totalReviews || 0})
-            </Text>
+          <div className="flex items-center gap-1">
+            <StarRating value={averageRating || 0} className="text-xs" />
+            <span className="text-xs text-gray-600">({totalReviews || 0})</span>
           </div>
         </div>
-      </Card>
+      </div>
+      {notification && (
+        <div className={`absolute top-0 left-0 right-0 mx-2 mt-2 p-2 rounded-md text-white text-center text-sm font-medium
+          ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+          {notification.message}
+        </div>
+      )}
     </div>
   );
 };
@@ -260,6 +200,7 @@ ProductCard.propTypes = {
     totalReviews: PropTypes.number,
   }),
   showDiscountLabel: PropTypes.bool,
+  onRemove: PropTypes.func,
 };
 
 export default ProductCard;

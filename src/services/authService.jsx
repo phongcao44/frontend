@@ -1,42 +1,75 @@
 import axiosInstance from "../utils/axiosInstance";
+import Cookies from "js-cookie";
 
-// Login
+//  Login
 export const login = async (formLogin) => {
-  console.log("service", formLogin);
-  const response = await axiosInstance.post("/auth/login", formLogin);
-
-  return response.data;
+  try {
+    const response = await axiosInstance.post("/auth/login", formLogin);
+    return response.data;
+  } catch (err) {
+    console.error("Login failed:", err);
+    throw err;
+  }
 };
 
-// Register
+//  Register
 export const register = async (formRegister) => {
-  const response = await axiosInstance.post("/auth/register", formRegister);
-  return response.data;
+  try {
+    const response = await axiosInstance.post("/auth/register", formRegister);
+    return response.data;
+  } catch (err) {
+    console.error("Register failed:", err);
+    throw err;
+  }
 };
 
-// Logout
+//  Logout
 export const logout = async () => {
-  const response = await axiosInstance.post("/auth/logout");
-  return response.data;
+  try {
+    const response = await axiosInstance.post("/auth/logout");
+    Cookies.remove("access_token", { path: "/" });
+    Cookies.remove("user", { path: "/" });
+    Cookies.remove("access_token");
+    Cookies.remove("user");
+    return response.data;
+  } catch (err) {
+    console.error("Logout failed:", err);
+    throw err;
+  }
 };
 
-// Forgot Password
+//  Forgot Password
 export const forgotPassword = async (request) => {
-  const response = await axiosInstance.post("/auth/forgot-password", request);
-  return response.data;
+  try {
+    const response = await axiosInstance.post("/auth/forgot-password", request);
+    return response.data;
+  } catch (err) {
+    console.error("Forgot Password failed:", err);
+    throw err;
+  }
 };
 
-// Reset Password
+//  Reset Password
 export const resetPassword = async (token, request) => {
-  const response = await axiosInstance.post(
-    `/auth/reset-password?token=${token}`,
-    request
-  );
-  return response.data;
+  try {
+    const response = await axiosInstance.post(
+      `/auth/reset-password?token=${token}`,
+      request
+    );
+    return response.data;
+  } catch (err) {
+    console.error("Reset Password failed:", err);
+    throw err;
+  }
 };
 
 // Change Password
 export const changePassword = async (request) => {
-  const response = await axiosInstance.put("/auth/change-password", request);
-  return response.data;
+  try {
+    const response = await axiosInstance.put("/auth/change-password", request);
+    return response.data;
+  } catch (err) {
+    console.error("Change Password failed:", err);
+    throw err;
+  }
 };

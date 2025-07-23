@@ -7,13 +7,38 @@ import {
   resetPassword,
   changePassword,
 } from "../../services/authService";
+import Cookies from "js-cookie";
 
 export const loginUser = createAsyncThunk(
   "auth/login",
   async (formLogin, { rejectWithValue }) => {
     try {
       const data = await login(formLogin);
-      console.log("login", data);
+
+      const userInfo = {
+        id: data?.data?.user?.id || "",
+        username: data?.data?.user?.username || "",
+        email: data?.data?.user?.email || "",
+        status: data?.data?.user?.status || "",
+        createdAt: data?.data?.user?.createdAt || "",
+        updatedAt: data?.data?.user?.updatedAt || "",
+        userPoint: data?.data?.user?.userPoint || 0,
+        roles: data?.data?.roles || [],
+      };
+
+      Cookies.set("access_token", data?.data?.accessToken || "", {
+        sameSite: "Strict",
+        secure: true,
+        path: "/",
+      });
+
+      Cookies.set("user", JSON.stringify(userInfo), {
+        sameSite: "Strict",
+        secure: true,
+        path: "/",
+      });
+
+
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -62,7 +87,7 @@ export const resetPasswordUser = createAsyncThunk(
   async ({ token, request }, { rejectWithValue }) => {
     try {
       const data = await resetPassword(token, request);
-      return data;
+      return data;zz
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -85,6 +110,7 @@ const authSlice = createSlice({
   name: "auth",
   initialState: {
     user: null,
+    isLoggedIn: false,
     loading: false,
     error: null,
   },
@@ -107,6 +133,7 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.user = action.payload.data;
         state.loading = false;
+        state.isLoggedIn = true;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -129,6 +156,7 @@ const authSlice = createSlice({
       // Logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
+        state.isLoggedIn = false;
       })
 
       // Forgot Password

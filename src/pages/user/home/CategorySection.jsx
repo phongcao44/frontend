@@ -1,113 +1,121 @@
-import { Card, Row, Col, Typography, Button, Space } from "antd";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  DribbbleOutlined,
+  HeartOutlined,
+  HomeOutlined,
+  LeftOutlined,
+  ManOutlined,
+  RightOutlined,
+  SmileOutlined,
+  WomanOutlined,
+  LaptopOutlined,
+  ShoppingOutlined,
+} from "@ant-design/icons";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import { loadParentCategories } from "../../../redux/slices/categorySlice";
 
-const { Text, Title } = Typography;
+// Icon mapping
+const iconMap = {
+  "Thời trang nữ": <WomanOutlined />,
+  "Thời trang nam": <ManOutlined />,
+  "Điện tử": <LaptopOutlined />,
+  "Nhà cửa & Đời sống": <HomeOutlined />,
+  "Sức khỏe": <HeartOutlined />,
+  "Thể thao & Dã ngoại": <DribbbleOutlined />,
+  "Mẹ & Bé": <SmileOutlined />,
+  "Thú cưng & Tạp hóa": <ShoppingOutlined />,
+};
 
-// eslint-disable-next-line react/prop-types
-const CategorySection = ({ categories = [] }) => {
+const CategorySection = () => {
+  const dispatch = useDispatch();
+  const { parentList, loading, error } = useSelector((state) => state.category);
+  const swiperRef = useRef(null);
+  const [activeCategoryId, setActiveCategoryId] = useState(null);
+
+  useEffect(() => {
+    dispatch(loadParentCategories({ page: 0, limit: 8, sortBy: "name", orderBy: "asc" }));
+  }, [dispatch]);
+
+  const categoriesWithIcons = (parentList || []).map((category) => ({
+    ...category,
+    icon: iconMap[category.name] || <ShoppingOutlined />,
+    active: category.id === activeCategoryId,
+  }));
+
+  const handleCategoryClick = (id) => {
+    setActiveCategoryId((prevId) => (prevId === id ? null : id)); // Toggle active state
+  };
+
+  if (loading) return <div className="text-center text-gray-600 py-10">Loading categories...</div>;
+  if (error) return <div className="text-center text-red-500 py-10">Error: {error}</div>;
+
   return (
-    <div style={{ padding: "40px 20px", backgroundColor: "#fff" }}>
-      <div style={{ marginBottom: 48 }}>
-        {/* Section Header Label */}
-        <div
-          style={{ display: "flex", alignItems: "center", marginBottom: 16 }}
-        >
-          <div
-            style={{
-              width: 20,
-              height: 40,
-              backgroundColor: "#ff4d4f",
-              borderRadius: 4,
-              marginRight: 16,
-            }}
-          />
-          <Text
-            style={{
-              color: "#ff4d4f",
-              fontSize: 16,
-              fontWeight: 600,
-              lineHeight: 1,
-            }}
-          >
-            Categories
-          </Text>
+    <div className="bg-white py-10 px-5">
+      <div className="max-w-7xl mx-auto">
+        {/* Label */}
+        <div className="flex items-center mb-4">
+          <div className="w-5 h-10 bg-red-500 rounded mr-4"></div>
+          <span className="text-red-500 text-lg font-semibold">Categories</span>
         </div>
 
-        {/* Title */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 32,
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          <Title level={2} style={{ margin: 0 }}>
-            Browse By Category
-          </Title>
-          <Space>
-            <Button
-              type="default"
-              shape="circle"
-              icon={<LeftOutlined />}
-              size="middle"
-            />
-            <Button
-              type="default"
-              shape="circle"
-              icon={<RightOutlined />}
-              size="middle"
-            />
-          </Space>
+        {/* Title + Arrows */}
+        <div className="flex justify-between items-center mb-8 flex-wrap gap-3">
+          <h2 className="text-3xl font-bold m-0">Browse By Category</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => swiperRef.current?.slidePrev()}
+              className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+              aria-label="Scroll left"
+            >
+              <LeftOutlined className="text-gray-600" />
+            </button>
+            <button
+              onClick={() => swiperRef.current?.slideNext()}
+              className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+              aria-label="Scroll right"
+            >
+              <RightOutlined className="text-gray-600" />
+            </button>
+          </div>
         </div>
 
-        {/* Category Items */}
-        <Row gutter={[16, 16]}>
-          {categories.map((category, index) => (
-            <Col xs={12} sm={8} md={6} lg={4} key={index}>
-              <Card
-                hoverable
-                variant="outlined"
-                style={{
-                  textAlign: "center",
-                  height: 120,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: category.active ? "#db4444" : "#ffffff",
-                  borderColor: category.active ? "#db4444" : "#f0f0f0",
-                  transition: "all 0.3s",
-                }}
-                styles={{
-                  body: {
-                    padding: 16,
-                  },
-                }}
+        {/* Swiper */}
+        <Swiper
+          onSwiper={(swiper) => (swiperRef.current = swiper)}
+          slidesPerView={6}
+          spaceBetween={20}
+          loop
+        >
+          {categoriesWithIcons.map((category) => (
+            <SwiperSlide key={category.id}>
+              <div
+                onClick={() => handleCategoryClick(category.id)}
+                className={`flex flex-col items-center justify-center h-32 border-2 rounded-lg transition-all duration-300 hover:shadow-md cursor-pointer ${
+                  category.active
+                    ? "bg-red-500 border-red-500"
+                    : "bg-white border-gray-200"
+                }`}
               >
                 <div
-                  style={{
-                    fontSize: 32,
-                    marginBottom: 8,
-                    color: category.active ? "#ffffff" : "#8c8c8c",
-                  }}
+                  className={`text-3xl mb-2 ${
+                    category.active ? "text-white" : "text-gray-600"
+                  }`}
                 >
                   {category.icon}
                 </div>
-                <Text
-                  style={{
-                    color: category.active ? "#ffffff" : "#000000",
-                    fontWeight: 500,
-                  }}
+                <span
+                  className={`font-medium text-sm truncate ${
+                    category.active ? "text-white" : "text-black"
+                  }`}
                 >
                   {category.name}
-                </Text>
-              </Card>
-            </Col>
+                </span>
+              </div>
+            </SwiperSlide>
           ))}
-        </Row>
+        </Swiper>
       </div>
     </div>
   );

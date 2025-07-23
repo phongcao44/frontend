@@ -1,11 +1,44 @@
-import { Typography, Button, Space, Row, Col } from "antd";
+import { Typography, Button, Space } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ProductCard from "./ProductCard";
+import { useEffect, useState, useRef } from "react";
+import { loadProductsPaginate } from "../../../redux/slices/productSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 const { Title, Text } = Typography;
 
-// eslint-disable-next-line react/prop-types
-const ExploreProducts = ({ allProducts = [] }) => {
+const ExploreProducts = () => {
+  const dispatch = useDispatch();
+ const scrollContainerRef = useRef(null);
+  const paginatedProducts = useSelector((state) => state.products.paginated);
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    const params = {
+      page,
+      limit: 20,
+    };
+    dispatch(loadProductsPaginate(params));
+  }, [dispatch, page]);
+
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({
+        left: -300, // Adjust scroll distance as needed
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({
+        left: 300, // Adjust scroll distance as needed
+        behavior: "smooth",
+      });
+    }
+  };
+
   return (
     <div>
       {/* Section Header Label */}
@@ -43,20 +76,31 @@ const ExploreProducts = ({ allProducts = [] }) => {
           Explore Our Products
         </Title>
         <Space>
-          <Button shape="circle" icon={<LeftOutlined />} />
-          <Button shape="circle" icon={<RightOutlined />} />
+          <Button shape="circle" icon={<LeftOutlined />} onClick={scrollLeft} />
+          <Button shape="circle" icon={<RightOutlined />} onClick={scrollRight} />
         </Space>
       </div>
 
-      <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-        {allProducts.map((product) => (
-          <Col xs={24} sm={12} md={6} key={product.id}>
+      <div
+        ref={scrollContainerRef}
+        style={{
+          display: "flex",
+          overflowX: "auto",
+          gap: "24px",
+          paddingBottom: "16px",
+          scrollBehavior: "smooth",
+          scrollbarWidth: "none", /* For Firefox */
+          "-ms-overflow-style": "none", /* For IE and Edge */
+        }}
+      >
+        {paginatedProducts?.data?.content?.map((product) => (
+          <div key={product.id} style={{ flex: "0 0 auto", width: "250px" }}>
             <ProductCard product={product} />
-          </Col>
+          </div>
         ))}
-      </Row>
+      </div>
 
-      <div style={{ textAlign: "center" }}>
+      <div style={{ textAlign: "center", marginTop: 32 }}>
         <Button
           type="primary"
           danger

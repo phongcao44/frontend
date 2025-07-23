@@ -1,38 +1,94 @@
-import { Navigate, Route } from "react-router-dom";
+import { Route } from "react-router-dom";
 import MainLayout from "../layouts/UserLayout";
 
+// --- Pages ---
 import Home from "../pages/user/Home";
-import Login from "../pages/user/Login";
-import SignUp from "../pages/user/SignUp";
-import Contact from "../pages/user/Contact";
-import About from "../pages/user/About";
-import ErrorPage from "../pages/user/ErrorPage";
+import ProductListing from "../pages/user/productList/ProductListing";
+import ProductDetail from "../pages/user/productDetail/ProductDetail";
 import WishList from "../pages/user/WishList";
 import Cart from "../pages/user/Cart";
-import ProductDetail from "../pages/user/ProductDetail";
 import CheckoutPage from "../pages/user/checkout/CheckoutPage";
+
+import DeliveredProductsPage from "../pages/user/Delivered";
+import ReturnForm from "../pages/user/ReturnForm"; // trang form bạn đã có
+import ReturnRequestsPage from "../pages/user/ReturnRequestsPage"; // trang danh sách yêu cầu trả hàng
+
+// --- Auth ---
+import Login from "../pages/user/Login";
+import SignUp from "../pages/user/SignUp";
+
+// --- Other ---
+import About from "../pages/user/About";
+import Contact from "../pages/user/Contact";
+import ErrorPage from "../pages/user/ErrorPage";
+import UserAccountPage from "../pages/user/account/UserAccountPage";
+import EditProfileForm from "../pages/user/account/EditProfileForm";
+import AddressBook from "../pages/user/account/AddressBook";
+import Orders from "../pages/user/account/Orders";
+import OrderSuccessPage from "../pages/user/checkout/OrderSuccessPage";
+import CategoryPage from "../pages/user/categoryPage/CategoryPage";
+import ProductSearch from "../pages/user/productList/ProductSearch";
 
 const UserRoutes = () => {
   return (
-    <Route path="/" element={<MainLayout />}>
-      <Route index element={<Navigate to="/signup" replace />} />
+    <>
+      <Route path="/" element={<MainLayout />}>
+        {/* Home */}
+        <Route index element={<Home />} />
 
-      <Route path="home" element={<Home />} />
+        {/* Product Listing & Detail */}
+        <Route path="products" element={<ProductListing />} />
+        <Route path="products/search" element={<ProductSearch />} />
+        <Route path="products/category/:id" element={<ProductListing />} />
+        <Route path="product/:id" element={<ProductDetail />} />
+        \
+        <Route path="categories/:id" element={<CategoryPage />} />
 
-      <Route path="login" element={<Login />} />
-      <Route path="signup" element={<SignUp />} />
-      <Route path="contact" element={<Contact />} />
-      <Route path="about" element={<About />} />
 
-      <Route path="/product/:id" element={<ProductDetail />} />
+        {/* Flash Sale & Best Selling */}
+        {/* <Route path="flash-sale" element={<FlashSalePage />} />
+        <Route path="best-selling" element={<BestSellingPage />} /> */}
 
-      <Route path="wishlist" element={<WishList />} />
-      <Route path="cart" element={<Cart />} />
+        {/* Search */}
+        {/* <Route path="search" element={<SearchPage />} /> */}
 
-      <Route path="checkout" element={<CheckoutPage />} />
+        {/* Wishlist, Cart, Checkout */}
+        <Route path="wishlist" element={<WishList />} />
+        <Route path="cart" element={<Cart />} />
+        <Route path="checkout" element={<CheckoutPage />} />
 
-      <Route path="*" element={<ErrorPage />} />
-    </Route>
+        {/* User Account */}
+
+        <Route path="user/" element={<UserAccountPage />}>
+          <Route index element={<EditProfileForm />} />
+          <Route path="profile" element={<EditProfileForm />} />
+          <Route path="addresses" element={<AddressBook />} />
+          <Route path="orders" element={<Orders />} />
+        </Route>
+
+        <Route path="payment-success" element={<OrderSuccessPage />} />
+
+        {/* Auth */}
+        <Route path="login" element={<Login />} />
+        <Route path="signup" element={<SignUp />} />
+        {/* <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password/:token" element={<ResetPassword />} /> */}
+
+        {/* Info */}
+        <Route path="about" element={<About />} />
+        <Route path="contact" element={<Contact />} />
+
+
+        {/* Default Redirect */}
+        <Route path="*" element={<ErrorPage />} />
+
+
+        <Route path="delivered-products" element={<DeliveredProductsPage />} />
+        <Route path="return-form" element={<ReturnForm />} />
+
+        <Route path="return-requests" element={<ReturnRequestsPage />} />
+      </Route>
+    </>
   );
 };
 

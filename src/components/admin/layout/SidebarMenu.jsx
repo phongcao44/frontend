@@ -9,7 +9,9 @@ import {
   CreditCardOutlined,
   StarOutlined,
   ThunderboltOutlined,
-  GiftOutlined, // 🎁 NEW: thêm icon quà tặng cho voucher
+  GiftOutlined,
+  FileTextOutlined, 
+  RetweetOutlined, 
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -38,14 +40,14 @@ const SidebarMenu = () => {
               key: "/admin/products",
               label: "Tất cả sản phẩm",
             },
-            {
-              key: "/admin/products/groups",
-              label: "Nhóm sản phẩm",
-            },
-            {
-              key: "/admin/products/pricing",
-              label: "Bảng giá",
-            },
+            // {
+            //   key: "/admin/products/groups",
+            //   label: "Nhóm sản phẩm",
+            // },
+            // {
+            //   key: "/admin/products/pricing",
+            //   label: "Bảng giá",
+            // },
             {
               key: "/admin/products/stock",
               label: "Tồn kho",
@@ -66,8 +68,8 @@ const SidebarMenu = () => {
               label: "Tất cả đơn hàng",
             },
             {
-              key: "/admin/orders/groups",
-              label: "Chưa hoàn tất",
+              key: "/admin/orders/ordercancel",
+              label: "Đơn hàng đã hủy",
             },
           ],
         },
@@ -97,9 +99,19 @@ const SidebarMenu = () => {
           label: "Đánh giá sản phẩm",
         },
         {
-          key: "/admin/voucher", 
-          icon: <GiftOutlined />, 
+          key: "/admin/voucher",
+          icon: <GiftOutlined />,
           label: "Quản lý voucher",
+        },
+        {
+          key: "/admin/return",
+          icon: <RetweetOutlined />, 
+          label: "Quản lý đổi trả",
+        },
+        {
+          key: "/admin/posts",
+          icon: <FileTextOutlined />, 
+          label: "Quản lý bài viết",
         },
       ]}
     />

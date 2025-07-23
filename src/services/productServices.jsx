@@ -13,14 +13,35 @@ export const fetchProductById = async (id) => {
 export const fetchProductsPaginate = async ({
   page = 0,
   limit = 10,
-  sortBy = "price",
-  orderBy = "asc",
+  sortBy = "createdAt",
+  orderBy = "desc",
+  keyword = "",
+  categoryId = null,
+  status = "",
+  brandName = "",
+  priceMin = null,
+  priceMax = null,
+  minRating = null,
 }) => {
   const res = await axiosInstance.get("/paginate", {
-    params: { page, limit, sortBy, orderBy },
+    params: {
+      page,
+      limit,
+      sortBy,
+      orderBy,
+      keyword,
+      categoryId,
+      status,
+      brandName,
+      priceMin,
+      priceMax,
+      minRating,
+    },
   });
   return res.data;
 };
+
+
 
 export const createProduct = async (productData) => {
   const res = await axiosInstance.post("/admin/product/add", productData);
@@ -217,6 +238,7 @@ export const fetchMergedProducts = async (page = 0, limit = 10) => {
     return [];
   }
 };
+
 export const fetchProductDetailById = async (productId) => {
   try {
     const [productRes, colorsRes, sizesRes] = await Promise.all([
@@ -225,98 +247,103 @@ export const fetchProductDetailById = async (productId) => {
       axiosInstance.get("/list"),
     ]);
 
-    const product = productRes.data;
+    const product = productRes?.data || {};
     let variantsRaw = [];
+
     try {
       const variantsRes = await axiosInstance.get(
         `/product-variants/${productId}`
       );
-      variantsRaw = variantsRes.data?.data;
+      variantsRaw = Array.isArray(variantsRes?.data?.data)
+        ? variantsRes.data.data
+        : [];
     } catch (err) {
-      if (err.response && err.response.status === 404) {
+      if (err?.response?.status === 404) {
         console.warn(`Không tìm thấy biến thể cho productId ${productId}`);
-        variantsRaw = [];
       } else {
-        throw err; // lỗi khác vẫn quăng ra
+        throw err;
       }
     }
 
-    const variants = Array.isArray(variantsRaw) ? variantsRaw : [];
+    const colors = Array.isArray(colorsRes?.data) ? colorsRes.data : [];
+    const sizes = Array.isArray(sizesRes?.data) ? sizesRes.data : [];
 
-    const colors = Array.isArray(colorsRes.data) ? colorsRes.data : [];
-    const sizes = Array.isArray(sizesRes.data) ? sizesRes.data : [];
+  
 
-    // Màu
     const colorMap = {};
     colors.forEach((c) => {
-      colorMap[c.name.toLowerCase()] = {
-        id: c.id,
-        name: c.name,
-        hex_code: c.hexCode || "#CCCCCC",
-      };
+      if (c && c.name) {
+        colorMap[c.name.toLowerCase()] = {
+          id: c.id ?? null,
+          name: c.name ?? "",
+          hex_code: c.hexCode || "#000000", // Fallback hex_code
+        };
+      }
     });
 
-    // Size
     const sizeMap = {};
     sizes.forEach((s) => {
-      sizeMap[s.sizeName.toUpperCase()] = {
-        id: s.id,
-        name: s.sizeName,
-        description: s.description || "",
-      };
+      if (s && s.sizeName) {
+        sizeMap[s.sizeName.toUpperCase()] = {
+          id: s.id ?? null,
+          name: s.sizeName ?? "",
+          description: s.description || "",
+        };
+      }
     });
 
-    const mappedVariants = variants.map((v) => ({
-      id: `${v.id}`,
-      color: colorMap[v.colorName?.toLowerCase()] || {
-        id: null,
-        name: v.colorName || "N/A",
-        hex_code: "#CCCCCC",
-      },
-      size: sizeMap[v.sizeName?.toUpperCase()] || {
-        id: null,
-        name: v.sizeName || "N/A",
-        description: "",
-      },
-      stock_quantity: v.stockQuantity ?? 0,
-      price_override: v.priceOverride ?? null,
-    }));
+    const mappedVariants = Array.isArray(variantsRaw)
+      ? variantsRaw.map((v) => {
+          const variant = {
+            id: `${v?.id ?? ""}`,
+            stock_quantity: v?.stockQuantity ?? 0,
+            price_override: v?.priceOverride ?? null,
+          };
+
+          const colorKey = v?.colorName?.toLowerCase();
+          if (colorKey && colorMap[colorKey]) {
+            variant.color = colorMap[colorKey];
+          }
+
+          const sizeKey = v?.sizeName?.toUpperCase();
+          if (sizeKey && sizeMap[sizeKey]) {
+            variant.size = sizeMap[sizeKey];
+          }
+
+          return variant;
+        })
+      : [];
+
+    const productPrice = typeof product.price === "number" ? product.price : 0;
 
     const minPrice =
       mappedVariants.length > 0
         ? Math.min(
             ...mappedVariants.map((v) =>
-              v.price_override !== null ? v.price_override : product.price
+              typeof v.price_override === "number"
+                ? v.price_override
+                : productPrice
             )
           )
-        : product.price;
+        : productPrice;
 
-    const discount = Math.max(product.price - minPrice, 0);
+    const discount = Math.max(productPrice - minPrice, 0);
 
     return {
-      id: `${product.id}`,
-      name: product.name,
-      description: product.description,
-      brand: product.brand,
+      id: `${product?.id ?? ""}`,
+      name: product?.name ?? "N/A",
+      description: product?.description ?? "",
+      brand: product?.brand ?? "N/A",
       price: minPrice,
-      originalPrice: product.price,
+      originalPrice: productPrice,
       discount,
-      category_id: product.categoryName
-        ? product.categoryName.toLowerCase().replace(/\s+/g, "-")
+      category_id: product?.categoryId
+        ? (product?.categoryName || "uncategorized")
+            .toLowerCase()
+            .replace(/\s+/g, "-")
         : "uncategorized",
-      status: product.status,
+      status: product?.status ?? "UNKNOWN",
       variants: mappedVariants,
-      images: Array.from({ length: 5 }, (_, index) => ({
-        id: `img-${product.id}-${index + 1}`,
-        image_url: `https://picsum.photos/seed/${product.id}-${
-          index + 1
-        }/720/720`,
-        is_main: index === 0,
-        variant_id: null,
-      })),
-      reviews: [],
-      averageRating: 4.5,
-      totalReviews: 0,
     };
   } catch (error) {
     console.error("❌ Error fetching product detail:", error);

@@ -29,7 +29,7 @@ import {
   CustomerServiceOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
-import { logout } from "../../../services/authService";
+import { logoutUser } from "../../../redux/slices/authSlice";
 
 const { Header } = Layout;
 const { Text, Title } = Typography;
@@ -43,11 +43,7 @@ const HeaderBar = ({ collapsed, setCollapsed }) => {
   const dispatch = useDispatch();
 
   const handleLogout = () => {
-    dispatch(logout());
-
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
+    dispatch(logoutUser());
     navigate("/login");
   };
 
