@@ -69,9 +69,11 @@ const Login = () => {
 
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");
-      } else {
-        navigate("/");
-      }
+      } else if (res?.data?.roles?.includes("ROLE_MODERATOR")) {
+          navigate("/shipper/dashboard");
+        } else {
+          navigate("/");
+        }
     } catch (err) {
       console.error("Đăng nhập lỗi:", err);
       console.log(err);
@@ -121,9 +123,8 @@ const Login = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
-                  validationErrors.email ? "border-red-500" : "border-gray-300"
-                } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.email ? "border-red-500" : "border-gray-300"
+                  } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               {validationErrors.email && (
                 <p className="text-red-500 text-sm mt-1">
@@ -139,11 +140,10 @@ const Login = () => {
                 placeholder="Mật khẩu"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
-                  validationErrors.password
-                    ? "border-red-500"
-                    : "border-gray-300"
-                } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.password
+                  ? "border-red-500"
+                  : "border-gray-300"
+                  } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               <button
                 type="button"

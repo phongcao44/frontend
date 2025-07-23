@@ -29,6 +29,7 @@ import OrderSuccessPage from "../pages/user/checkout/OrderSuccessPage";
 import CategoryPage from "../pages/user/categoryPage/CategoryPage";
 import ProductSearch from "../pages/user/productList/ProductSearch";
 
+
 const UserRoutes = () => {
   return (
     <>
@@ -41,7 +42,7 @@ const UserRoutes = () => {
         <Route path="products/search" element={<ProductSearch />} />
         <Route path="products/category/:id" element={<ProductListing />} />
         <Route path="product/:id" element={<ProductDetail />} />
-        \
+        
         <Route path="categories/:id" element={<CategoryPage />} />
 
 
@@ -87,6 +88,8 @@ const UserRoutes = () => {
         <Route path="return-form" element={<ReturnForm />} />
 
         <Route path="return-requests" element={<ReturnRequestsPage />} />
+
+      
       </Route>
     </>
   );
