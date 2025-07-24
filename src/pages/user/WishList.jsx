@@ -94,3 +94,130 @@ const WishList = () => {
 };
 
 export default WishList;
+
+// Inline Styles
+const styles = {
+  container: {
+    padding: "40px 10%",
+    fontFamily: "'Segoe UI', sans-serif",
+    background: "#fff",
+  },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  title: { fontSize: 16 },
+  outlineBtn: {
+    padding: "8px 16px",
+    border: "1px solid #000",
+    background: "#fff",
+    cursor: "pointer",
+    fontSize: 14,
+  },
+  redLine: {
+    width: 6,
+    height: 20,
+    background: "#DB4444",
+    borderRadius: 2,
+  },
+  subTitle: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: 500,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 30,
+    marginBottom: 40,
+  },
+  card: {
+    position: "relative",
+    background: "#f4f4f4",
+    padding: "10px",
+    textAlign: "center",
+    transition: "all 0.3s ease",
+  },
+  cardHover: {
+    transform: "translateY(0)",
+  },
+  discount: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    background: "#DB4444",
+    color: "#fff",
+    fontSize: 12,
+    padding: "2px 6px",
+    borderRadius: 4,
+  },
+  newTag: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    background: "#00FF66",
+    color: "#fff",
+    fontSize: 12,
+    padding: "2px 6px",
+    borderRadius: 4,
+  },
+  icon: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 16,
+    color: "#000",
+  },
+  image: {
+    width: "100%",
+    height: "auto",
+    marginBottom: 10,
+  },
+  cartBtn: {
+    width: "100%",
+    background: "#000",
+    color: "#fff",
+    padding: "8px",
+    fontSize: 14,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    cursor: "pointer",
+    marginBottom: 10,
+    transition: "background 0.3s ease",
+  },
+  name: {
+    fontSize: 14,
+    fontWeight: 500,
+    margin: "8px 0 4px",
+  },
+  price: {
+    fontSize: 14,
+    color: "#DB4444",
+  },
+  oldPrice: {
+    marginLeft: 8,
+    textDecoration: "line-through",
+    color: "#888",
+    fontSize: 13,
+  },
+  rating: {
+    marginTop: 6,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  review: {
+    marginLeft: 6,
+    fontSize: 12,
+    color: "#333",
+  },
+};
