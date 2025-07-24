@@ -25,7 +25,6 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (!productId) return;
-
     const timer = setTimeout(() => {
       dispatch(trackView(productId));
     }, 3000);

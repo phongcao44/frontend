@@ -55,6 +55,7 @@ export const createReturnPolicy = async (requestDTO) => {
  */
 export const updateReturnPolicy = async (id, requestDTO) => {
   try {
+    console.log("Updating return policy with ID:", id, "and data:", requestDTO);
     const response = await axiosInstance.put(
       `/admin/return-policy/update/${id}`,
       requestDTO

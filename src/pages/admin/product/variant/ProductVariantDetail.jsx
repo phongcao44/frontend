@@ -3,26 +3,26 @@ import { Card, List, Image, Typography, Row, Col, Button, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { loadProductDetail } from "../../../redux/slices/productSlice";
-import { loadColors } from "../../../redux/slices/colorSlice";
-import { loadSizes } from "../../../redux/slices/sizeSlice";
+import { loadProductById } from "../../../../redux/slices/productSlice";
+import { loadColors } from "../../../../redux/slices/colorSlice";
+import { loadSizes } from "../../../../redux/slices/sizeSlice";
 import {
   editProductVariant,
   removeProductVariant,
   addProductVariant,
-} from "../../../redux/slices/productVariantSlice";
-import VariantFormPanel from "./VariantFormPanel";
+} from "../../../../redux/slices/productVariantSlice";
+import VariantFormPanel from "../variant/VariantFormPanel";
 
 const { Title, Text } = Typography;
 
 export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [variantForm, setVariantForm] = useState({
+    id: null, // Thêm id vào variantForm
     colorId: null,
     sizeId: null,
     price: 0,
     stock: 0,
-    customAttributes: [],
   });
   const [isAddingNew, setIsAddingNew] = useState(false);
 
@@ -38,7 +38,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (productId) {
-      dispatch(loadProductDetail(productId));
+      dispatch(loadProductById(productId));
     }
   }, [dispatch, productId]);
 
@@ -58,10 +58,11 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (selectedVariant) {
       setVariantForm({
-        colorId: selectedVariant.color?.id || null,
-        sizeId: selectedVariant.size?.id || null,
-        price: selectedVariant.price_override || 0,
-        stock: selectedVariant.stock_quantity || 0,
+        id: selectedVariant.id, // Thêm id vào variantForm
+        colorId: selectedVariant.colorId || null,
+        sizeId: selectedVariant.sizeId || null,
+        price: selectedVariant.priceOverride || 0,
+        stock: selectedVariant.stockQuantity || 0,
       });
     }
   }, [selectedVariant]);
@@ -74,10 +75,10 @@ export default function ProductDetailPage() {
   };
 
   const handleSave = async () => {
-    if (!selectedVariant) return;
+    if (!selectedVariant && !isAddingNew) return;
 
     const payload = {
-      id: selectedVariant.id,
+      id: variantForm.id,
       variantData: {
         productId: parseInt(productId),
         colorId: variantForm.colorId,
@@ -88,12 +89,17 @@ export default function ProductDetailPage() {
     };
 
     try {
-      await dispatch(editProductVariant(payload)).unwrap();
-      message.success("Cập nhật biến thể thành công!");
-      dispatch(loadProductDetail(productId));
+      if (isAddingNew) {
+        await dispatch(addProductVariant(payload.variantData)).unwrap();
+        message.success("Thêm biến thể mới thành công!");
+      } else {
+        await dispatch(editProductVariant(payload)).unwrap();
+        message.success("Cập nhật biến thể thành công!");
+      }
+      setIsAddingNew(false);
+      dispatch(loadProductById(productId));
     } catch (err) {
-      console.error(err);
-      message.error("Lỗi khi cập nhật biến thể");
+      message.error(`Lỗi: ${err.message || "Không xác định"}`);
     }
   };
 
@@ -104,10 +110,9 @@ export default function ProductDetailPage() {
       await dispatch(removeProductVariant(selectedVariant.id)).unwrap();
       message.success("Xóa biến thể thành công!");
       setSelectedVariant(null);
-      dispatch(loadProductDetail(productId));
+      dispatch(loadProductById(productId));
     } catch (err) {
-      console.error(err);
-      message.error("Xóa biến thể thất bại");
+      message.error(`Xóa biến thể thất bại: ${err.message || "Không xác định"}`);
     }
   };
 
@@ -115,6 +120,7 @@ export default function ProductDetailPage() {
     setIsAddingNew(true);
     setSelectedVariant(null);
     setVariantForm({
+      id: null, // Đặt id là null khi thêm mới
       colorId: null,
       sizeId: null,
       price: 0,
@@ -122,23 +128,18 @@ export default function ProductDetailPage() {
     });
   };
 
-  const handleCreate = async () => {
-    const payload = {
-      productId: parseInt(productId),
-      colorId: variantForm.colorId,
-      sizeId: variantForm.sizeId,
-      stockQuantity: variantForm.stock,
-      priceOverride: variantForm.price,
-    };
+  const renderVariantName = (item) => {
+    const colorName = item.colorName || null;
+    const sizeName = item.sizeName || null;
 
-    try {
-      await dispatch(addProductVariant(payload)).unwrap();
-      message.success("Thêm biến thể mới thành công!");
-      setIsAddingNew(false);
-      dispatch(loadProductDetail(productId));
-    } catch (err) {
-      console.error(err);
-      message.error("Thêm biến thể thất bại");
+    if (colorName && sizeName) {
+      return `${colorName} - ${sizeName}`;
+    } else if (colorName) {
+      return colorName;
+    } else if (sizeName) {
+      return sizeName;
+    } else {
+      return "Không xác định";
     }
   };
 
@@ -159,7 +160,7 @@ export default function ProductDetailPage() {
                 <Image
                   width={60}
                   height={60}
-                  src={product?.images?.[0]?.image_url}
+                  src={product?.images?.[0]?.image_url || "https://via.placeholder.com/60"}
                   style={{ borderRadius: 8 }}
                 />
               </Col>
@@ -167,7 +168,7 @@ export default function ProductDetailPage() {
                 <Title level={4} style={{ margin: 0 }}>
                   {product?.name || "Tên sản phẩm"}
                 </Title>
-                <Text type="secondary">{product?.description}</Text>
+                <Text type="secondary">{product?.description || "Chưa có mô tả"}</Text>
                 <br />
                 <Button
                   type="link"
@@ -210,17 +211,11 @@ export default function ProductDetailPage() {
                   }}
                 >
                   <Row gutter={16} align="middle" style={{ width: "100%" }}>
-                    <Col span={4}>
-                      <PlusOutlined />
-                    </Col>
                     <Col span={20}>
-                      <Text strong>
-                        {item.color?.name || "Chưa có màu"} -{" "}
-                        {item.size?.name || "Chưa có size"}
-                      </Text>
+                      <Text strong>{renderVariantName(item)}</Text>
                       <br />
                       <Text type="secondary">
-                        Tồn: {item.stock_quantity || 0}
+                        Tồn: {item.stockQuantity || 0} | Giá: {item.priceOverride?.toLocaleString() || 0} ₫
                       </Text>
                     </Col>
                   </Row>
@@ -247,13 +242,7 @@ export default function ProductDetailPage() {
                     setSelectedVariant(null);
                   }
                 }}
-                onSave={() => {
-                  if (isAddingNew) {
-                    handleCreate();
-                  } else {
-                    handleSave();
-                  }
-                }}
+                onSave={handleSave}
                 onDelete={handleDelete}
                 variants={variants}
               />
