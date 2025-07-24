@@ -16,16 +16,17 @@ export const addToWishlist = async (productId) => {
     const response = await axiosInstance.post('/user/wishList/add', { productId });
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error);
+    }
+    throw error.message || 'Có lỗi xảy ra khi thêm vào danh sách yêu thích';
   }
 };
 
 // Remove product from wishlist
-export const removeFromWishlist = async (productId) => {
+export const removeFromWishlist = async (wishlistId) => {
   try {
-    const response = await axiosInstance.delete('/user/wishList/remove', {
-      data: { productId }
-    });
+    const response = await axiosInstance.delete(`/user/wishList?wishlistId=${wishlistId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
