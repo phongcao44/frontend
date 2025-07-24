@@ -12,8 +12,8 @@ import ReturnRequestDetail from "../pages/admin/return/ReturnRequestDetail";
 
 // Products
 import ProductManagement from "../pages/admin/product/ProductManagement";
-import ProductForm from "../pages/admin/product/ProductForm";
-import ProductVariantDetail from  "../pages/admin/product/ProductVariantDetail";
+import ProductForm from "../pages/admin/product//productDetail/ProductForm";
+import ProductVariantDetail from  "../pages/admin/product/variant/ProductVariantDetail";
 import StockManagement from "../pages/admin/StockManagement";
 
 // Orders

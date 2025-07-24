@@ -13,7 +13,7 @@ export default function OrderSection({ onOrderSelect }) {
     { id: 'ALL', label: 'Tất cả' },
     { id: 'PENDING', label: 'Chờ xác nhận' },
     { id: 'CONFIRMED', label: 'Đã xác nhận' },
-    { id: 'SHIPPING', label: 'Đang giao' },
+    { id: 'SHIPPED', label: 'Đang giao' },
     { id: 'DELIVERED', label: 'Đã giao' },
     { id: 'CANCELLED', label: 'Đã hủy' },
   ];
@@ -48,7 +48,7 @@ export default function OrderSection({ onOrderSelect }) {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
       case 'CONFIRMED': return 'bg-blue-100 text-blue-800';
-      case 'SHIPPING': return 'bg-indigo-100 text-indigo-800';
+      case 'SHIPPED': return 'bg-indigo-100 text-indigo-800';
       case 'DELIVERED': return 'bg-green-100 text-green-800';
       case 'CANCELLED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -59,7 +59,7 @@ export default function OrderSection({ onOrderSelect }) {
     switch (status) {
       case 'PENDING': return 'Chờ xác nhận';
       case 'CONFIRMED': return 'Đã xác nhận';
-      case 'SHIPPING': return 'Đang giao';
+      case 'SHIPPED': return 'Đang giao';
       case 'DELIVERED': return 'Đã giao';
       case 'CANCELLED': return 'Đã hủy';
       default: return 'Không xác định';

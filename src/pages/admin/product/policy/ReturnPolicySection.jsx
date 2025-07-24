@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+/* eslint-disable no-unused-vars */
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -5,16 +7,17 @@ import {
   addReturnPolicy,
   editReturnPolicy,
   removeReturnPolicy,
-} from "../../../redux/slices/returnPolicySlice";
+} from "../../../../redux/slices/returnPolicySlice";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import PolicyModal from "./PolicyModal";
+import PolicyModal from "../policy/PolicyModal";
 
 const ReturnPolicySection = ({
   onChange,
   defaultPolicyId = null,
   productId = null,
 }) => {
+
   const dispatch = useDispatch();
   const returnPolicies = useSelector((state) => state.returnPolicy.items || []);
   const loading = useSelector((state) => state.returnPolicy.loading);
@@ -38,9 +41,11 @@ const ReturnPolicySection = ({
 
   useEffect(() => {
     if (returnPolicies.length === 0) {
-      setSelectedPolicyId(null);
-      setFormData(null);
-      onChange?.(null);
+      if (selectedPolicyId) {
+        setSelectedPolicyId(null);
+        setFormData(null);
+        onChange?.(null);
+      }
       return;
     }
 
@@ -59,7 +64,12 @@ const ReturnPolicySection = ({
       onChange?.(null);
     } else if (selectedPolicyId) {
       const policy = returnPolicies.find((p) => p.id === selectedPolicyId);
-      if (policy && (!formData || formData.id !== policy.id || JSON.stringify(formData) !== JSON.stringify(policy))) {
+      if (
+        policy &&
+        (!formData ||
+          formData.id !== policy.id ||
+          JSON.stringify(formData) !== JSON.stringify(policy))
+      ) {
         setFormData({ ...policy });
         onChange?.(policy);
       }
@@ -99,60 +109,60 @@ const ReturnPolicySection = ({
         status: formData.status ?? "ACTIVE",
       };
       try {
-        const createdPolicy = await dispatch(
-          addReturnPolicy(payload)
-        ).unwrap();
+        const createdPolicy = await dispatch(addReturnPolicy(payload)).unwrap();
         toast.success("Đã thêm chính sách mới");
         setSelectedPolicyId(createdPolicy.id);
         setFormData({ ...createdPolicy });
         setAddModalVisible(false);
         onChange?.(createdPolicy);
       } catch (err) {
+        console.error("handleCreatePolicy: Error", err);
         toast.error("Thêm chính sách thất bại");
-        console.error(err);
       }
     },
     [dispatch, onChange]
   );
 
-  const handleSavePolicy = useCallback(async () => {
-    if (!formData?.title?.trim()) {
-      toast.error("Vui lòng nhập tiêu đề chính sách");
-      return;
-    }
-    if (!formData?.content?.trim()) {
-      toast.error("Vui lòng nhập nội dung chính sách");
-      return;
-    }
-    if (formData?.returnDays < 1) {
-      toast.error("Số ngày đổi trả phải lớn hơn 0");
-      return;
-    }
+  const handleSavePolicy = useCallback(
+    async () => {
+      if (!formData?.title?.trim()) {
+        toast.error("Vui lòng nhập tiêu đề chính sách");
+        return;
+      }
+      if (!formData?.content?.trim()) {
+        toast.error("Vui lòng nhập nội dung chính sách");
+        return;
+      }
+      if (formData?.returnDays < 1) {
+        toast.error("Số ngày đổi trả phải lớn hơn 0");
+        return;
+      }
 
-    const payload = {
-      title: formData.title.trim(),
-      content: formData.content.trim(),
-      returnDays: formData.returnDays,
-      allowReturnWithoutReason: formData.allowReturnWithoutReason ?? false,
-      status: formData.status ?? "ACTIVE",
-    };
+      const payload = {
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        returnDays: formData.returnDays,
+        allowReturnWithoutReason: formData.allowReturnWithoutReason ?? false,
+        status: formData.status ?? "ACTIVE",
+      };
 
-    try {
-      console.log("Saving return policy:", payload);
-      const updatedPolicy = await dispatch(
-        editReturnPolicy({
-          id: selectedPolicyId,
-          requestDTO: payload,
-        })
-      ).unwrap();
-      toast.success("Đã cập nhật chính sách");
-      setFormData({ ...updatedPolicy });
-      onChange?.(updatedPolicy);
-    } catch (err) {
-      toast.error("Cập nhật chính sách thất bại");
-      console.error(err);
-    }
-  }, [dispatch, formData, selectedPolicyId, onChange]);
+      try {
+        const updatedPolicy = await dispatch(
+          editReturnPolicy({
+            id: selectedPolicyId,
+            requestDTO: payload,
+          })
+        ).unwrap();
+        toast.success("Đã cập nhật chính sách");
+        setFormData({ ...updatedPolicy });
+        onChange?.(updatedPolicy);
+      } catch (err) {
+        console.error("handleSavePolicy: Error", err);
+        toast.error("Cập nhật chính sách thất bại");
+      }
+    },
+    [dispatch, formData, selectedPolicyId, onChange]
+  );
 
   const removePolicy = useCallback(
     async (policyId) => {
@@ -163,15 +173,26 @@ const ReturnPolicySection = ({
         setFormData(null);
         onChange?.(null);
       } catch (err) {
+        console.error("removePolicy: Error", err);
         toast.error("Xóa chính sách thất bại");
-        console.error(err);
       }
     },
     [dispatch, onChange]
   );
 
+  const handleCollapseToggle = useCallback(
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDetailsCollapsed((prev) => !prev);
+    },
+    []
+  );
+
   const selectedPolicyDetails = useMemo(
-    () => returnPolicies.find((p) => p.id === selectedPolicyId),
+    () => {
+      return returnPolicies.find((p) => p.id === selectedPolicyId);
+    },
     [returnPolicies, selectedPolicyId]
   );
 
@@ -233,7 +254,10 @@ const ReturnPolicySection = ({
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setAddModalVisible(true)}
+            type="button"
+            onClick={() => {
+              setAddModalVisible(true);
+            }}
             className="text-blue-600 hover:text-blue-800 flex items-center"
             disabled={loading}
           >
@@ -262,7 +286,8 @@ const ReturnPolicySection = ({
             Chi tiết chính sách
           </h3>
           <button
-            onClick={() => setIsDetailsCollapsed(!isDetailsCollapsed)}
+            type="button"
+            onClick={handleCollapseToggle}
             className="text-gray-600 hover:text-gray-800 flex items-center"
           >
             <svg
@@ -287,6 +312,7 @@ const ReturnPolicySection = ({
           <div className="space-y-4">
             {formData ? (
               <>
+               
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tiêu đề chính sách
@@ -383,14 +409,20 @@ const ReturnPolicySection = ({
                 {selectedPolicyDetails && (
                   <div className="flex gap-4 mt-2">
                     <button
-                      onClick={handleSavePolicy}
+                      type="button"
+                      onClick={() => {
+                        handleSavePolicy();
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                       disabled={loading}
                     >
                       Lưu
                     </button>
                     <button
-                      onClick={() => removePolicy(selectedPolicyDetails.id)}
+                      type="button"
+                      onClick={() => {
+                        removePolicy(selectedPolicyDetails.id);
+                      }}
                       className="text-red-600 hover:text-red-800 text-sm"
                       disabled={loading}
                     >
@@ -413,7 +445,9 @@ const ReturnPolicySection = ({
         onClose={() => {
           setAddModalVisible(false);
         }}
-        onSubmit={handleCreatePolicy}
+        onSubmit={(data) => {
+          handleCreatePolicy(data);
+        }}
         loading={loading}
       />
     </div>
