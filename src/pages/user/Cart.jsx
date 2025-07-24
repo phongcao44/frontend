@@ -78,7 +78,7 @@ const Cart = () => {
   const subtotal =
     cart?.items?.reduce((sum, item) => {
       if (selectedItems.includes(item.cartItemId)) {
-        return sum + (item.totalPrice || 0) * (item.quantity || 0);
+        return sum + (item.totalPrice || 0);// * (item.quantity || 0);
       }
       return sum;
     }, 0) || 0;
@@ -159,7 +159,7 @@ const Cart = () => {
                   </span>
                 </div>
                 <div className="text-black">
-                  {(item.totalPrice || 0).toLocaleString("vi-VN")} ₫
+                  {(item.originalPrice || 0).toLocaleString("vi-VN")} ₫
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
@@ -180,7 +180,7 @@ const Cart = () => {
                 </div>
                 <div className="text-black">
                   {(
-                    (item.totalPrice || 0) * (item.quantity || 0)
+                    (item.originalPrice || 0) * (item.quantity || 0)
                   ).toLocaleString("vi-VN")}{" "}
                   ₫
                 </div>
