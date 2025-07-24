@@ -237,7 +237,7 @@ const CategoryBanner = () => {
                         className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                       >
                         Xem chi tiết
-                      </button>
+                      </button> 
                     </div>
                   </div>
                 </SwiperSlide>
