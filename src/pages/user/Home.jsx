@@ -17,7 +17,8 @@ const Home = () => {
   );
 
   return (
-    <section style={{ maxWidth: 1200, margin: "auto", padding: 0 }}>
+    <>
+    <section style={{ maxWidth: 1200, margin: "auto", padding: 0, paddingBottom: 100, }}>
       <CategoryBanner />
       <FlashSale />
 
@@ -32,9 +33,11 @@ const Home = () => {
 
       {divider}
       <NewArrival />
-
-      <GeminiChatButton />
+      
+      
     </section>
+    <GeminiChatButton />
+    </>
   );
 };
 

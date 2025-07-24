@@ -4,6 +4,7 @@ import { generateToken, messaging } from "./notification/firebase"; // điều c
 import { onMessage } from "firebase/messaging";
 import Cookies from "js-cookie";
 
+
 const App = () => {
   useEffect(() => {
     // Tạo token khi app load
