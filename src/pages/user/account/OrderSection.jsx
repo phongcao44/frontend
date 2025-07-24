@@ -16,6 +16,7 @@ export default function OrderSection({ onOrderSelect }) {
     { id: 'SHIPPED', label: 'Đang giao' },
     { id: 'DELIVERED', label: 'Đã giao' },
     { id: 'CANCELLED', label: 'Đã hủy' },
+    { id: 'RETURNED', label: 'Đã hoàn trả' },
   ];
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export default function OrderSection({ onOrderSelect }) {
       case 'SHIPPED': return 'bg-indigo-100 text-indigo-800';
       case 'DELIVERED': return 'bg-green-100 text-green-800';
       case 'CANCELLED': return 'bg-red-100 text-red-800';
+      case 'RETURNED': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -62,6 +64,7 @@ export default function OrderSection({ onOrderSelect }) {
       case 'SHIPPED': return 'Đang giao';
       case 'DELIVERED': return 'Đã giao';
       case 'CANCELLED': return 'Đã hủy';
+      case 'RETURNED': return 'Đã hoàn trả';
       default: return 'Không xác định';
     }
   };
@@ -75,22 +78,6 @@ export default function OrderSection({ onOrderSelect }) {
       minute: '2-digit'
     });
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-600">Đang tải dữ liệu...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-red-600">{error}</div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6">
@@ -135,10 +122,24 @@ export default function OrderSection({ onOrderSelect }) {
 
         {/* Orders List */}
         <div className="p-6">
-          {filteredOrders.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-gray-600">Đang tải dữ liệu...</div>
+            </div>
+          ) : error ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-red-600">{error}</div>
+            </div>
+          ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12">
               <i className="ri-shopping-bag-line text-4xl text-gray-400 mb-4"></i>
               <p className="text-gray-600">Không tìm thấy đơn hàng nào</p>
+              <p className="text-gray-500 text-sm mt-2">
+                {activeTab === 'ALL' 
+                  ? 'Bạn chưa có đơn hàng nào'
+                  : `Bạn không có đơn hàng nào ở trạng thái ${getStatusText(activeTab)}`
+                }
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -176,4 +177,4 @@ export default function OrderSection({ onOrderSelect }) {
       </div>
     </div>
   );
-};
+}

@@ -9,6 +9,7 @@ import AddToCart from "./AddToCart";
 import DeliveryInfo from "./DeliveryInfo";
 import ProductReviews from "./ProductReviews";
 import RelatedProductsSection from "./RelatedProductsSection";
+import WishlistButton from '../../../components/WishlistButton';
 
 const ProductDetail = () => {
   const dispatch = useDispatch();

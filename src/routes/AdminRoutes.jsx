@@ -42,6 +42,7 @@ import FlashSaleItemManagement from "../pages/admin/flash_Sale/FlashSaleItemMana
 import VoucherManagement from "../pages/admin/voucher/VoucherManagement";
 import PostManagement from "../pages/admin/posts/PostManagement";
 
+
 export default function AdminRoutes() {
   return (
     <Route
@@ -103,6 +104,7 @@ export default function AdminRoutes() {
       
       {/* Fallback */}
       <Route path="/admin/*" element={<ErrorPage />} />
+      
     </Route>
   );
 }

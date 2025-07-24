@@ -3,31 +3,42 @@ export default function OrderDetail({ order, onBack }) {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'shipping': return 'bg-blue-100 text-blue-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+      case 'CONFIRMED': return 'bg-blue-100 text-blue-800';
+      case 'SHIPPED': return 'bg-indigo-100 text-indigo-800';
+      case 'DELIVERED': return 'bg-green-100 text-green-800';
+      case 'CANCELLED': return 'bg-red-100 text-red-800';
+      case 'RETURNED': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'pending': return 'Chờ xác nhận';
-      case 'shipping': return 'Đang giao';
-      case 'delivered': return 'Đã giao';
-      case 'cancelled': return 'Đã hủy';
+      case 'PENDING': return 'Chờ xác nhận';
+      case 'CONFIRMED': return 'Đã xác nhận';
+      case 'SHIPPED': return 'Đang giao';
+      case 'DELIVERED': return 'Đã giao';
+      case 'CANCELLED': return 'Đã hủy';
+      case 'RETURNED': return 'Đã hoàn trả';
       default: return 'Không xác định';
     }
   };
 
   const timeline = [
-    { status: 'Đã đặt hàng', date: '2024-01-15 10:30', completed: true },
-    { status: 'Đã xác nhận', date: '2024-01-15 11:00', completed: order.status !== 'pending' },
-    { status: 'Đang chuẩn bị', date: '2024-01-15 14:30', completed: order.status === 'shipping' || order.status === 'delivered' },
-    { status: 'Đang giao hàng', date: '2024-01-16 09:00', completed: order.status === 'delivered' },
-    { status: 'Đã giao hàng', date: order.status === 'delivered' ? '2024-01-16 15:30' : '', completed: order.status === 'delivered' }
+    { status: 'Đã đặt hàng', date: order.createdAt, completed: true },
+    { status: 'Đã xác nhận', date: order.confirmedAt, completed: ['CONFIRMED', 'SHIPPED', 'DELIVERED'].includes(order.status) },
+    { status: 'Đang giao hàng', date: order.shippedAt, completed: ['SHIPPED', 'DELIVERED'].includes(order.status) },
+    { status: 'Đã giao hàng', date: order.deliveredAt, completed: order.status === 'DELIVERED' }
   ];
+
+  if (order.status === 'CANCELLED') {
+    timeline.push({ status: 'Đã hủy', date: order.cancelledAt, completed: true });
+  }
+
+  if (order.status === 'RETURNED') {
+    timeline.push({ status: 'Đã hoàn trả', date: order.returnedAt, completed: true });
+  }
 
   return (
     <div className="p-6">
