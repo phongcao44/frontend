@@ -28,7 +28,8 @@ import Orders from "../pages/user/account/Orders";
 import OrderSuccessPage from "../pages/user/checkout/OrderSuccessPage";
 import CategoryPage from "../pages/user/categoryPage/CategoryPage";
 import ProductSearch from "../pages/user/productList/ProductSearch";
-
+import Blog from "../pages/user/Blog";
+import BlogDetail from "../pages/user/BlogDetail";
 
 const UserRoutes = () => {
   return (
@@ -89,7 +90,8 @@ const UserRoutes = () => {
 
         <Route path="return-requests" element={<ReturnRequestsPage />} />
 
-      
+          <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:id" element={<BlogDetail />} />
       </Route>
     </>
   );
