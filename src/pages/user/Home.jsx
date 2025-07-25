@@ -3,6 +3,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import GeminiChatButton from "./home/GeminiChatButton";
 
+import CartIcon from "../../components/CartItem";
 import BestSelling from "./home/BestSelling";
 import Promo from "./home/Promo";
 import ExploreProducts from "./home/ExploreProducts";
@@ -37,6 +38,7 @@ const Home = () => {
       
     </section>
     <GeminiChatButton />
+
     </>
   );
 };
