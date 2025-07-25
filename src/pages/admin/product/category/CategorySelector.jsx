@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   loadCategoryTree,
   loadParentLine,
-} from "../../../redux/slices/categorySlice";
+} from "../../../../redux/slices/categorySlice";
 
 const { Option } = Select;
 

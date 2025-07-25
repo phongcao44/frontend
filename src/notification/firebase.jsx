@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken } from "firebase/messaging";
 import Cookies from "js-cookie";
 
-// ✅ Cấu hình Firebase (dữ liệu của bạn)
+// Cấu hình Firebase (dữ liệu của bạn)
 const firebaseConfig = {
   apiKey: "AIzaSyDdT5RLKprhhQHdrzlhdtymsevVdOLZ-UE",
   authDomain: "ecommer-project-e7caa.firebaseapp.com",
@@ -14,15 +14,15 @@ const firebaseConfig = {
   measurementId: "G-E3M5E6W32W",
 };
 
-// ✅ Khởi tạo Firebase App
+// Khởi tạo Firebase App
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// ✅ Hàm sinh token khi client cho phép gửi thông báo
+// Hàm sinh token khi client cho phép gửi thông báo
 export const generateToken = async () => {
   try {
     const permission = await Notification.requestPermission();
-    console.log("🔔 Notification permission:", permission);
+    console.log(" Notification permission:", permission);
 
     if (permission === "granted") {
       const token = await getToken(messaging, {
@@ -31,11 +31,11 @@ export const generateToken = async () => {
       });
 
       if (token) {
-        console.log("✅ FCM Token ...:", token);
+        console.log("FCM Token ...:", token);
 
         const accessToken = Cookies.get("access_token") || "";
 
-        // 👇 Lấy token từ localStorage
+        // Lấy token từ localStorage
         const userInfoRaw = Cookies.get("user");
         console.log("Raw user info:", userInfoRaw);
 
@@ -53,13 +53,13 @@ export const generateToken = async () => {
           }),
         });
       } else {
-        console.warn("⚠️ Không lấy được token FCM.");
+        console.warn("Không lấy được token FCM.");
       }
     } else {
-      console.warn("⚠️ Người dùng không cho phép gửi thông báo.");
+      console.warn("Người dùng không cho phép gửi thông báo.");
     }
   } catch (error) {
-    console.error("❌ Lỗi khi lấy FCM token:", error);
+    console.error(" Lỗi khi lấy FCM token:", error);
   }
 };
 

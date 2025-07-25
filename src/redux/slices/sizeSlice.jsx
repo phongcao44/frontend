@@ -16,7 +16,7 @@ export const createSize = createAsyncThunk("size/add", async (sizeData) => {
   return data;
 });
 
-export const editSize = createAsyncThunk(
+export const updateSizes = createAsyncThunk(
   "size/update",
   async ({ id, updatedData }) => {
     const data = await updateSize(id, updatedData);
@@ -59,12 +59,16 @@ const sizeSlice = createSlice({
       })
 
       // Update size
-      .addCase(editSize.fulfilled, (state, action) => {
+     .addCase(updateSizes.fulfilled, (state, action) => {
+      if (action.payload && action.payload.id) {
         const index = state.sizes.findIndex((s) => s.id === action.payload.id);
         if (index !== -1) {
           state.sizes[index] = action.payload;
         }
-      })
+      } else {
+        console.error("Invalid payload in updateSize.fulfilled:", action.payload);
+      }
+    })
 
       // Delete size
       .addCase(removeSize.fulfilled, (state, action) => {

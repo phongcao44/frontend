@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+/* eslint-disable react/prop-types */
+import { useEffect, useState } from "react";
 import { Card, Checkbox, Input, Button, Space, Divider } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams } from "react-router-dom";
-import { handleDownloadPDF } from "../../services/handleDownloadPDF";
+import { handleDownloadPDF } from "../../../services/handleDownloadPDF";
 import {
   Card,
   Table,
@@ -13,7 +13,6 @@ import {
   Row,
   Col,
   Avatar,
-  Badge,
   Spin,
   Alert,
   message,
@@ -24,30 +23,23 @@ import {
   loadOrderDetail,
   clearCurrentOrder,
   editOrderStatus,
-} from "../../redux/slices/orderSlice";
+} from "../../../redux/slices/orderSlice";
 
 const { Text } = Typography;
 const { Option } = Select;
 
 export default function OrderDetail() {
   const dispatch = useDispatch();
-  const { orderId } = useParams();
+  const { id } = useParams();
   const { currentOrder, loading, error } = useSelector((state) => state.order);
   const [selectedStatus, setSelectedStatus] = useState("");
 
   useEffect(() => {
-    dispatch(loadOrderDetail(Number(orderId)));
+    dispatch(loadOrderDetail(Number(id)));
     return () => {
       dispatch(clearCurrentOrder());
     };
-  }, [dispatch, orderId]);
-
-  useEffect(() => {
-    // Set default status to current order status
-    if (currentOrder?.status) {
-      setSelectedStatus(currentOrder.status);
-    }
-  }, [currentOrder]);
+  }, [dispatch, id]);
 
   const handleStatusChange = async () => {
     if (!selectedStatus) {
@@ -55,6 +47,7 @@ export default function OrderDetail() {
       return;
     }
     try {
+      console.log(selectedStatus)
       await dispatch(
         editOrderStatus({
           id: currentOrder.orderId,
@@ -97,7 +90,7 @@ export default function OrderDetail() {
       <div style={{ padding: 24 }}>
         <Alert
           message="Không tìm thấy đơn hàng"
-          description={`Không tìm thấy đơn hàng với ID ${orderId}.`}
+          description={`Không tìm thấy đơn hàng với ID ${id}.`}
           type="warning"
           showIcon
         />
@@ -191,21 +184,6 @@ export default function OrderDetail() {
         return "Đã hủy giao hàng";
       default:
         return "Không rõ";
-    }
-  };
-
-  const translatePaymentMethod = (method) => {
-    switch (method) {
-      case "COD":
-        return "Thanh toán khi nhận hàng";
-      case "CARD":
-        return "Thẻ tín dụng/Thẻ ghi nợ";
-      case "BANK_TRANSFER":
-        return "Chuyển khoản ngân hàng";
-      case "MOBILE_PAYMENT":
-        return "Thanh toán qua ứng dụng di động";
-      default:
-        return "Không xác định";
     }
   };
 
@@ -431,13 +409,6 @@ export default function OrderDetail() {
                 
             <Row gutter={24} style={{ marginTop: 24 }}>
               <Col span={12}>
-                <Button
-                  type="default"
-                  onClick={() => handleDownloadPDF(currentOrder.orderId)}
-                  style={{ marginBottom: 16 }}
-                >
-                  Tải PDF đơn hàng
-                </Button>
               </Col>
               <Col span={12}>
                 <Card>
@@ -478,12 +449,10 @@ export default function OrderDetail() {
                 <Select
                   style={{ width: "100%", marginTop: 8 }}
                   placeholder="Chọn trạng thái"
-                  value={selectedStatus}
                   onChange={(value) => setSelectedStatus(value)}
                 >
                   <Option value="PENDING">Chờ xử lý</Option>
-                  <Option value="CONFIRMED">Đã xác nhận</Option>
-                  <Option value="SHIPPED">Đã gửi hàng</Option>
+                  <Option value="SHIPPED">Đang giao hàng</Option>
                   <Option value="DELIVERED">Đã giao hàng</Option>
                   <Option value="CANCELLED">Đã hủy</Option>
                 </Select>
@@ -495,25 +464,6 @@ export default function OrderDetail() {
                 >
                   Cập nhật trạng thái
                 </Button>
-              </div>
-            </Card>
-
-            <Card style={{ marginBottom: 16 }}>
-              <Text strong>Phương thức thanh toán</Text>
-              <div style={{ marginTop: 8 }}>
-                <Text>
-                  {translatePaymentMethod(currentOrder.paymentMethod)}
-                </Text>
-                {currentOrder.paymentMethod === "CARD" && (
-                  <>
-                    <br />
-                    <Text type="secondary">
-                      Ngày thanh toán: {currentOrder.paymentDetails?.paymentDate 
-                        ? new Date(currentOrder.paymentDetails.paymentDate).toLocaleDateString("vi-VN") 
-                        : "Không xác định"}
-                    </Text>
-                  </>
-                )}
               </div>
             </Card>
 

@@ -54,10 +54,13 @@ export default function useUserDetail() {
   const dispatch = useDispatch();
   const { userId } = useParams();
   const {
-    userDetail,
+    userDetail = {}, // Fallback to empty object
     loading,
     error: reduxError,
-  } = useSelector((state) => state.users);
+  } = useSelector((state) => {
+    console.log("state.users:", state.users); // Debug log
+    return state.users;
+  });
 
   // State for modals, tabs, and UI
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -132,38 +135,39 @@ export default function useUserDetail() {
 
   // Map API data to local state when userDetail changes
   useEffect(() => {
-    if (userDetail) {
+    if (userDetail && Object.keys(userDetail).length > 0) {
       const normalizedData = normalizeNull(userDetail);
       setUserInfo({
-        id: normalizedData.userId,
-        name: normalizedData.userName,
-        email: normalizedData.userEmail,
+        id: normalizedData.userId || "",
+        name: normalizedData.userName || "",
+        email: normalizedData.userEmail || "",
         avatar: undefined,
-        status: normalizedData.status,
-        createdAt: normalizedData.createTime,
-        updatedAt: normalizedData.updateTime,
+        status: normalizedData.status || "INACTIVE",
+        createdAt: normalizedData.createTime || "",
+        updatedAt: normalizedData.updateTime || "",
         loyaltyPoints:
-          normalizedData.address[0]?.user.userPoint.totalPoints || 0,
-        memberTier: normalizedData.rank,
+          normalizedData.address?.[0]?.user?.userPoint?.totalPoints || 0,
+        memberTier: normalizedData.rank || "",
         totalOrders: 0,
         totalSpent: 0,
       });
 
       setAddress({
-        name: normalizedData.address[0]?.recipientName || undefined,
-        country: normalizedData.address[0]?.province || undefined,
-        street: normalizedData.address[0]?.fullAddress || undefined,
-        city: normalizedData.address[0]?.district || undefined,
-        zipCode: normalizedData.address[0]?.wardCode || undefined,
+        name: normalizedData.address?.[0]?.recipientName || undefined,
+        country: normalizedData.address?.[0]?.province || undefined,
+        street: normalizedData.address?.[0]?.fullAddress || undefined,
+        city: normalizedData.address?.[0]?.district || undefined,
+        zipCode: normalizedData.address?.[0]?.wardCode || undefined,
       });
 
-      const apiRoles = normalizedData.role.map((role) => ({
-        id: role.id,
-        name: role.name,
-        description: role.description,
-        granted: true, // Assuming roles from API are granted
-      }));
-
+      const apiRoles = Array.isArray(normalizedData.role)
+        ? normalizedData.role.map((role) => ({
+            id: role.id || "",
+            name: role.name || "",
+            description: role.description || "",
+            granted: true, // Assuming roles from API are granted
+          }))
+        : [];
       setUserRoles(apiRoles);
     }
   }, [userDetail]);
@@ -237,13 +241,16 @@ export default function useUserDetail() {
       handleStatusChange: async (newStatus) => {
         setIsLoading(true);
         try {
+          console.log("Updating status to:", newStatus); // Debug log
           await dispatch(
             updateUserStatus({ userId, status: newStatus })
           ).unwrap();
+          console.log("Fetching user detail after status update"); // Debug log
           await dispatch(fetchUserDetail(userId)).unwrap();
           setUserInfo((prev) => normalizeNull({ ...prev, status: newStatus }));
           setSuccess(`Trạng thái đã được thay đổi thành ${newStatus}`);
         } catch (err) {
+          console.error("Error in handleStatusChange:", err); // Debug log
           const errorMessage =
             typeof err === "string"
               ? err
@@ -315,7 +322,7 @@ export default function useUserDetail() {
       handleProfileSave: async (values) => {
         setIsLoading(true);
         try {
-          // await dispatch(updateUserDetailThunk({ userId, ...values })).unwrap();
+          await dispatch(updateUserDetailThunk({ userId, ...values })).unwrap();
           setUserInfo((prev) => normalizeNull({ ...prev, ...values }));
           setSuccess("Thông tin cá nhân đã được cập nhật");
           setIsEditingProfile(false);
