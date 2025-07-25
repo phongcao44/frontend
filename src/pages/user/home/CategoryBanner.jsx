@@ -4,6 +4,7 @@ import { Pagination, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
+import { useNavigate } from "react-router-dom";
 
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,6 +19,7 @@ const CategoryBanner = () => {
   const { categoryTree } = useSelector((state) => state.category);
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [megaMenuPosition, setMegaMenuPosition] = useState({ top: 0 });
+  const navigate = useNavigate();
 
   useEffect(() => {
     dispatch(loadCategoryTree());
@@ -40,8 +42,8 @@ const CategoryBanner = () => {
   // Handle hover on category item
   const handleCategoryHover = (category, event) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    setMegaMenuPosition({ 
-      top: rect.top - event.currentTarget.offsetParent.getBoundingClientRect().top 
+    setMegaMenuPosition({
+      top: rect.top - event.currentTarget.offsetParent.getBoundingClientRect().top
     });
     setHoveredCategory(category);
   };
@@ -198,9 +200,9 @@ const CategoryBanner = () => {
               navigation={
                 showNav
                   ? {
-                      prevEl: prevRef.current,
-                      nextEl: nextRef.current,
-                    }
+                    prevEl: prevRef.current,
+                    nextEl: nextRef.current,
+                  }
                   : false
               }
               onInit={(swiper) => {
@@ -226,10 +228,16 @@ const CategoryBanner = () => {
                       <h2 className="text-white text-4xl font-bold mb-4 drop-shadow-lg max-w-md">
                         {item.title}
                       </h2>
-                      <button className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                      <button
+                        onClick={() => {
+                          if (item.targetUrl) {
+                            navigate(`/product/${item.targetUrl}`);
+                          }
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
                         Xem chi tiết
-                        
-                      </button>
+                      </button> 
                     </div>
                   </div>
                 </SwiperSlide>
