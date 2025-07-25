@@ -520,7 +520,6 @@ export default function OrderManagement() {
                           </span>
                         </td>
 
-                        
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentColor(
@@ -539,7 +538,12 @@ export default function OrderManagement() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
-                            <button className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors">
+                            <button
+                              onClick={() =>
+                                navigate(`/admin/orders/${order.orderId}`)
+                              }
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                            >
                               <Eye className="h-4 w-4" />
                             </button>
                           </div>

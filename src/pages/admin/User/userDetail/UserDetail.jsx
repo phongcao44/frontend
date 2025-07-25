@@ -31,6 +31,12 @@ export default function UserDetail() {
     getStatusIcon,
   } = useUserDetail();
 
+  // Debug log for status change
+  const handleStatusChangeWithLog = (...args) => {
+    console.log("UserDetail: Triggering status change", args);
+    handlers.handleStatusChange(...args);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
@@ -62,8 +68,6 @@ export default function UserDetail() {
         {error && (
           <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-6 text-sm text-red-800 flex items-center justify-between">
             <span>{error}</span>
-            <span>Hi</span>
-
             <button
               onClick={handlers.clearError}
               className="text-red-600 hover:text-red-800"
@@ -88,21 +92,21 @@ export default function UserDetail() {
           {/* Left Section */}
           <div className="lg:col-span-3 space-y-6">
             <UserProfileCard
-              userInfo={userInfo}
+              userInfo={userInfo || {}}
               isLoading={isLoading}
-              handlers={handlers}
+              handlers={{ ...handlers, handleStatusChange: handleStatusChangeWithLog }}
               formatDate={formatDate}
               formatCurrency={formatCurrency}
               getStatusColor={getStatusColor}
               getStatusIcon={getStatusIcon}
-              isEditingProfile={isEditingProfile} 
+              isEditingProfile={isEditingProfile}
             />
             <TabContent
               selectedTab={selectedTab}
-              userInfo={userInfo}
-              userRoles={userRoles}
-              orders={orders}
-              vouchers={vouchers}
+              userInfo={userInfo || {}}
+              userRoles={userRoles || []}
+              orders={orders || []}
+              vouchers={vouchers || []}
               isLoading={isLoading}
               handlers={handlers}
               formatDate={formatDate}
@@ -113,22 +117,22 @@ export default function UserDetail() {
           {/* Right Sidebar */}
           <div className="space-y-6">
             <ContactInfo
-              userInfo={userInfo}
+              userInfo={userInfo || {}}
               isEditingContact={handlers.isEditingContact}
               isLoading={isLoading}
               handlers={handlers}
             />
             <AddressInfo
-              address={address}
+              address={address || {}}
               isEditingAddress={handlers.isEditingAddress}
               isLoading={isLoading}
               handlers={handlers}
             />
             {userInfo && (
               <QuickActions
-                handlers={handlers}
+                handlers={{ ...handlers, handleStatusChange: handleStatusChangeWithLog }}
                 isLoading={isLoading}
-                currentStatus={userInfo.status}
+                currentStatus={userInfo.status || "INACTIVE"}
               />
             )}
           </div>
@@ -139,9 +143,9 @@ export default function UserDetail() {
           showEmailModal={showEmailModal}
           showRoleModal={showRoleModal}
           showResetPasswordModal={showResetPasswordModal}
-          userInfo={userInfo}
-          allRoles={allRoles}
-          userRoles={userRoles}
+          userInfo={userInfo || {}}
+          allRoles={allRoles || []}
+          userRoles={userRoles || []}
           handlers={handlers}
         />
       </div>

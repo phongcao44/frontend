@@ -42,13 +42,19 @@ export default function OrderDetail() {
     };
   }, [dispatch, orderId]);
 
+  useEffect(() => {
+    // Set default status to current order status
+    if (currentOrder?.status) {
+      setSelectedStatus(currentOrder.status);
+    }
+  }, [currentOrder]);
+
   const handleStatusChange = async () => {
     if (!selectedStatus) {
       message.warning("Vui lòng chọn trạng thái");
       return;
     }
     try {
-      console.log(selectedStatus)
       await dispatch(
         editOrderStatus({
           id: currentOrder.orderId,
@@ -185,6 +191,21 @@ export default function OrderDetail() {
         return "Đã hủy giao hàng";
       default:
         return "Không rõ";
+    }
+  };
+
+  const translatePaymentMethod = (method) => {
+    switch (method) {
+      case "COD":
+        return "Thanh toán khi nhận hàng";
+      case "CARD":
+        return "Thẻ tín dụng/Thẻ ghi nợ";
+      case "BANK_TRANSFER":
+        return "Chuyển khoản ngân hàng";
+      case "MOBILE_PAYMENT":
+        return "Thanh toán qua ứng dụng di động";
+      default:
+        return "Không xác định";
     }
   };
 
@@ -457,6 +478,7 @@ export default function OrderDetail() {
                 <Select
                   style={{ width: "100%", marginTop: 8 }}
                   placeholder="Chọn trạng thái"
+                  value={selectedStatus}
                   onChange={(value) => setSelectedStatus(value)}
                 >
                   <Option value="PENDING">Chờ xử lý</Option>
@@ -473,6 +495,25 @@ export default function OrderDetail() {
                 >
                   Cập nhật trạng thái
                 </Button>
+              </div>
+            </Card>
+
+            <Card style={{ marginBottom: 16 }}>
+              <Text strong>Phương thức thanh toán</Text>
+              <div style={{ marginTop: 8 }}>
+                <Text>
+                  {translatePaymentMethod(currentOrder.paymentMethod)}
+                </Text>
+                {currentOrder.paymentMethod === "CARD" && (
+                  <>
+                    <br />
+                    <Text type="secondary">
+                      Ngày thanh toán: {currentOrder.paymentDetails?.paymentDate 
+                        ? new Date(currentOrder.paymentDetails.paymentDate).toLocaleDateString("vi-VN") 
+                        : "Không xác định"}
+                    </Text>
+                  </>
+                )}
               </div>
             </Card>
 
