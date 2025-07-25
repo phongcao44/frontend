@@ -101,7 +101,7 @@ export const updateProductImage = async (id, formData) => {
 export const deleteProductImage = async (id) => {
   try {
     const response = await axiosInstance.delete(
-      `/admin/product-image/delete/${id}`
+      `/admin/product-image/delete${id}`
     );
     return response.data;
   } catch (error) {

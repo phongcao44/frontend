@@ -7,15 +7,19 @@ import {
   createBanner,
   editBanner,
 } from "../../../redux/slices/bannerSlice";
+import { loadProducts, loadProductsPaginate } from "../../../redux/slices/productSlice";
 
 export default function BannerFormModal({ open, onClose, id }) {
   const dispatch = useDispatch();
   const { banners, loading, error } = useSelector((state) => state.banner);
+  const { paginated } = useSelector((state) => state.products);
+  const products = paginated?.data?.content || [];
 
   const editingBanner = id ? (banners || []).find((b) => b.id === id) : null;
 
   const [formData, setFormData] = useState({
     title: "",
+    targetUrl: "",
     position: "HOME_TOP",
     status: true,
     timeStart: "",
@@ -24,6 +28,12 @@ export default function BannerFormModal({ open, onClose, id }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [localError, setLocalError] = useState(null);
+
+  useEffect(() => {
+    dispatch(loadProductsPaginate({ page: 0, limit: 100 }));
+  }, [dispatch]);
+
+
 
   useEffect(() => {
     if (id && (!banners || banners.length === 0) && !loading && !error) {
@@ -37,6 +47,7 @@ export default function BannerFormModal({ open, onClose, id }) {
     if (editingBanner) {
       setFormData({
         title: editingBanner.title || "Unknown",
+        targetUrl: editingBanner.targetUrl || "",
         position: editingBanner.position || "HOME_TOP",
         status: editingBanner.status ?? true,
         timeStart: editingBanner.startAt
@@ -81,11 +92,15 @@ export default function BannerFormModal({ open, onClose, id }) {
     setImagePreview(null);
     setSelectedFile(null);
   };
+console.log("➡️ Submitting banner with:", formData);
 
   const handleSubmit = () => {
     try {
       const form = new FormData();
       form.append("title", formData.title || "Unknown");
+      form.append("targetUrl", formData.targetUrl);
+      console.log("📦 form.targetUrl:", form.get("targetUrl"));
+
       form.append("position", formData.position || "HOME_TOP");
       form.append("status", formData.status ? "true" : "false");
 
@@ -108,6 +123,7 @@ export default function BannerFormModal({ open, onClose, id }) {
             id,
             payload: {
               title: formData.title || "Unknown",
+              targetUrl: formData.targetUrl,
               position: formData.position || "HOME_TOP",
               status: formData.status,
               image: selectedFile,
@@ -117,6 +133,7 @@ export default function BannerFormModal({ open, onClose, id }) {
           })
         );
       } else {
+        console.log("📦 Creating new banner with form:", form);
         dispatch(createBanner(form));
       }
 
@@ -129,6 +146,7 @@ export default function BannerFormModal({ open, onClose, id }) {
   const handleReset = () => {
     setFormData({
       title: "",
+      targetUrl: "",
       position: "HOME_TOP",
       status: true,
       timeStart: "",
@@ -147,9 +165,8 @@ export default function BannerFormModal({ open, onClose, id }) {
   if (error || localError) {
     return (
       <div
-        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
       >
         <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
           <div className="text-center">
@@ -171,9 +188,8 @@ export default function BannerFormModal({ open, onClose, id }) {
 
   return (
     <div
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
-        open ? "opacity-100" : "opacity-0 pointer-events-none"
-      }`}
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
     >
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
@@ -200,6 +216,22 @@ export default function BannerFormModal({ open, onClose, id }) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-1 font-medium text-gray-700">Sản phẩm liên kết</label>
+          <select
+            name="targetUrl"
+            value={formData.targetUrl}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">-- Chọn sản phẩm --</option>
+            {products.map((product) => (
+              <option key={product.id} value={`${product.id}`}>
+                {product.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="mb-4">
