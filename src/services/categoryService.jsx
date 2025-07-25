@@ -32,7 +32,9 @@ export const fetchParentCategories = async (
  */
 export const fetchSubCategories = async (parentId) => {
   try {
-    const response = await axiosInstance.get(`/categories/list/son/${parentId}`);
+    const response = await axiosInstance.get(
+      `/categories/list/son/${parentId}`
+    );
     return response.data;
   } catch (error) {
     console.error(`fetchSubCategories error (ParentID: ${parentId}):`, error);
@@ -77,9 +79,23 @@ export const searchCategories = async (keyword) => {
  * @param {Object} categoryData
  * @returns {Promise<any>}
  */
-export const addCategory = async (categoryData) => {
+// export const addCategory = async (categoryData) => {
+//   try {
+//     const response = await axiosInstance.post(`/add`, categoryData);
+//     return response.data;
+//   } catch (error) {
+//     console.error("addCategory error:", error);
+//     throw extractApiError(error);
+//   }
+// };
+
+export const addCategory = async (formData) => {
   try {
-    const response = await axiosInstance.post(`/add`, categoryData);
+    const response = await axiosInstance.post(`/add`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data;
   } catch (error) {
     console.error("addCategory error:", error);
@@ -130,11 +146,16 @@ export const addSubCategory = async (parentId, categoryData) => {
  * @param {Object} data
  * @returns {Promise<any>}
  */
-export const updateParentCategory = async (id, data) => {
+export const updateParentCategory = async (id, formData) => {
   try {
     const response = await axiosInstance.put(
       `/admin/categories/edit/parent/${id}`,
-      data
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
     return response.data;
   } catch (error) {
@@ -149,11 +170,28 @@ export const updateParentCategory = async (id, data) => {
  * @param {Object} data
  * @returns {Promise<any>}
  */
-export const updateSubCategory = async (id, data) => {
+// export const updateSubCategory = async (id, data) => {
+//   try {
+//     const response = await axiosInstance.put(
+//       `/admin/categories/edit/son/${id}`,
+//       data
+//     );
+//     return response.data;
+//   } catch (error) {
+//     console.error(`updateSubCategory error (ID: ${id}):`, error);
+//     throw extractApiError(error);
+//   }
+// };
+export const updateSubCategory = async (id, formData) => {
   try {
     const response = await axiosInstance.put(
       `/admin/categories/edit/son/${id}`,
-      data
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
     return response.data;
   } catch (error) {
