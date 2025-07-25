@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
+import Cookies from "js-cookie";
 
 const GeminiChatButton = () => {
   const [showChat, setShowChat] = useState(false);
@@ -18,11 +19,36 @@ const GeminiChatButton = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:8080/api/gemini", { prompt });
+      const userCookie = Cookies.get("user");
+      let userId = null;
+
+      if (userCookie) {
+        const userObj = JSON.parse(userCookie);
+        userId = userObj.id;
+      }
+
+      if (!userId) {
+        setChatHistory((prev) => [
+          ...prev,
+          { role: "ai", text: "❌ Không xác định được người dùng (userId)." },
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      const res = await axios.post("http://localhost:8080/api/gemini", {
+        prompt,
+        userId,
+      });
+
       const aiMessage = { role: "ai", text: res.data.reply };
       setChatHistory((prev) => [...prev, aiMessage]);
     } catch (error) {
-      setChatHistory((prev) => [...prev, { role: "ai", text: "❌ Lỗi gọi API." }]);
+      console.error("❌ Lỗi API:", error);
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "ai", text: "❌ Lỗi khi gửi yêu cầu đến AI." },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -143,7 +169,6 @@ const GeminiChatButton = () => {
                 </div>
               </div>
             ))}
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Nhập prompt */}
