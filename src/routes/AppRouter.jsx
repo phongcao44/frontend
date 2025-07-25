@@ -4,6 +4,7 @@ import AdminRoutes from "./AdminRoutes";
 import ErrorPage from "../pages/user/ErrorPage";
 import ShipperRoutes from "./ShipperRoutes";
 
+
 const AppRouter = () => {
   return (
     <Routes>
@@ -11,6 +12,7 @@ const AppRouter = () => {
       {UserRoutes()}
       {AdminRoutes()}
        {ShipperRoutes()}
+       
     </Routes>
   );
 };

@@ -7,6 +7,7 @@ const menuItems = [
   { key: "contact", label: "Contact", path: "/contact" },
   { key: "about", label: "About", path: "/about" },
   { key: "signup", label: "Sign Up", path: "/signup" },
+  { key: "blog", label: "Blog", path: "/blog" },
 ];
 
 // eslint-disable-next-line react/prop-types
