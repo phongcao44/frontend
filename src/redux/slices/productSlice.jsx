@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   fetchLeastViewedProducts,
-  fetchProductDetailById,
   fetchProductsByCategory,
   fetchTopBestSellingProducts,
   fetchTopLeastSellingProducts,
@@ -19,15 +18,6 @@ import {
   searchProducts,
 } from "../../services/productServices";
 
-export const loadProductDetail = createAsyncThunk(
-  "products/loadDetail",
-  async (productId) => {
-    const data = await fetchProductDetailById(productId);
-    return data;
-  }
-);
-
-// ------
 export const loadProducts = createAsyncThunk(
   "products/loadAll",
   fetchAllProducts
@@ -36,6 +26,22 @@ export const loadProducts = createAsyncThunk(
 export const loadProductsPaginate = createAsyncThunk(
   "products/loadPaginate",
   async (params) => await fetchProductsPaginate(params)
+);
+
+export const loadNewArrivals = createAsyncThunk(
+  "products/loadNewArrivals",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await fetchProductsPaginate({
+        page: 0,
+        limit: 4,
+        sortBy: "createdAt",
+        orderBy: "desc",
+      });
+    } catch (err) {
+      return rejectWithValue(err.response?.data || err.message);
+    }
+  }
 );
 
 export const loadProductById = createAsyncThunk(
@@ -103,6 +109,7 @@ const productSlice = createSlice({
   initialState: {
     list: [],
     paginated: null,
+    newArrivals: [],
     productDetail: null,
     topBestSelling: [],
     topLeastSelling: [],
@@ -119,18 +126,6 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(loadProductDetail.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(loadProductDetail.fulfilled, (state, action) => {
-        state.productDetail = action.payload;
-        state.loading = false;
-      })
-      .addCase(loadProductDetail.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message;
-      })
 
       // Load All
       .addCase(loadProducts.pending, (state) => {
@@ -143,6 +138,19 @@ const productSlice = createSlice({
       .addCase(loadProducts.rejected, (state, action) => {
         state.error = action.error.message;
         state.loading = false;
+      })
+
+       .addCase(loadNewArrivals.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadNewArrivals.fulfilled, (state, action) => {
+        state.loading = false;
+        state.newArrivals = action.payload;
+      })
+      .addCase(loadNewArrivals.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
 
       // Paginate

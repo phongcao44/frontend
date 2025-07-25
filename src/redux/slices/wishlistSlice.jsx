@@ -17,12 +17,14 @@ export const getUserWishlist = createAsyncThunk(
 // Add product to wishlist
 export const addProductToWishlist = createAsyncThunk(
   'wishlist/addToWishlist',
-  async (productId, { rejectWithValue }) => {
+  async (productId, { rejectWithValue, dispatch }) => {
     try {
-      const response = await addToWishlist(productId);
+      await addToWishlist(productId);
+      // Refresh wishlist after adding
+      const response = await fetchUserWishlist();
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      return rejectWithValue(error.message || 'Có lỗi xảy ra khi thêm vào danh sách yêu thích');
     }
   }
 );
@@ -30,12 +32,14 @@ export const addProductToWishlist = createAsyncThunk(
 // Remove product from wishlist
 export const removeProductFromWishlist = createAsyncThunk(
   'wishlist/removeFromWishlist',
-  async (productId, { rejectWithValue }) => {
+  async (wishlistId, { rejectWithValue, dispatch }) => {
     try {
-      await removeFromWishlist(productId);
-      return productId;
+      await removeFromWishlist(wishlistId);
+      // Refresh wishlist after removing
+      const response = await fetchUserWishlist();
+      return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      return rejectWithValue(error.message || 'Có lỗi xảy ra khi xóa khỏi danh sách yêu thích');
     }
   }
 );
@@ -47,7 +51,11 @@ const wishlistSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    clearWishlistError: (state) => {
+      state.error = null;
+    }
+  },
   extraReducers: (builder) => {
     builder
       // Get wishlist
@@ -71,7 +79,7 @@ const wishlistSlice = createSlice({
       })
       .addCase(addProductToWishlist.fulfilled, (state, action) => {
         state.loading = false;
-        state.items.push(action.payload);
+        state.items = action.payload;
       })
       .addCase(addProductToWishlist.rejected, (state, action) => {
         state.loading = false;
@@ -85,7 +93,7 @@ const wishlistSlice = createSlice({
       })
       .addCase(removeProductFromWishlist.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = state.items.filter(item => item.id !== action.payload);
+        state.items = action.payload;
       })
       .addCase(removeProductFromWishlist.rejected, (state, action) => {
         state.loading = false;
@@ -94,4 +102,5 @@ const wishlistSlice = createSlice({
   },
 });
 
+export const { clearWishlistError } = wishlistSlice.actions;
 export default wishlistSlice.reducer; 

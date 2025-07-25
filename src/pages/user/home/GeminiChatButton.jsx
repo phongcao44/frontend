@@ -32,8 +32,8 @@ const GeminiChatButton = () => {
         onClick={() => setShowChat(!showChat)}
         style={{
           position: "fixed",
-          bottom: 30,
-          right: 30,
+          bottom: 90,
+          right: 15,
           backgroundColor: "#1677ff",
           color: "#fff",
           border: "none",

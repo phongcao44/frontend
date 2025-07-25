@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { handleDownloadExcel } from "../../services/handleDownloadExcel";
+import { handleDownloadExcel } from "../../../services/handleDownloadExcel";
 import {
   Search,
   ChevronDown,
@@ -17,16 +17,16 @@ import {
   User,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { loadPaginatedOrders } from "../../redux/slices/orderSlice";
+import { loadPaginatedOrders } from "../../../redux/slices/orderSlice";
 import { useNavigate } from "react-router-dom";
-import Pagination from "../../components/Pagination";
-import { getStatusColor, translateStatus } from "../../utils/orderUtils";
+import Pagination from "../../../components/Pagination";
+import { getStatusColor, translateStatus } from "../../../utils/orderUtils";
 import {
   getPaymentColor,
   translatePaymentStatus,
   translatePaymentMethod,
-} from "../../utils/paymentUtils";
-import OrderStatusIcon from "../../components/OrderStatusIcon";
+} from "../../../utils/paymentUtils";
+import OrderStatusIcon from "../../../components/OrderStatusIcon";
 
 // Debounce utility function
 const debounce = (func, wait) => {
@@ -243,19 +243,6 @@ export default function OrderManagement() {
                   className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`}
                 />
               </button>
-              <button
-                onClick={handleDownloadExcel}
-                className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
-              >
-                <Download className="h-5 w-5" />
-              </button>
-              <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
-              <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105">
-                <Plus className="h-5 w-5" />
-                <span className="font-medium">Tạo đơn hàng</span>
-              </button>
             </div>
           </div>
         </div>
@@ -311,21 +298,6 @@ export default function OrderManagement() {
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {totalElements}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">
-                  Tổng doanh thu
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(totalRevenue)}
                 </p>
               </div>
             </div>
@@ -484,7 +456,7 @@ export default function OrderManagement() {
                               <div
                                 className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
                                 onClick={() =>
-                                  navigate(`/admin/orders/${order.orderId}`)
+                                  navigate(`/shipper/dashboard/${order.orderId}`)
                                 }
                               >
                                 {order.orderId}
@@ -520,6 +492,7 @@ export default function OrderManagement() {
                           </span>
                         </td>
 
+                        
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentColor(
@@ -538,12 +511,7 @@ export default function OrderManagement() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() =>
-                                navigate(`/admin/orders/${order.orderId}`)
-                              }
-                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                            >
+                            <button className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors">
                               <Eye className="h-4 w-4" />
                             </button>
                           </div>
@@ -569,9 +537,9 @@ export default function OrderManagement() {
                       <div className="ml-4">
                         <h3
                           className="text-lg font-semibold text-blue-600 cursor-pointer hover:text-blue-800"
-                          onClick={() =>
-                            navigate(`/admin/orders/${order.orderId}`)
-                          }
+                           onClick={() =>
+                                  navigate(`/shipper/dashboard/${order.orderId}`)
+                                }
                         >
                           {order.orderId}
                         </h3>

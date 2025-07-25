@@ -116,7 +116,7 @@ export const changeUserStatus = async (userId, status) => {
  */
 export const getUserDetail = async (userId) => {
   try {
-    const response = await axiosInstance.get(`/admin/users/admin/getUsers/${userId}`);
+    const response = await axiosInstance.get(`/admin/users/${userId}`);
     return response.data;
   } catch (error) {
     console.error(`getUserDetail error (UserID: ${userId}):`, error);
@@ -132,7 +132,7 @@ export const getUserDetail = async (userId) => {
 export const updateUserDetail = async (userDetailRequest) => {
   try {
     console.log('Request to API:', userDetailRequest);
-    const response = await axiosInstance.patch(`/admin/users/update`, userDetailRequest);
+    const response = await axiosInstance.patch(`/users/update`, userDetailRequest);
     console.log('Response from API:', response.data);
     return response.data;
   } catch (error) {
@@ -150,7 +150,7 @@ export const updateUserDetail = async (userDetailRequest) => {
  */
 export const getUserView = async () => {
   try {
-    const response = await axiosInstance.get("/admin/users/view/");
+    const response = await axiosInstance.get("/users/view");
     return response.data;
   } catch (error) {
     console.error("getUserView error:", error);

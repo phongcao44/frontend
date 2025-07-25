@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Rate, Divider, Typography, Space, Button, Tag } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import { loadProductDetail } from "../../../redux/slices/productSlice";
+import { loadProductById } from "../../../redux/slices/productSlice";
 import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice";
 import {
   fetchAverageRating,
@@ -139,7 +139,7 @@ const VariantSelector = ({ productId, onVariantChange }) => {
       dispatch(fetchAverageRating(productId));
       dispatch(fetchRatingSummary(productId));
       dispatch(loadVariantsByProduct(productId));
-      dispatch(loadProductDetail(productId));
+      dispatch(loadProductById(productId));
     }
   }, [dispatch, productId]);
 

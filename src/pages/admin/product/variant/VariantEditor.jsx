@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 
 const VariantEditor = ({ variants, productId }) => {
   const navigate = useNavigate();
-
   return (
     <div
       style={{
@@ -61,18 +60,18 @@ const VariantEditor = ({ variants, productId }) => {
           }}
         >
           <div style={{ display: "flex", gap: 8 }}>
-            {variant.color && (
-              <Tag color="blue">Màu sắc: {variant.color.name}</Tag>
+            {variant.colorName && (
+              <Tag color="blue">Màu sắc: {variant.colorName}</Tag>
             )}
-            {variant.size && (
-              <Tag color="purple">Kích thước: {variant.size.name}</Tag>
+            {variant.sizeName && (
+              <Tag color="purple">Kích thước: {variant.sizeName}</Tag>
             )}
           </div>
 
           <div style={{ display: "flex", gap: 16 }}>
-            <Tag color="green">Số lượng: {variant.stock_quantity || 0}</Tag>
+            <Tag color="green">Số lượng: {variant.stockQuantity || 0}</Tag>
             <span style={{ fontWeight: 500 }}>
-              {variant.price_override?.toLocaleString()} ₫
+              {variant.priceOverride?.toLocaleString()} ₫
             </span>
           </div>
         </div>
