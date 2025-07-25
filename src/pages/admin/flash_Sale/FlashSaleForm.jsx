@@ -1,13 +1,13 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   createFlashSale,
   updateFlashSale,
 } from "../../../redux/slices/flashSaleSlice";
 
-export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
+export default function FlashSaleForm({ flashSale, onClose, isOpen, existingFlashSales }) {
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     name: "",
@@ -16,6 +16,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
     endTime: "",
     status: "ACTIVE",
   });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (flashSale) {
@@ -26,6 +27,7 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
         endTime: flashSale.endTime?.slice(0, 16) || "",
         status: flashSale.status || "ACTIVE",
       });
+      setErrors({});
     } else {
       setFormData({
         name: "",
@@ -34,25 +36,88 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
         endTime: "",
         status: "ACTIVE",
       });
+      setErrors({});
     }
   }, [flashSale, isOpen]);
 
+  const validateForm = () => {
+    const newErrors = {};
+    
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = "Tên Flash Sale là bắt buộc";
+    } else if (formData.name.length > 100) {
+      newErrors.name = "Tên Flash Sale không được vượt quá 100 ký tự";
+    } else if (
+      existingFlashSales.some(
+        (sale) => 
+          sale.name.trim().toLowerCase() === formData.name.trim().toLowerCase() && 
+          (!flashSale || sale.id !== flashSale.id)
+      )
+    ) {
+      newErrors.name = "Tên Flash Sale đã tồn tại";
+    }
+
+    // Description validation
+    if (!formData.description.trim()) {
+      newErrors.description = "Mô tả là bắt buộc";
+    } else if (formData.description.length > 500) {
+      newErrors.description = "Mô tả không được vượt quá 500 ký tự";
+    }
+
+    // Date validation
+    if (!formData.startTime) {
+      newErrors.startTime = "Thời gian bắt đầu là bắt buộc";
+    }
+    
+    if (!formData.endTime) {
+      newErrors.endTime = "Thời gian kết thúc là bắt buộc";
+    }
+
+    // Validate date range
+    if (formData.startTime && formData.endTime) {
+      const start = new Date(formData.startTime);
+      const end = new Date(formData.endTime);
+      const now = new Date();
+
+      if (start >= end) {
+        newErrors.endTime = "Thời gian kết thúc phải sau thời gian bắt đầu";
+      }
+
+      if (start < now && !flashSale) {
+        newErrors.startTime = "Thời gian bắt đầu phải từ hiện tại trở đi";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     if (flashSale) {
       dispatch(updateFlashSale({ id: flashSale.id, data: formData }))
         .unwrap()
         .then(() => {
           onClose();
         })
-        .catch(console.error);
+        .catch((error) => {
+          setErrors({ submit: error.message || "Có lỗi xảy ra khi cập nhật" });
+        });
     } else {
       dispatch(createFlashSale(formData))
         .unwrap()
         .then(() => {
           onClose();
         })
-        .catch(console.error);
+        .catch((error) => {
+          setErrors({ submit: error.message || "Có lỗi xảy ra khi tạo mới" });
+        });
     }
   };
 
@@ -72,6 +137,12 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
           {flashSale ? "Chỉnh sửa Flash Sale" : "Tạo Flash Sale mới"}
         </h1>
 
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+            {errors.submit}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -84,9 +155,13 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                required
+                className={`w-full px-3 py-2 border ${
+                  errors.name ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:ring-2 focus:ring-blue-500`}
               />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+              )}
             </div>
 
             <div>
@@ -115,9 +190,13 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
                 onChange={(e) =>
                   setFormData({ ...formData, startTime: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                required
+                className={`w-full px-3 py-2 border ${
+                  errors.startTime ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:ring-2 focus:ring-blue-500`}
               />
+              {errors.startTime && (
+                <p className="mt-1 text-sm text-red-500">{errors.startTime}</p>
+              )}
             </div>
 
             <div>
@@ -130,9 +209,13 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
                 onChange={(e) =>
                   setFormData({ ...formData, endTime: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                required
+                className={`w-full px-3 py-2 border ${
+                  errors.endTime ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:ring-2 focus:ring-blue-500`}
               />
+              {errors.endTime && (
+                <p className="mt-1 text-sm text-red-500">{errors.endTime}</p>
+              )}
             </div>
           </div>
 
@@ -144,9 +227,14 @@ export default function FlashSaleFormModal({ flashSale, onClose, isOpen }) {
                 setFormData({ ...formData, description: e.target.value })
               }
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:ring-2 focus:ring-blue-500`}
               placeholder="Mô tả chi tiết..."
             />
+            {errors.description && (
+              <p className="mt-1 text-sm text-red-500">{errors.description}</p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-4">

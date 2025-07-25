@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, Upload as UploadIcon, AlertTriangle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -7,12 +7,20 @@ import {
   createBanner,
   editBanner,
 } from "../../../redux/slices/bannerSlice";
-import { loadProducts, loadProductsPaginate } from "../../../redux/slices/productSlice";
+import { loadProductsPaginate } from "../../../redux/slices/productSlice";
+
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(null, args), wait);
+  };
+};
 
 export default function BannerFormModal({ open, onClose, id }) {
   const dispatch = useDispatch();
-  const { banners, loading, error } = useSelector((state) => state.banner);
-  const { paginated } = useSelector((state) => state.products);
+  const { banners, loading: bannerLoading, error: bannerError } = useSelector((state) => state.banner);
+  const { paginated, loading: productsLoading, error: productsError } = useSelector((state) => state.products);
   const products = paginated?.data?.content || [];
 
   const editingBanner = id ? (banners || []).find((b) => b.id === id) : null;
@@ -28,20 +36,47 @@ export default function BannerFormModal({ open, onClose, id }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [localError, setLocalError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage] = useState(10);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      setDebouncedSearchTerm(value);
+      setCurrentPage(0);
+    }, 500),
+    []
+  );
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    debouncedSearch(value);
+  };
 
   useEffect(() => {
-    dispatch(loadProductsPaginate({ page: 0, limit: 100 }));
-  }, [dispatch]);
-
-
+    const params = {
+      page: currentPage,
+      limit: itemsPerPage,
+      keyword: debouncedSearchTerm || null,
+    };
+    dispatch(loadProductsPaginate(params)).catch((err) => {
+      setLocalError(err.message || "Không thể tải danh sách sản phẩm");
+    });
+  }, [dispatch, currentPage, itemsPerPage, debouncedSearchTerm]);
 
   useEffect(() => {
-    if (id && (!banners || banners.length === 0) && !loading && !error) {
+    if (id && (!banners || banners.length === 0) && !bannerLoading && !bannerError) {
       dispatch(getBanners()).catch((err) => {
         setLocalError(err.message || "Không load được dữ liệu");
       });
     }
-  }, [dispatch, id, banners, loading, error]);
+  }, [dispatch, id, banners, bannerLoading, bannerError]);
+
+  console.log("hehe ", formData)
 
   useEffect(() => {
     if (editingBanner) {
@@ -56,10 +91,75 @@ export default function BannerFormModal({ open, onClose, id }) {
         timeEnd: editingBanner.endAt ? editingBanner.endAt.slice(0, 16) : "",
       });
       setImagePreview(editingBanner.bannerUrl || null);
+      setSearchTerm("");
+      setDebouncedSearchTerm("");
+      setCurrentPage(0);
+      setErrors({});
     } else {
       handleReset();
     }
   }, [editingBanner]);
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Title validation
+    if (!formData.title.trim()) {
+      newErrors.title = "Tiêu đề là bắt buộc";
+    } else if (formData.title.length > 100) {
+      newErrors.title = "Tiêu đề không được vượt quá 100 ký tự";
+    } else if (
+      banners.some(
+        (banner) =>
+          banner.title.trim().toLowerCase() === formData.title.trim().toLowerCase() &&
+          (!id || banner.id !== id)
+      )
+    ) {
+      newErrors.title = "Tiêu đề banner đã tồn tại";
+    }
+
+    // TargetUrl validation
+    if (!formData.targetUrl) {
+      newErrors.targetUrl = "Vui lòng chọn một sản phẩm";
+    }
+
+    // Position validation
+    if (!formData.position) {
+      newErrors.position = "Vị trí là bắt buộc";
+    }
+
+    // Date validation
+    if (!formData.timeStart) {
+      newErrors.timeStart = "Thời gian bắt đầu là bắt buộc";
+    }
+
+    if (!formData.timeEnd) {
+      newErrors.timeEnd = "Thời gian kết thúc là bắt buộc";
+    }
+
+    // Date range validation
+    if (formData.timeStart && formData.timeEnd) {
+      const start = new Date(formData.timeStart);
+      const end = new Date(formData.timeEnd);
+      const now = new Date();
+
+      if (start >= end) {
+        newErrors.timeEnd = "Thời gian kết thúc phải sau thời gian bắt đầu";
+      }
+
+      if (start < now && !id) {
+        newErrors.timeStart = "Thời gian bắt đầu phải từ hiện tại trở đi";
+      }
+    }
+
+    // Image validation
+    if (!id && !selectedFile && !imagePreview) {
+      newErrors.image = "Ảnh banner là bắt buộc khi tạo mới";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -92,15 +192,16 @@ export default function BannerFormModal({ open, onClose, id }) {
     setImagePreview(null);
     setSelectedFile(null);
   };
-console.log("➡️ Submitting banner with:", formData);
 
   const handleSubmit = () => {
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       const form = new FormData();
       form.append("title", formData.title || "Unknown");
       form.append("targetUrl", formData.targetUrl);
-      console.log("📦 form.targetUrl:", form.get("targetUrl"));
-
       form.append("position", formData.position || "HOME_TOP");
       form.append("status", formData.status ? "true" : "false");
 
@@ -133,7 +234,6 @@ console.log("➡️ Submitting banner with:", formData);
           })
         );
       } else {
-        console.log("📦 Creating new banner with form:", form);
         dispatch(createBanner(form));
       }
 
@@ -155,6 +255,10 @@ console.log("➡️ Submitting banner with:", formData);
     setImagePreview(null);
     setSelectedFile(null);
     setLocalError(null);
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setCurrentPage(0);
+    setErrors({});
   };
 
   const handleClose = () => {
@@ -162,17 +266,30 @@ console.log("➡️ Submitting banner with:", formData);
     onClose();
   };
 
-  if (error || localError) {
+  const handleProductSelect = (productId) => {
+    setFormData((prev) => ({
+      ...prev,
+      targetUrl: productId,
+    }));
+    setIsDropdownOpen(false);
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+  };
+
+  const totalPages = paginated?.data?.totalPages || 1;
+
+  if (bannerError || productsError || localError) {
     return (
       <div
-        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
+          open ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
       >
         <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
           <div className="text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 text-sm mb-4">
-              {error?.message || localError || "Không load được dữ liệu"}
+              {bannerError?.message || productsError?.message || localError || "Không load được dữ liệu"}
             </p>
             <button
               onClick={handleClose}
@@ -188,8 +305,9 @@ console.log("➡️ Submitting banner with:", formData);
 
   return (
     <div
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
+        open ? "opacity-100" : "opacity-0 pointer-events-none"
+      }`}
     >
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
@@ -204,6 +322,12 @@ console.log("➡️ Submitting banner with:", formData);
           </button>
         </div>
 
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+            {errors.submit}
+          </div>
+        )}
+
         <div className="mb-4">
           <label className="block mb-1 font-medium text-gray-700">
             Tiêu đề
@@ -213,25 +337,77 @@ console.log("➡️ Submitting banner with:", formData);
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
+            className={`w-full px-3 py-2 border ${
+              errors.title ? "border-red-500" : "border-gray-300"
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
           />
+          {errors.title && (
+            <p className="mt-1 text-sm text-red-500">{errors.title}</p>
+          )}
         </div>
-        <div className="mb-4">
+
+        <div className="mb-4 relative">
           <label className="block mb-1 font-medium text-gray-700">Sản phẩm liên kết</label>
-          <select
-            name="targetUrl"
-            value={formData.targetUrl}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">-- Chọn sản phẩm --</option>
-            {products.map((product) => (
-              <option key={product.id} value={`${product.id}`}>
-                {product.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Tìm kiếm sản phẩm..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onFocus={() => setIsDropdownOpen(true)}
+              className={`w-full px-3 py-2 border ${
+                errors.targetUrl ? "border-red-500" : "border-gray-300"
+              } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+            />
+            {isDropdownOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {productsLoading ? (
+                  <div className="p-3 text-center text-gray-500">Đang tải...</div>
+                ) : products.length === 0 ? (
+                  <div className="p-3 text-center text-gray-500">Không tìm thấy sản phẩm</div>
+                ) : (
+                  <>
+                    {products.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => handleProductSelect(product.id)}
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                      >
+                        {product.name}
+                      </div>
+                    ))}
+                    <div className="p-2 border-t border-gray-200 flex justify-between">
+                      <button
+                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+                        disabled={currentPage === 0}
+                        className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+                      >
+                        Trước
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Trang {currentPage + 1} / {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))}
+                        disabled={currentPage >= totalPages - 1}
+                        className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          {errors.targetUrl && (
+            <p className="mt-1 text-sm text-red-500">{errors.targetUrl}</p>
+          )}
+          {formData.targetUrl && (
+            <p className="mt-1 text-sm text-gray-500">
+              Sản phẩm đã chọn: {products.find((p) => p.id === formData.targetUrl)?.name || "Không xác định"}
+            </p>
+          )}
         </div>
 
         <div className="mb-4">
@@ -240,13 +416,17 @@ console.log("➡️ Submitting banner with:", formData);
             name="position"
             value={formData.position}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
+            className={`w-full px-3 py-2 border ${
+              errors.position ? "border-red-500" : "border-gray-300"
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
           >
             <option value="HOME_TOP">HOME_TOP</option>
             <option value="HOME_MIDDLE">HOME_MIDDLE</option>
             <option value="HOME_BOTTOM">HOME_BOTTOM</option>
           </select>
+          {errors.position && (
+            <p className="mt-1 text-sm text-red-500">{errors.position}</p>
+          )}
         </div>
 
         <div className="mb-4 flex items-center">
@@ -270,8 +450,13 @@ console.log("➡️ Submitting banner with:", formData);
               name="timeStart"
               value={formData.timeStart}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border ${
+                errors.timeStart ? "border-red-500" : "border-gray-300"
+              } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             />
+            {errors.timeStart && (
+              <p className="mt-1 text-sm text-red-500">{errors.timeStart}</p>
+            )}
           </div>
           <div>
             <label className="block mb-1 font-medium text-gray-700">
@@ -282,8 +467,13 @@ console.log("➡️ Submitting banner with:", formData);
               name="timeEnd"
               value={formData.timeEnd}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border ${
+                errors.timeEnd ? "border-red-500" : "border-gray-300"
+              } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             />
+            {errors.timeEnd && (
+              <p className="mt-1 text-sm text-red-500">{errors.timeEnd}</p>
+            )}
           </div>
         </div>
 
@@ -311,6 +501,9 @@ console.log("➡️ Submitting banner with:", formData);
                 className="hidden"
               />
             </label>
+          )}
+          {errors.image && (
+            <p className="mt-1 text-sm text-red-500">{errors.image}</p>
           )}
         </div>
 

@@ -110,7 +110,6 @@ export default function FlashSaleManagement() {
   const handleRefresh = () => {
     dispatch(fetchFlashSales());
   };
-  
 
   const handlePageChange = (page, newItemsPerPage) => {
     setCurrentPage(page);
@@ -488,6 +487,7 @@ export default function FlashSaleManagement() {
           isOpen={isFormModalOpen}
           onClose={() => setIsFormModalOpen(false)}
           flashSale={selectedFlashSale}
+          existingFlashSales={flashSales}
         />
       </div>
     </div>
