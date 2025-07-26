@@ -14,8 +14,14 @@ const WishList = () => {
     dispatch(getUserWishlist());
   }, [dispatch]);
 
-  const handleRemoveFromWishlist = async (wishlistId) => {
+  const handleRemoveFromWishlist = async (wishlistIdOrItem) => {
     try {
+      // Nếu truyền vào là object, log ra để kiểm tra
+      if (typeof wishlistIdOrItem === 'object') {
+        console.log('Item khi xóa khỏi wishlist:', wishlistIdOrItem);
+      } else {
+        console.log('Xóa wishlistId:', wishlistIdOrItem);
+      }
       await Swal.fire({
         title: 'Xác nhận xóa',
         text: 'Bạn có chắc chắn muốn xóa sản phẩm này khỏi danh sách yêu thích?',
@@ -27,19 +33,30 @@ const WishList = () => {
         cancelButtonText: 'Hủy'
       }).then(async (result) => {
         if (result.isConfirmed) {
-          await dispatch(removeProductFromWishlist(wishlistId)).unwrap();
-          Swal.fire(
-            'Đã xóa!',
-            'Sản phẩm đã được xóa khỏi danh sách yêu thích.',
-            'success'
-          );
+          try {
+            // Sửa lại: lấy wishListId đúng trường
+            const wishListId = typeof wishlistIdOrItem === 'object' ? wishlistIdOrItem.wishListId : wishlistIdOrItem;
+            await dispatch(removeProductFromWishlist(wishListId)).unwrap();
+            Swal.fire(
+              'Đã xóa!',
+              'Sản phẩm đã được xóa khỏi danh sách yêu thích.',
+              'success'
+            );
+          } catch (err) {
+            console.error('Error removing from wishlist:', err);
+            Swal.fire(
+              'Lỗi!',
+              err?.message || 'Không thể xóa sản phẩm khỏi danh sách yêu thích.',
+              'error'
+            );
+          }
         }
       });
     } catch (err) {
       console.error('Error removing from wishlist:', err);
       Swal.fire(
         'Lỗi!',
-        'Không thể xóa sản phẩm khỏi danh sách yêu thích.',
+        err?.message || 'Không thể xóa sản phẩm khỏi danh sách yêu thích.',
         'error'
       );
     }
@@ -47,8 +64,19 @@ const WishList = () => {
 
   const handleAddToCart = async (item) => {
     try {
+      console.log('Item khi thêm vào giỏ hàng:', item); // Log kiểm tra
+      const variantId = item.variants?.[0]?.id;
+      console.log('variantId lấy được:', variantId); // Log kiểm tra id lấy ra
+      if (!variantId) {
+        Swal.fire({
+          title: 'Lỗi!',
+          text: 'Không tìm thấy biến thể sản phẩm để thêm vào giỏ hàng',
+          icon: 'error'
+        });
+        return;
+      }
       await dispatch(addItemToCart({
-        productId: item.productId,
+        variantId,
         quantity: 1
       })).unwrap();
       Swal.fire({
@@ -61,7 +89,7 @@ const WishList = () => {
       console.error('Error adding to cart:', err);
       Swal.fire({
         title: 'Lỗi!',
-        text: 'Không thể thêm sản phẩm vào giỏ hàng',
+        text: err?.message || 'Không thể thêm sản phẩm vào giỏ hàng',
         icon: 'error'
       });
     }
@@ -123,7 +151,7 @@ const WishList = () => {
                   className="w-full h-48 object-cover"
                 />
                 <button
-                  onClick={() => handleRemoveFromWishlist(item.id)}
+                  onClick={() => handleRemoveFromWishlist(item)}
                   className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
                 >
                   <Trash2 className="w-5 h-5 text-red-500" />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, Package, MapPin, Settings, Heart, LogOut, Edit, Trash2 } from 'lucide-react';
+import { User, Package, MapPin, Settings, Heart, LogOut, Edit, Trash2, Gift, Tag, Calendar, Percent, DollarSign } from 'lucide-react';
 import { fetchUserView } from '../../../redux/slices/userSlice';
 import { removeAddress } from '../../../redux/slices/addressSlice';
 import { useNavigate } from 'react-router-dom';
@@ -9,13 +9,17 @@ import OrderSection from './OrderSection';
 import EditProfileForm from './EditProfileForm';
 import AddressForm from './AddressForm';
 import WishList from '../WishList';
+import { fetchUserVouchers, fetchCollectibleVouchers, userCollectVoucher } from '../../../redux/slices/voucherSlice';
+import Swal from 'sweetalert2';
 
 export default function UserAccountPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [error, setError] = useState(null);
+  const [isCollectModalOpen, setIsCollectModalOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userDetail, loading } = useSelector((state) => state.users);
+  const { userVouchers, collectibleVouchers } = useSelector((state) => state.voucher || {});
   const [isEditing, setIsEditing] = useState(false);
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -25,13 +29,16 @@ export default function UserAccountPage() {
       try {
         setError(null);
         await dispatch(fetchUserView()).unwrap();
+        if (activeTab === 'myVouchers') {
+          await dispatch(fetchUserVouchers()).unwrap();
+        }
       } catch (error) {
         console.error('Failed to fetch user data:', error);
         setError(error.message || 'Có lỗi xảy ra khi tải thông tin người dùng');
       }
     };
     fetchData();
-  }, [dispatch]);
+  }, [dispatch, activeTab]);
 
   const handleLogout = async () => {
     try {
@@ -65,11 +72,75 @@ export default function UserAccountPage() {
     }
   };
 
+  const handleCollectVoucher = async (voucher) => {
+    // Thử các cách khác nhau để lấy userId
+    const userId = userDetail?.id || userDetail?.userId || userDetail?.user?.id;
+    
+    const payload = {
+      userId: userId,
+      voucherCode: voucher.code
+    };
+    console.log('Payload gửi lên BE:', payload);
+    console.log('userDetail:', userDetail);
+    console.log('userId được lấy:', userId);
+    
+    // Kiểm tra userId trước khi gửi
+    if (!userId) {
+      setError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.');
+      return;
+    }
+    
+    try {
+      await dispatch(userCollectVoucher(payload)).unwrap();
+      console.log('Thu thập voucher thành công!');
+      
+      // Hiển thị thông báo thành công
+      Swal.fire({
+        title: 'Thành công!',
+        text: 'Bạn đã thu thập voucher thành công',
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+      
+      // Refresh both lists after collecting
+      await dispatch(fetchUserVouchers());
+      await dispatch(fetchCollectibleVouchers());
+      setIsCollectModalOpen(false); // Close modal after collecting
+    } catch (err) {
+      console.error('Lỗi thu thập voucher:', err);
+      setError(err?.message || 'Có lỗi xảy ra khi thu thập voucher');
+    }
+  };
+
+  const handleOpenCollectModal = async () => {
+    try {
+      await dispatch(fetchCollectibleVouchers()).unwrap();
+      setIsCollectModalOpen(true);
+    } catch (error) {
+      setError('Có lỗi xảy ra khi tải danh sách voucher có thể thu thập');
+    }
+  };
+
+  // Helper to render discount info safely
+  const renderDiscount = (voucher) => {
+    if (voucher.discountPercent != null) {
+      return `Giảm ${voucher.discountPercent}%`;
+    }
+    if (voucher.discountAmount != null) {
+      return `Giảm ${voucher.discountAmount.toLocaleString('vi-VN')}₫`;
+    }
+    return 'Không xác định';
+  };
+
   const menuItems = [
     { id: 'profile', label: 'Thông tin cá nhân', icon: User },
     { id: 'orders', label: 'Đơn hàng của tôi', icon: Package },
     { id: 'addresses', label: 'Địa chỉ', icon: MapPin },
     { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart },
+    { id: 'myVouchers', label: 'Voucher của tôi', icon: Settings },
   ];
 
   const renderProfile = () => {
@@ -187,6 +258,181 @@ export default function UserAccountPage() {
     </div>
   );
 
+  const renderMyVouchers = () => (
+    <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <Gift className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Voucher của tôi</h2>
+            <p className="text-sm text-gray-500">Quản lý voucher và mã giảm giá</p>
+          </div>
+        </div>
+        <button
+          onClick={handleOpenCollectModal}
+          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+        >
+          <Gift className="w-4 h-4" />
+          Thu thập voucher
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {userVouchers && userVouchers.length > 0 ? (
+          userVouchers.map((voucher) => (
+            <div key={voucher.id} className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 group">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Tag className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-blue-700">{voucher.code}</h3>
+                    <p className="text-sm text-gray-600">{voucher.description || voucher.name}</p>
+                  </div>
+                </div>
+                <div className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
+                  Đã có
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar className="w-4 h-4" />
+                  <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
+                </div>
+                
+                <div className="bg-white rounded-lg p-3 border border-blue-100">
+                  <div className="flex items-center gap-2">
+                    {voucher.discountPercent > 0 ? (
+                      <>
+                        <Percent className="w-4 h-4 text-green-600" />
+                        <span className="font-bold text-lg text-green-600">Giảm Giá: {voucher.discountPercent}%</span>
+                      </>
+                    ) : voucher.discountAmount > 0 ? (
+                      <>
+                        <DollarSign className="w-4 h-4 text-green-600" />
+                        <span className="font-bold text-lg text-green-600">Giảm Giá: {voucher.discountAmount.toLocaleString('vi-VN')}₫</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-500">Không xác định</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12">
+            <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Gift className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Bạn chưa có voucher nào</h3>
+            <p className="text-gray-500 mb-4">Hãy thu thập voucher để nhận ưu đãi hấp dẫn!</p>
+            <button
+              onClick={handleOpenCollectModal}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+            >
+              Thu thập voucher ngay
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderCollectModal = () => (
+    isCollectModalOpen && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Gift className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Thu thập voucher</h2>
+                <p className="text-sm text-gray-500">Chọn voucher bạn muốn thu thập</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsCollectModalOpen(false)}
+              className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {collectibleVouchers && collectibleVouchers.length > 0 ? (
+              collectibleVouchers.map((voucher) => (
+                <div key={voucher.id} className="bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 group">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        <Tag className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-green-700">{voucher.code}</h3>
+                        <p className="text-sm text-gray-600">{voucher.description || voucher.name}</p>
+                      </div>
+                    </div>
+                    <div className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium">
+                      Có thể thu thập
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Calendar className="w-4 h-4" />
+                      <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg p-3 border border-green-100">
+                      <div className="flex items-center gap-2">
+                        {voucher.discountPercent > 0 ? (
+                          <>
+                            <Percent className="w-4 h-4 text-green-600" />
+                            <span className="font-bold text-lg text-green-600">Giảm {voucher.discountPercent}%</span>
+                          </>
+                        ) : voucher.discountAmount > 0 ? (
+                          <>
+                            <DollarSign className="w-4 h-4 text-green-600" />
+                            <span className="font-bold text-lg text-green-600">Giảm {voucher.discountAmount.toLocaleString('vi-VN')}₫</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-500">Không xác định</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button
+                    className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group-hover:scale-105"
+                    onClick={() => handleCollectVoucher(voucher)}
+                  >
+                    <Gift className="w-4 h-4" />
+                    Thu thập ngay
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="w-20 h-20 bg-gradient-to-r from-green-100 to-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Gift className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Không có voucher nào để thu thập</h3>
+                <p className="text-gray-500">Hãy quay lại sau để xem voucher mới!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
@@ -201,6 +447,8 @@ export default function UserAccountPage() {
         return renderAddresses();
       case 'wishlist':
         return <WishList />;
+      case 'myVouchers':
+        return renderMyVouchers();
       default:
         return null;
     }
@@ -303,6 +551,8 @@ export default function UserAccountPage() {
           }}
         />
       )}
+
+      {renderCollectModal()}
     </div>
   );
 }

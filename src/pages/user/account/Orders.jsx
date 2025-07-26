@@ -14,68 +14,7 @@ export default function Orders() {
     { id: 'cancelled', label: 'Đã hủy', badge: 2 },
   ];
 
-  const orders = [
-    {
-      id: '#DH001',
-      date: '2024-01-15',
-      status: 'delivered',
-      total: 1250000,
-      items: [
-        { 
-          image: 'https://readdy.ai/api/search-image?query=modern%20smartphone%20with%20sleek%20design%2C%20white%20background%2C%20product%20photography%20style%2C%20clean%20minimal%20aesthetic%2C%20high%20quality%20details&width=80&height=80&seq=phone1&orientation=squarish',
-          name: 'iPhone 15 Pro Max',
-          quantity: 1,
-          price: 850000
-        },
-        { 
-          image: 'https://readdy.ai/api/search-image?query=wireless%20bluetooth%20headphones%2C%20black%20color%2C%20modern%20design%2C%20white%20background%2C%20product%20photography%20style%2C%20premium%20quality&width=80&height=80&seq=headphone1&orientation=squarish',
-          name: 'AirPods Pro',
-          quantity: 1,
-          price: 400000
-        }
-      ]
-    },
-    {
-      id: '#DH002',
-      date: '2024-01-12',
-      status: 'shipping',
-      total: 750000,
-      items: [
-        { 
-          image: 'https://readdy.ai/api/search-image?query=modern%20laptop%20computer%20with%20silver%20finish%2C%20white%20background%2C%20product%20photography%20style%2C%20clean%20professional%20look%2C%20high%20quality%20details&width=80&height=80&seq=laptop1&orientation=squarish',
-          name: 'MacBook Air M2',
-          quantity: 1,
-          price: 750000
-        }
-      ]
-    },
-    {
-      id: '#DH003',
-      date: '2024-01-10',
-      status: 'pending',
-      total: 320000,
-      items: [
-        { 
-          image: 'https://readdy.ai/api/search-image?query=wireless%20computer%20mouse%2C%20white%20color%2C%20ergonomic%20design%2C%20white%20background%2C%20product%20photography%20style%2C%20modern%20minimalist%20aesthetic&width=80&height=80&seq=mouse1&orientation=squarish',
-          name: 'Magic Mouse',
-          quantity: 1,
-          price: 180000
-        },
-        { 
-          image: 'https://readdy.ai/api/search-image?query=wireless%20keyboard%2C%20white%20color%2C%20compact%20design%2C%20white%20background%2C%20product%20photography%20style%2C%20clean%20modern%20look%2C%20premium%20quality&width=80&height=80&seq=keyboard1&orientation=squarish',
-          name: 'Magic Keyboard',
-          quantity: 1,
-          price: 140000
-        }
-      ]
-    }
-  ];
-
-  const filteredOrders = orders.filter(order => {
-    if (activeTab !== 'all' && order.status !== activeTab) return false;
-    if (searchTerm && !order.id.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
+  const filteredOrders = []; // No mock data, so filteredOrders will be empty
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -155,10 +94,24 @@ export default function Orders() {
 
         {/* Orders List */}
         <div className="p-6">
-          {filteredOrders.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-gray-600">Đang tải dữ liệu...</div>
+            </div>
+          ) : error ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-red-600">{typeof error === 'string' ? error : error?.message || JSON.stringify(error)}</div>
+            </div>
+          ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12">
               <i className="ri-shopping-bag-line text-4xl text-gray-400 mb-4"></i>
               <p className="text-gray-600">Không tìm thấy đơn hàng nào</p>
+              <p className="text-gray-500 text-sm mt-2">
+                {activeTab === 'ALL' 
+                  ? 'Bạn chưa có đơn hàng nào'
+                  : `Bạn không có đơn hàng nào ở trạng thái ${getStatusText(activeTab)}`
+                }
+              </p>
             </div>
           ) : (
             <div className="space-y-4">

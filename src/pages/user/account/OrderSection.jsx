@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { getMyOrders } from '../../../services/orderService';
 import OrderCard from './OrderCard';
+import { useNavigate } from 'react-router-dom';
 
-export default function OrderSection({ onOrderSelect }) {
+export default function OrderSection() {
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const tabs = [
     { id: 'ALL', label: 'Tất cả' },
@@ -158,7 +160,7 @@ export default function OrderSection({ onOrderSelect }) {
                         {order.totalAmount?.toLocaleString('vi-VN')}đ
                       </span>
                       <button
-                        onClick={() => onOrderSelect(order)}
+                        onClick={() => navigate(`/order/${order.orderId}`)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer whitespace-nowrap"
                       >
                         Xem chi tiết
