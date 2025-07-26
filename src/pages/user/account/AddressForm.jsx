@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { createAddress, editAddress } from '../../../redux/slices/addressSlice';
 import { fetchUserView } from '../../../redux/slices/userSlice';
 import { fetchProvinces, fetchDistricts, fetchWards } from '../../../services/ghnService';
+import Swal from 'sweetalert2';
 
 export default function AddressForm({ address, onClose }) {
   const dispatch = useDispatch();
@@ -48,13 +49,21 @@ export default function AddressForm({ address, onClose }) {
       try {
         const data = await fetchDistricts(formData.provinceId);
         setDistricts(data);
+        
+        // Nếu đang edit và có district, tìm và set districtId
+        if (address && address.district && data.length > 0) {
+          const foundDistrict = data.find(d => d.DistrictName === address.district);
+          if (foundDistrict) {
+            setFormData(prev => ({ ...prev, districtId: foundDistrict.DistrictID.toString() }));
+          }
+        }
       } catch (err) {
         console.error('Error fetching districts:', err);
         setError('Không thể tải danh sách quận/huyện');
       }
     };
     loadDistricts();
-  }, [formData.provinceId]);
+  }, [formData.provinceId, address]);
 
   // Fetch wards when district changes
   useEffect(() => {
@@ -66,16 +75,25 @@ export default function AddressForm({ address, onClose }) {
       try {
         const data = await fetchWards(formData.districtId);
         setWards(data);
+        
+        // Nếu đang edit và có ward, tìm và set wardCode
+        if (address && address.ward && data.length > 0) {
+          const foundWard = data.find(w => w.WardName === address.ward);
+          if (foundWard) {
+            setFormData(prev => ({ ...prev, wardCode: foundWard.WardCode }));
+          }
+        }
       } catch (err) {
         console.error('Error fetching wards:', err);
         setError('Không thể tải danh sách phường/xã');
       }
     };
     loadWards();
-  }, [formData.districtId]);
+  }, [formData.districtId, address]);
 
   useEffect(() => {
     if (address) {
+      // Khi edit địa chỉ, hiển thị thông tin hiện tại
       setFormData({
         recipientName: address.recipientName || '',
         phone: address.phone || '',
@@ -87,8 +105,29 @@ export default function AddressForm({ address, onClose }) {
         districtId: '',
         wardCode: ''
       });
+      
+      // Tìm và set provinceId, districtId, wardCode dựa trên tên
+      if (address.province) {
+        const foundProvince = provinces.find(p => p.ProvinceName === address.province);
+        if (foundProvince) {
+          setFormData(prev => ({ ...prev, provinceId: foundProvince.ProvinceID.toString() }));
+        }
+      }
+    } else {
+      // Khi thêm mới, reset form
+      setFormData({
+        recipientName: '',
+        phone: '',
+        fullAddress: '',
+        ward: '',
+        district: '',
+        province: '',
+        provinceId: '',
+        districtId: '',
+        wardCode: ''
+      });
     }
-  }, [address]);
+  }, [address, provinces]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -186,6 +225,18 @@ export default function AddressForm({ address, onClose }) {
       }
 
       await dispatch(fetchUserView());
+      
+      // Hiển thị thông báo thành công
+      Swal.fire({
+        title: 'Thành công!',
+        text: address?.id ? 'Địa chỉ đã được cập nhật thành công' : 'Địa chỉ đã được thêm thành công',
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+      
       onClose();
     } catch (err) {
       console.error('Error saving address:', err);

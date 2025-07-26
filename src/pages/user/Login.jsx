@@ -95,7 +95,7 @@ const Login = () => {
   };
 
   const handleForgotPassword = () => {
-    console.log("Forgot password clicked");
+    navigate("/forgot-password");
   };
   const handleGoogleLogin = () => {
     console.log("Google sign up clicked");

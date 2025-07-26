@@ -16,6 +16,8 @@ import ReturnRequestsPage from "../pages/user/ReturnRequestsPage"; // trang danh
 // --- Auth ---
 import Login from "../pages/user/Login";
 import SignUp from "../pages/user/SignUp";
+import ForgotPassword from "../pages/user/ForgotPassword";
+import ResetPassword from "../pages/user/ResetPassword";
 
 // --- Other ---
 import About from "../pages/user/About";
@@ -73,6 +75,8 @@ const UserRoutes = () => {
         {/* Auth */}
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SignUp />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password/:token" element={<ResetPassword />} />
         {/* <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password/:token" element={<ResetPassword />} /> */}
 
