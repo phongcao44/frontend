@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { ShoppingCart, Heart, Trash2, Star, Eye, Package, Search, Filter } from "lucide-react";
 import { getUserWishlist, removeProductFromWishlist } from "../../redux/slices/wishlistSlice";
 import { addItemToCart } from "../../redux/slices/cartSlice";
@@ -8,6 +9,7 @@ import Swal from 'sweetalert2';
 
 const WishList = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { items: wishlistItems, loading, error } = useSelector((state) => state.wishlist);
   
   // Filter states
@@ -102,6 +104,11 @@ const WishList = () => {
         icon: 'error'
       });
     }
+  };
+
+  const handleProductClick = (item) => {
+    // Chuyển đến trang chi tiết sản phẩm
+    navigate(`/product/${item.productId}`);
   };
 
   // Filter functions
@@ -409,9 +416,9 @@ const WishList = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((item) => (
-              <div key={item.productId} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+              <div key={item.productId} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer">
                 {/* Product Image */}
-              <div className="relative">
+              <div className="relative" onClick={() => handleProductClick(item)}>
                 <img
                   src={item.imageUrl || '/placeholder.png'}
                   alt={item.productName || 'Sản phẩm'}
@@ -420,7 +427,10 @@ const WishList = () => {
                   
                   {/* Remove Button */}
                 <button
-                  onClick={() => handleRemoveFromWishlist(item)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveFromWishlist(item);
+                  }}
                     className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-red-50 transition-all duration-200 hover:scale-110"
                     title="Xóa khỏi yêu thích"
                 >
@@ -436,9 +446,9 @@ const WishList = () => {
               </div>
 
                 {/* Product Info */}
-                <div className="p-5">
+                <div className="p-5" onClick={() => handleProductClick(item)}>
                   {/* Product Name */}
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-pink-600 transition-colors">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-pink-600 transition-colors cursor-pointer">
                   {item.productName || 'Không có tên'}
                 </h3>
 
@@ -480,7 +490,7 @@ const WishList = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleAddToCart(item)}
                       className="flex-1 px-4 py-3 bg-gradient-to-r from-pink-600 to-red-600 text-white rounded-xl hover:from-pink-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-medium"
