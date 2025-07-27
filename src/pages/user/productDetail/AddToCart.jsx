@@ -1,18 +1,32 @@
 import { useEffect, useState } from "react";
 import { message } from "antd";
 import PropTypes from "prop-types";
-import { HeartOutlined, PlusOutlined, MinusOutlined } from "@ant-design/icons";
+import { HeartOutlined, HeartFilled, PlusOutlined, MinusOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { addItemToCart, getCart } from "../../../redux/slices/cartSlice";
+import { addProductToWishlist, removeProductFromWishlist, getUserWishlist } from "../../../redux/slices/wishlistSlice";
+import Swal from 'sweetalert2';
 
-const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
+const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorId, selectedSizeId }) => {
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { cart } = useSelector((state) => state.cart);
-  const wishlist = useSelector((state) => state.products.wishlist) || {};
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
+  
+  // Kiểm tra xem sản phẩm có trong wishlist không
+  const isInWishlist = wishlistItems.some(
+    item => {
+      const itemProductId = item.productId || item.product?.id;
+      return itemProductId == productId; // Sử dụng == để so sánh string và number
+    }
+  );
+
+
 
   useEffect(() => {
     if (productId) {
@@ -20,13 +34,32 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
     }
   }, [dispatch, productId]);
 
-  const isVariantSelected = matchedVariant && maxQuantity > 0;
+  // Load wishlist khi component mount
+  useEffect(() => {
+    dispatch(getUserWishlist());
+  }, [dispatch]);
+
+  // Kiểm tra xem người dùng đã chọn biến thể chưa
+  const hasColors = matchedVariant && (matchedVariant.colorId !== null && matchedVariant.colorId !== undefined);
+  const hasSizes = matchedVariant && (matchedVariant.sizeId !== null && matchedVariant.sizeId !== undefined);
+  
+  // Kiểm tra xem người dùng đã chọn màu và kích thước chưa
+  const isColorSelected = !hasColors || selectedColorId !== null;
+  const isSizeSelected = !hasSizes || selectedSizeId !== null;
+  
+  const isVariantSelected = matchedVariant && maxQuantity > 0 && isColorSelected && isSizeSelected;
 
   const handleAddToCart = async (e) => {
     e.stopPropagation();
 
     if (!isVariantSelected) {
-      message.warning("Vui lòng chọn biến thể sản phẩm!");
+      let errorMessage = "Vui lòng chọn biến thể sản phẩm!";
+      if (hasColors && !isColorSelected) {
+        errorMessage = "Vui lòng chọn màu sắc!";
+      } else if (hasSizes && !isSizeSelected) {
+        errorMessage = "Vui lòng chọn kích thước!";
+      }
+      message.warning(errorMessage);
       return;
     }
 
@@ -56,25 +89,110 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
     }
   };
 
-  const handleBuyNow = (e) => {
+  const handleBuyNow = async (e) => {
     e.stopPropagation();
 
     if (!isVariantSelected) {
-      message.warning("Vui lòng chọn biến thể sản phẩm!");
+      let errorMessage = "Vui lòng chọn biến thể sản phẩm!";
+      if (hasColors && !isColorSelected) {
+        errorMessage = "Vui lòng chọn màu sắc!";
+      } else if (hasSizes && !isSizeSelected) {
+        errorMessage = "Vui lòng chọn kích thước!";
+      }
+      message.warning(errorMessage);
       return;
     }
 
     setIsBuying(true);
-    setTimeout(() => setIsBuying(false), 500);
 
-    console.log(
-      `Buy now: ${quantity} of product ${productId}, variant ${matchedVariant?.id}`
-    );
+    try {
+      // Thêm sản phẩm vào giỏ hàng
+      const result = await dispatch(addItemToCart({ 
+        variantId: matchedVariant.id, 
+        quantity 
+      })).unwrap();
+      
+      // Tạo cart item từ kết quả API và matchedVariant
+      const unitPrice = matchedVariant.finalPriceAfterDiscount || matchedVariant.priceOverride;
+      const cartItem = {
+        cartItemId: result.cartItemId,
+        variantId: matchedVariant.id,
+        productId: productId,
+        productName: matchedVariant.productName || "Sản phẩm",
+        quantity: quantity,
+        originalPrice: unitPrice,
+        totalPrice: unitPrice, // Chỉ gửi giá đơn vị, không nhân quantity
+        discountedPrice: unitPrice, // Chỉ gửi giá đơn vị, không nhân quantity
+        colorName: matchedVariant.colorName,
+        sizeName: matchedVariant.sizeName,
+        image: `https://picsum.photos/seed/${result.cartItemId}/200/200`
+      };
+
+      // Chuyển hướng đến trang checkout với sản phẩm vừa thêm
+      navigate("/checkout", { 
+        state: { 
+          selectedCartItems: [cartItem] 
+        } 
+      });
+      
+    } catch (error) {
+      message.error("Không thể thêm sản phẩm vào giỏ hàng!");
+    } finally {
+      setIsBuying(false);
+    }
   };
 
   const handleQuantityChange = (value) => {
     const newValue = Math.max(1, Math.min(maxQuantity, Number(value) || 1));
     setQuantity(newValue);
+  };
+
+  const handleWishlistToggle = async () => {
+    try {
+      if (!isInWishlist) {
+        // Thêm vào wishlist
+        await dispatch(addProductToWishlist(productId)).unwrap();
+        Swal.fire({
+          title: 'Thành công!',
+          text: 'Đã thêm sản phẩm vào danh sách yêu thích',
+          icon: 'success',
+          timer: 1500
+        });
+      } else {
+        // Xóa khỏi wishlist
+        const wishlistItem = wishlistItems.find(item => {
+          const itemProductId = item.productId || item.product?.id;
+          return itemProductId == productId;
+        });
+        if (wishlistItem) {
+          await Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc chắn muốn xóa sản phẩm này khỏi danh sách yêu thích?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+                      }).then(async (result) => {
+              if (result.isConfirmed) {
+                await dispatch(removeProductFromWishlist(wishlistItem.wishListId)).unwrap();
+                Swal.fire(
+                'Đã xóa!',
+                'Sản phẩm đã được xóa khỏi danh sách yêu thích.',
+                'success'
+              );
+            }
+          });
+        }
+      }
+    } catch (error) {
+      Swal.fire({
+        title: 'Lỗi!',
+        text: error.message || 'Không thể thực hiện thao tác',
+        icon: 'error'
+      });
+    }
   };
 
   return (
@@ -106,11 +224,8 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
 
       <button
         onClick={handleAddToCart}
-        disabled={!isVariantSelected}
         className={`flex-1 h-10 rounded text-white font-semibold transition-colors duration-200 ${
-          !isVariantSelected
-            ? "bg-gray-400 cursor-not-allowed"
-            : isAdding
+          isAdding
             ? "bg-gray-500"
             : "bg-red-500 hover:bg-red-600"
         }`}
@@ -120,11 +235,8 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
 
       <button
         onClick={handleBuyNow}
-        disabled={!isVariantSelected}
         className={`flex-1 h-10 rounded text-white font-semibold transition-colors duration-200 ${
-          !isVariantSelected
-            ? "bg-gray-400 cursor-not-allowed"
-            : isBuying
+          isBuying
             ? "bg-gray-500"
             : "bg-red-500 hover:bg-red-600"
         }`}
@@ -133,11 +245,15 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10 }) => {
       </button>
 
       <button
-        className={`h-10 w-10 flex items-center justify-center border border-gray-300 rounded ${
-          wishlist[productId] ? "text-red-500" : "text-gray-700"
+        onClick={handleWishlistToggle}
+        className={`h-10 w-10 flex items-center justify-center border border-gray-300 rounded transition-all duration-200 ${
+          isInWishlist 
+            ? "text-red-500 border-red-300 bg-red-50 hover:bg-red-100" 
+            : "text-gray-700 hover:bg-gray-50"
         }`}
+        title={isInWishlist ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
       >
-        <HeartOutlined />
+        {isInWishlist ? <HeartFilled /> : <HeartOutlined />}
       </button>
     </div>
   );
@@ -148,6 +264,8 @@ AddToCart.propTypes = {
     .isRequired,
   matchedVariant: PropTypes.object,
   maxQuantity: PropTypes.number,
+  selectedColorId: PropTypes.number,
+  selectedSizeId: PropTypes.number,
 };
 
 export default AddToCart;
