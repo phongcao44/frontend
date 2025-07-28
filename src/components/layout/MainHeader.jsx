@@ -4,6 +4,7 @@ import NavMenu from "./NavMenu";
 import TopBanner from "./TopBanner";
 import AccountDropdown from "./AccountDropdown";
 import Cookies from "js-cookie";
+import { useSelector } from "react-redux";
 
 const MainHeader = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -11,6 +12,9 @@ const MainHeader = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const cart = useSelector((state) => state.cart.cart);
+  const itemCount = cart?.items?.length || 0;
+
 
   const activePath = location.pathname;
 
@@ -108,7 +112,7 @@ const MainHeader = () => {
                 />
               </svg>
               <span className="absolute -top-1.5 -right-2.5 bg-red-500 text-white rounded-full w-4 h-4 sm:w-4 sm:h-4 flex items-center justify-center text-[9px] sm:text-[10px]">
-                2
+                {itemCount}
               </span>
             </Link>
             {isLoggedIn ? (
@@ -136,9 +140,8 @@ const MainHeader = () => {
       </header>
 
       <div
-        className={`fixed inset-y-0 left-0 bg-white w-4/5 md:w-64 transform ${
-          drawerVisible ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 ease-in-out z-50`}
+        className={`fixed inset-y-0 left-0 bg-white w-4/5 md:w-64 transform ${drawerVisible ? "translate-x-0" : "-translate-x-full"
+          } transition-transform duration-300 ease-in-out z-50`}
       >
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           <span className="text-lg font-semibold">Menu</span>

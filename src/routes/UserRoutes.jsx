@@ -16,6 +16,8 @@ import ReturnRequestsPage from "../pages/user/ReturnRequestsPage";
 // --- Auth ---
 import Login from "../pages/user/Login";
 import SignUp from "../pages/user/SignUp";
+import ForgotPassword from "../pages/user/ForgotPassword";
+import ResetPassword from "../pages/user/ResetPassword";
 
 // --- Other ---
 import About from "../pages/user/About";
@@ -29,7 +31,8 @@ import Orders from "../pages/user/account/Orders";
 import OrderSuccessPage from "../pages/user/order-success/OrderSuccessPage";
 
 import ProductSearch from "../pages/user/productList/ProductSearch";
-
+import Blog from "../pages/user/Blog";
+import BlogDetail from "../pages/user/BlogDetail";
 
 const UserRoutes = () => {
   return (
@@ -62,6 +65,8 @@ const UserRoutes = () => {
         {/* Auth */}
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SignUp />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password/:token" element={<ResetPassword />} />
         {/* <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password/:token" element={<ResetPassword />} /> */}
 
@@ -79,7 +84,8 @@ const UserRoutes = () => {
 
         <Route path="return-requests" element={<ReturnRequestsPage />} />
 
-      
+          <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:id" element={<BlogDetail />} />
       </Route>
     </>
   );

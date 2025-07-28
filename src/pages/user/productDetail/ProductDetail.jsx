@@ -19,8 +19,8 @@ const ProductDetail = () => {
   const [variantData, setVariantData] = useState({
     matchedVariant: null,
     maxQuantity: 10,
-    selectedColor: null,
-    selectedSize: null,
+    selectedColorId: null,
+    selectedSizeId: null,
   });
 
   useEffect(() => {
@@ -59,6 +59,8 @@ const ProductDetail = () => {
                 productId={productId}
                 matchedVariant={variantData.matchedVariant}
                 maxQuantity={variantData.maxQuantity}
+                selectedColorId={variantData.selectedColorId}
+                selectedSizeId={variantData.selectedSizeId}
               />
               <DeliveryInfo />
             </div>

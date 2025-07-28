@@ -32,12 +32,12 @@ const accountMenuItems = [
     icon: faCircleXmark,
     path: "/user/orders/cancellations",
   },
-  {
-    key: "reviews",
-    label: "My Reviews",
-    icon: faStarRegular,
-    path: "/user/reviews",
-  },
+  // {
+  //   key: "reviews",
+  //   label: "My Reviews",
+  //   icon: faStarRegular,
+  //   path: "/user/reviews",
+  // },
   {
     key: "logout",
     label: "Logout",

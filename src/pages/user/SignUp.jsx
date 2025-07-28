@@ -131,7 +131,7 @@ const SignUp = () => {
       console.error("Register or auto login failed:", error);
       setError(
         error?.data?.message ||
-          "Đăng ký hoặc đăng nhập tự động thất bại. Vui lòng thử lại."
+        "Đăng ký hoặc đăng nhập tự động thất bại. Vui lòng thử lại."
       );
     }
   };
@@ -190,11 +190,10 @@ const SignUp = () => {
                 placeholder="Họ và tên"
                 value={formData.username}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
-                  validationErrors.username
+                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.username
                     ? "border-red-500"
                     : "border-gray-300"
-                } focus:border-red-500 focus:outline-none bg-transparent`}
+                  } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               {validationErrors.username && (
                 <p className="text-red-500 text-sm mt-1">
@@ -210,9 +209,8 @@ const SignUp = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
-                  validationErrors.email ? "border-red-500" : "border-gray-300"
-                } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.email ? "border-red-500" : "border-gray-300"
+                  } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               {validationErrors.email && (
                 <p className="text-red-500 text-sm mt-1">
@@ -228,11 +226,10 @@ const SignUp = () => {
                 placeholder="Mật khẩu"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
-                  validationErrors.password
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.password
                     ? "border-red-500"
                     : "border-gray-300"
-                } focus:border-red-500 focus:outline-none bg-transparent`}
+                  } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               <button
                 type="button"
@@ -286,11 +283,10 @@ const SignUp = () => {
                 placeholder="Xác nhận mật khẩu"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
-                  validationErrors.confirmPassword
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.confirmPassword
                     ? "border-red-500"
                     : "border-gray-300"
-                } focus:border-red-500 focus:outline-none bg-transparent`}
+                  } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               <button
                 type="button"
@@ -345,9 +341,8 @@ const SignUp = () => {
             >
               Tạo tài khoản
             </button>
-
-            <button
-              onClick={handleGoogleSignUp}
+            <a
+              href="http://localhost:8080/oauth2/authorization/google"
               className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-4 px-6 rounded-lg border border-gray-300 transition-colors duration-200 flex items-center justify-center gap-3"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -368,8 +363,9 @@ const SignUp = () => {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Đăng ký với Google
-            </button>
+              Đăng ký  với Google
+            </a>
+
           </div>
 
           <div className="mt-8 text-center">

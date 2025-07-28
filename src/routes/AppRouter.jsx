@@ -3,6 +3,8 @@ import UserRoutes from "./UserRoutes";
 import AdminRoutes from "./AdminRoutes";
 import ErrorPage from "../pages/user/ErrorPage";
 import ShipperRoutes from "./ShipperRoutes";
+import OrderDetail from '../pages/user/account/OrderDetail';
+
 
 const AppRouter = () => {
   return (
@@ -11,6 +13,8 @@ const AppRouter = () => {
       {UserRoutes()}
       {AdminRoutes()}
        {ShipperRoutes()}
+       <Route path="/order/:id" element={<OrderDetail />} />
+       
     </Routes>
   );
 };

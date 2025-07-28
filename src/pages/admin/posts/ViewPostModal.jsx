@@ -7,6 +7,8 @@ import {
 } from "../../../redux/slices/postSlice";
 import { UploadIcon, X } from "lucide-react";
 import { POST_CATEGORIES } from "../../../constants/postCategories";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 
 export default function ViewPostModal({
   show,
@@ -115,8 +117,8 @@ export default function ViewPostModal({
             {isAdd
               ? "Thêm bài viết mới"
               : isEdit
-              ? "Chỉnh sửa bài viết"
-              : "Chi tiết bài viết"}
+                ? "Chỉnh sửa bài viết"
+                : "Chi tiết bài viết"}
           </h3>
           <button
             onClick={onClose}
@@ -246,17 +248,18 @@ export default function ViewPostModal({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-500">Nội dung</p>
           {isAdd || isEdit ? (
-            <textarea
-              name="content"
+            <ReactQuill
               value={editData.content}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-              rows={6}
+              onChange={(value) =>
+                setEditData((prev) => ({ ...prev, content: value }))
+              }
             />
           ) : (
-            <div className="prose max-w-none bg-gray-50 border p-4 rounded">
-              {editData.content}
-            </div>
+            <div
+              className="prose max-w-none bg-gray-50 border p-4 rounded"
+              dangerouslySetInnerHTML={{ __html: editData.content }}
+            />
+
           )}
         </div>
 
