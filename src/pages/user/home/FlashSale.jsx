@@ -1,8 +1,6 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Typography, Space, Button, Spin } from "antd";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
@@ -11,124 +9,93 @@ import "swiper/css/navigation";
 import ProductCard from "./ProductCard";
 import FlashCountdown from "./FlashCountdown";
 import {
-  fetchFlashSales,
+  fetchActiveFlashSale,
   fetchFlashSaleItems,
 } from "../../../redux/slices/flashSaleSlice";
 
-const { Title, Text } = Typography;
+// Custom icons component để thay thế Ant Design icons
+const LeftOutlined = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const RightOutlined = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Loading spinner component
+const Spinner = () => (
+  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+);
 
 const FlashSale = () => {
   const dispatch = useDispatch();
-  const { flashSales, flashSaleItems, loading } = useSelector(
+  const { activeFlashSale, flashSaleItems, loading } = useSelector(
     (state) => state.flashSale
   );
-
-  const [activeCampaign, setActiveCampaign] = useState(null);
 
   const prevRef = useRef(null);
   const nextRef = useRef(null);
 
   useEffect(() => {
-    const loadFlashSales = async () => {
-      const res = await dispatch(fetchFlashSales()).unwrap();
-      const now = new Date();
-
-      const active = res.find((c) => {
-        const start = new Date(c.startTime);
-        const end = new Date(c.endTime);
-        return c.status === "ACTIVE" && start <= now && now <= end;
-      });
-
-      if (active) {
-        setActiveCampaign(active);
-        dispatch(fetchFlashSaleItems(active.id));
-      } else {
-        setActiveCampaign(null);
+    const loadActiveFlashSale = async () => {
+      const res = await dispatch(fetchActiveFlashSale()).unwrap();
+      if (res) {
+        dispatch(fetchFlashSaleItems(res.id));
       }
     };
 
-    loadFlashSales();
+    loadActiveFlashSale();
   }, [dispatch]);
 
+
   return (
-    <div style={{ padding: "40px 20px", backgroundColor: "#fff" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+    <div className="py-10 px-5 bg-white">
+      <div className="max-w-6xl mx-auto">
         {/* Section Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: "32px",
-          }}
-        >
-          <div
-            style={{
-              width: "20px",
-              height: "40px",
-              backgroundColor: "#ff4d4f",
-              borderRadius: "4px",
-              marginRight: "16px",
-            }}
-          />
-          <Text
-            style={{ color: "#ff4d4f", fontSize: "16px", fontWeight: "600" }}
-          >
+        <div className="flex items-center mb-8">
+          <div className="w-5 h-10 bg-red-500 rounded mr-4" />
+          <span className="text-red-500 text-base font-semibold">
             {"Today's"}
-          </Text>
+          </span>
         </div>
 
         {/* Title + Countdown + Nav */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: "40px",
-            flexWrap: "wrap",
-            gap: "20px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              flexGrow: 1,
-              flexWrap: "wrap",
-              gap: "40px",
-            }}
-          >
-            <Title
-              level={2}
-              style={{ margin: 0, fontSize: "36px", fontWeight: "600" }}
-            >
+        <div className="flex items-center mb-10 flex-wrap gap-5">
+          <div className="flex items-center flex-grow flex-wrap gap-10">
+            <h2 className="text-4xl font-semibold m-0">
               Flash Sales
-            </Title>
-            {activeCampaign && (
-              <FlashCountdown endTime={activeCampaign.endTime} />
+            </h2>
+            {activeFlashSale && (
+              <FlashCountdown endTime={activeFlashSale.endTime} />
             )}
           </div>
 
-          <Space>
-            <Button
-              type="default"
-              shape="circle"
-              icon={<LeftOutlined />}
-              size="middle"
+          <div className="flex gap-2">
+            <button
               ref={prevRef}
-            />
-            <Button
-              type="default"
-              shape="circle"
-              icon={<RightOutlined />}
-              size="middle"
+              className="w-10 h-10 rounded-full border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors duration-200"
+            >
+              <LeftOutlined />
+            </button>
+            <button
               ref={nextRef}
-            />
-          </Space>
+              className="w-10 h-10 rounded-full border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors duration-200"
+            >
+              <RightOutlined />
+            </button>
+          </div>
         </div>
 
         {/* Slider */}
         {loading ? (
-          <div style={{ textAlign: "center", padding: "80px 20px" }}>
-            <Spin size="large" />
+          <div className="text-center py-20 px-5">
+            <div className="flex justify-center">
+              <Spinner />
+            </div>
           </div>
         ) : flashSaleItems.length > 0 ? (
           <>
@@ -151,18 +118,7 @@ const FlashSale = () => {
               {flashSaleItems.map((product) => (
                 <SwiperSlide key={product.id}>
                   <ProductCard
-                    product={{
-                      id: product.id,
-                      name: product.name,
-                      images: product.images,
-                      price: product.price,
-                      originalPrice: product.originalPrice,
-                      discountPercentage: product.discountPercentage,
-                      discountAmount: product.discountAmount,
-                      discountType: product.discountType,
-                      averageRating: product.averageRating,
-                      totalReviews: product.totalReviews,
-                    }}
+                    product={product}
                     showDiscountLabel
                   />
                 </SwiperSlide>
@@ -170,45 +126,30 @@ const FlashSale = () => {
             </Swiper>
 
             {/* View All */}
-            <div style={{ textAlign: "center", marginTop: "40px" }}>
-              <Button
-                type="primary"
-                size="large"
-                style={{
-                  backgroundColor: "#ff4d4f",
-                  borderColor: "#ff4d4f",
-                  padding: "12px 48px",
-                  height: "auto",
-                  borderRadius: "4px",
-                }}
+            <div className="text-center mt-10">
+              <button
+                className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-12 rounded transition-colors duration-200"
                 onClick={() => {
                   window.location.href = "/products";
                 }}
               >
                 View All Products
-              </Button>
+              </button>
             </div>
           </>
         ) : (
-          <div style={{ textAlign: "center", padding: "80px 20px" }}>
-            <Title level={4} style={{ marginBottom: "16px" }}>
+          <div className="text-center py-20 px-5">
+            <h4 className="text-xl font-medium mb-4">
               Không có Flash Sale nào đang diễn ra!
-            </Title>
-            <Button
-              type="primary"
-              size="large"
+            </h4>
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200"
               onClick={() => {
                 window.location.href = "/products";
               }}
-              style={{
-                backgroundColor: "#ff4d4f",
-                borderColor: "#ff4d4f",
-                padding: "12px 32px",
-                borderRadius: "4px",
-              }}
             >
               Khám phá sản phẩm khác
-            </Button>
+            </button>
           </div>
         )}
       </div>

@@ -10,8 +10,8 @@ import Cart from "../pages/user/Cart";
 import CheckoutPage from "../pages/user/checkout/CheckoutPage";
 
 import DeliveredProductsPage from "../pages/user/Delivered";
-import ReturnForm from "../pages/user/ReturnForm"; // trang form bạn đã có
-import ReturnRequestsPage from "../pages/user/ReturnRequestsPage"; // trang danh sách yêu cầu trả hàng
+import ReturnForm from "../pages/user/ReturnForm"; 
+import ReturnRequestsPage from "../pages/user/ReturnRequestsPage"; 
 
 // --- Auth ---
 import Login from "../pages/user/Login";
@@ -26,9 +26,10 @@ import ErrorPage from "../pages/user/ErrorPage";
 import UserAccountPage from "../pages/user/account/UserAccountPage";
 import EditProfileForm from "../pages/user/account/EditProfileForm";
 import AddressBook from "../pages/user/account/AddressBook";
+
 import Orders from "../pages/user/account/Orders";
-import OrderSuccessPage from "../pages/user/checkout/OrderSuccessPage";
-import CategoryPage from "../pages/user/categoryPage/CategoryPage";
+import OrderSuccessPage from "../pages/user/order-success/OrderSuccessPage";
+
 import ProductSearch from "../pages/user/productList/ProductSearch";
 import Blog from "../pages/user/Blog";
 import BlogDetail from "../pages/user/BlogDetail";
@@ -45,18 +46,7 @@ const UserRoutes = () => {
         <Route path="products/search" element={<ProductSearch />} />
         <Route path="products/category/:id" element={<ProductListing />} />
         <Route path="product/:id" element={<ProductDetail />} />
-        
-        <Route path="categories/:id" element={<CategoryPage />} />
 
-
-        {/* Flash Sale & Best Selling */}
-        {/* <Route path="flash-sale" element={<FlashSalePage />} />
-        <Route path="best-selling" element={<BestSellingPage />} /> */}
-
-        {/* Search */}
-        {/* <Route path="search" element={<SearchPage />} /> */}
-
-        {/* Wishlist, Cart, Checkout */}
         <Route path="wishlist" element={<WishList />} />
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<CheckoutPage />} />
@@ -70,7 +60,7 @@ const UserRoutes = () => {
           <Route path="orders" element={<Orders />} />
         </Route>
 
-        <Route path="payment-success" element={<OrderSuccessPage />} />
+        <Route path="payment-success/:orderId" element={<OrderSuccessPage />} />
 
         {/* Auth */}
         <Route path="login" element={<Login />} />

@@ -112,7 +112,7 @@ const Login = () => {
       {/* Left */}
       <div className="w-full md:w-3/5 flex items-center justify-center p-4 md:p-12">
         <img
-          src="/public/assets/images/signUp.png"
+          src="/assets/images/signUp.png"
           alt="Login illustration"
           className="w-full h-full object-cover"
         />
