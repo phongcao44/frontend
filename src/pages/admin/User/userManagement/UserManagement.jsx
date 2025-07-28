@@ -1,9 +1,8 @@
-import { Search, Plus, RefreshCw, Download, MoreHorizontal } from "lucide-react";
+import { Search, Plus, RefreshCw } from "lucide-react";
 import UserTable from "./UserTable";
 import UserCards from "./UserCards";
 import Pagination from "../../../../components/Pagination";
 import useUserManagement from "./useUserManagement";
-
 
 export default function UserManagement() {
   const {
@@ -17,7 +16,7 @@ export default function UserManagement() {
     error,
     handlers,
     pagination,
-    filters
+    filters,
   } = useUserManagement();
 
   return (
@@ -38,12 +37,13 @@ export default function UserManagement() {
               >
                 <RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
               </button>
-              <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
+              {/* Placeholder for Download button - implement or remove */}
+              {/* <button
+                onClick={() => alert("Download functionality not implemented")}
+                className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+              >
                 <Download className="h-5 w-5" />
-              </button>
-              <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100">
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
+              </button> */}
               <button
                 onClick={handlers.handleCreateUser}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105"
@@ -138,22 +138,23 @@ export default function UserManagement() {
           </div>
         </div>
 
-        {/* Content */}
+        {/* Error Handling */}
         {error && (
           <div className="bg-red-100 p-6 rounded-xl shadow-sm border border-red-200 text-center">
             <p className="text-sm text-red-600">
-              Lỗi: {error.message || "Không thể tải dữ liệu khách hàng"}
+              Lỗi: {typeof error === "string" ? error : error.message || "Không thể tải dữ liệu khách hàng"}
             </p>
           </div>
         )}
 
+        {/* Empty State */}
         {!isLoading && !error && customers.length === 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
             <p className="text-sm text-gray-600">Không tìm thấy khách hàng nào.</p>
           </div>
         )}
 
-        {/* Conditional rendering for loading and data */}
+        {/* Content */}
         <div className="hidden lg:block">
           <UserTable customers={customers} handlers={handlers} isLoading={isLoading} />
           {!isLoading && customers.length > 0 && <Pagination {...pagination} />}

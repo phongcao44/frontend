@@ -1,5 +1,4 @@
-/* eslint-disable react/prop-types */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react"; // Add useRef
 import { X, Upload as UploadIcon, AlertTriangle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -7,7 +6,10 @@ import {
   createBanner,
   editBanner,
 } from "../../../redux/slices/bannerSlice";
-import { loadProductsPaginate } from "../../../redux/slices/productSlice";
+import {
+  loadProductsPaginate,
+  loadProductById,
+} from "../../../redux/slices/productSlice";
 
 const debounce = (func, wait) => {
   let timeout;
@@ -19,11 +21,21 @@ const debounce = (func, wait) => {
 
 export default function BannerFormModal({ open, onClose, id }) {
   const dispatch = useDispatch();
-  const { banners, loading: bannerLoading, error: bannerError } = useSelector((state) => state.banner);
-  const { paginated, loading: productsLoading, error: productsError } = useSelector((state) => state.products);
+  const {
+    banners,
+    loading: bannerLoading,
+    error: bannerError,
+  } = useSelector((state) => state.banner);
+  const {
+    paginated,
+    loading: productsLoading,
+    error: productsError,
+    productDetail,
+  } = useSelector((state) => state.products);
   const products = paginated?.data?.content || [];
 
   const editingBanner = id ? (banners || []).find((b) => b.id === id) : null;
+  const [isProductDetailLoading, setIsProductDetailLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -43,6 +55,10 @@ export default function BannerFormModal({ open, onClose, id }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Add refs for dropdown and input
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+
   const debouncedSearch = useCallback(
     debounce((value) => {
       setDebouncedSearchTerm(value);
@@ -55,7 +71,35 @@ export default function BannerFormModal({ open, onClose, id }) {
     const value = e.target.value;
     setSearchTerm(value);
     debouncedSearch(value);
+    setIsDropdownOpen(true); // Open dropdown on search change
   };
+
+  // Handle clicks outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event) => {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscapeKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscapeKey);
+    };
+  }, []);
 
   useEffect(() => {
     const params = {
@@ -69,14 +113,33 @@ export default function BannerFormModal({ open, onClose, id }) {
   }, [dispatch, currentPage, itemsPerPage, debouncedSearchTerm]);
 
   useEffect(() => {
-    if (id && (!banners || banners.length === 0) && !bannerLoading && !bannerError) {
+    if (
+      id &&
+      (!banners || banners.length === 0) &&
+      !bannerLoading &&
+      !bannerError
+    ) {
       dispatch(getBanners()).catch((err) => {
         setLocalError(err.message || "Không load được dữ liệu");
       });
     }
   }, [dispatch, id, banners, bannerLoading, bannerError]);
 
-  console.log("hehe ", formData)
+  useEffect(() => {
+    if (editingBanner && editingBanner.targetUrl) {
+      setIsProductDetailLoading(true);
+      dispatch(loadProductById(editingBanner.targetUrl))
+        .unwrap()
+        .then((product) => {
+          setSearchTerm(product.name || "");
+          setIsProductDetailLoading(false);
+        })
+        .catch((err) => {
+          setLocalError(err.message || "Không thể tải thông tin sản phẩm");
+          setIsProductDetailLoading(false);
+        });
+    }
+  }, [dispatch, editingBanner]);
 
   useEffect(() => {
     if (editingBanner) {
@@ -91,7 +154,6 @@ export default function BannerFormModal({ open, onClose, id }) {
         timeEnd: editingBanner.endAt ? editingBanner.endAt.slice(0, 16) : "",
       });
       setImagePreview(editingBanner.bannerUrl || null);
-      setSearchTerm("");
       setDebouncedSearchTerm("");
       setCurrentPage(0);
       setErrors({});
@@ -103,7 +165,6 @@ export default function BannerFormModal({ open, onClose, id }) {
   const validateForm = () => {
     const newErrors = {};
 
-    // Title validation
     if (!formData.title.trim()) {
       newErrors.title = "Tiêu đề là bắt buộc";
     } else if (formData.title.length > 100) {
@@ -111,24 +172,22 @@ export default function BannerFormModal({ open, onClose, id }) {
     } else if (
       banners.some(
         (banner) =>
-          banner.title.trim().toLowerCase() === formData.title.trim().toLowerCase() &&
+          banner.title.trim().toLowerCase() ===
+            formData.title.trim().toLowerCase() &&
           (!id || banner.id !== id)
       )
     ) {
       newErrors.title = "Tiêu đề banner đã tồn tại";
     }
 
-    // TargetUrl validation
     if (!formData.targetUrl) {
       newErrors.targetUrl = "Vui lòng chọn một sản phẩm";
     }
 
-    // Position validation
     if (!formData.position) {
       newErrors.position = "Vị trí là bắt buộc";
     }
 
-    // Date validation
     if (!formData.timeStart) {
       newErrors.timeStart = "Thời gian bắt đầu là bắt buộc";
     }
@@ -137,7 +196,6 @@ export default function BannerFormModal({ open, onClose, id }) {
       newErrors.timeEnd = "Thời gian kết thúc là bắt buộc";
     }
 
-    // Date range validation
     if (formData.timeStart && formData.timeEnd) {
       const start = new Date(formData.timeStart);
       const end = new Date(formData.timeEnd);
@@ -152,7 +210,6 @@ export default function BannerFormModal({ open, onClose, id }) {
       }
     }
 
-    // Image validation
     if (!id && !selectedFile && !imagePreview) {
       newErrors.image = "Ảnh banner là bắt buộc khi tạo mới";
     }
@@ -219,27 +276,14 @@ export default function BannerFormModal({ open, onClose, id }) {
       }
 
       if (id) {
-        dispatch(
-          editBanner({
-            id,
-            payload: {
-              title: formData.title || "Unknown",
-              targetUrl: formData.targetUrl,
-              position: formData.position || "HOME_TOP",
-              status: formData.status,
-              image: selectedFile,
-              timeStart: formData.timeStart,
-              timeEnd: formData.timeEnd,
-            },
-          })
-        );
+        dispatch(editBanner({ id, payload: form }));
       } else {
         dispatch(createBanner(form));
       }
 
       handleClose();
     } catch (err) {
-      setLocalError(err.message || "Không thể lưu banner");
+      setErrors({ submit: err.message || "Không thể lưu banner" });
     }
   };
 
@@ -259,6 +303,8 @@ export default function BannerFormModal({ open, onClose, id }) {
     setDebouncedSearchTerm("");
     setCurrentPage(0);
     setErrors({});
+    setIsProductDetailLoading(false);
+    setIsDropdownOpen(false);
   };
 
   const handleClose = () => {
@@ -267,29 +313,39 @@ export default function BannerFormModal({ open, onClose, id }) {
   };
 
   const handleProductSelect = (productId) => {
+    const selectedProduct = products.find((p) => p.id === productId);
     setFormData((prev) => ({
       ...prev,
       targetUrl: productId,
     }));
-    setIsDropdownOpen(false);
-    setSearchTerm("");
+    setSearchTerm(selectedProduct?.name || "");
+    setIsDropdownOpen(false); // Close dropdown only after selecting a product
     setDebouncedSearchTerm("");
+  };
+
+  const handleSearchFocus = () => {
+    setIsDropdownOpen(true); // Open dropdown on focus
   };
 
   const totalPages = paginated?.data?.totalPages || 1;
 
-  if (bannerError || productsError || localError) {
+  const isLoading =
+    bannerLoading || productsLoading || (id && isProductDetailLoading);
+  const hasError = bannerError || productsError || localError;
+
+  if (!open) return null;
+
+  if (hasError) {
     return (
-      <div
-        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-      >
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 opacity-100">
         <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
           <div className="text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 text-sm mb-4">
-              {bannerError?.message || productsError?.message || localError || "Không load được dữ liệu"}
+              {bannerError?.message ||
+                productsError?.message ||
+                localError ||
+                "Không load được dữ liệu"}
             </p>
             <button
               onClick={handleClose}
@@ -303,12 +359,19 @@ export default function BannerFormModal({ open, onClose, id }) {
     );
   }
 
+  if (isLoading || (id && !editingBanner) || !paginated?.data?.content) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 opacity-100">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-700">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 ${
-        open ? "opacity-100" : "opacity-0 pointer-events-none"
-      }`}
-    >
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300 opacity-100">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900">
@@ -347,24 +410,34 @@ export default function BannerFormModal({ open, onClose, id }) {
         </div>
 
         <div className="mb-4 relative">
-          <label className="block mb-1 font-medium text-gray-700">Sản phẩm liên kết</label>
+          <label className="block mb-1 font-medium text-gray-700">
+            Sản phẩm liên kết
+          </label>
           <div className="relative">
             <input
               type="text"
               placeholder="Tìm kiếm sản phẩm..."
               value={searchTerm}
               onChange={handleSearchChange}
-              onFocus={() => setIsDropdownOpen(true)}
+              onFocus={handleSearchFocus}
+              ref={inputRef} // Attach ref to input
               className={`w-full px-3 py-2 border ${
                 errors.targetUrl ? "border-red-500" : "border-gray-300"
               } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             />
             {isDropdownOpen && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div
+                ref={dropdownRef} // Attach ref to dropdown
+                className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+              >
                 {productsLoading ? (
-                  <div className="p-3 text-center text-gray-500">Đang tải...</div>
+                  <div className="p-3 text-center text-gray-500">
+                    Đang tải...
+                  </div>
                 ) : products.length === 0 ? (
-                  <div className="p-3 text-center text-gray-500">Không tìm thấy sản phẩm</div>
+                  <div className="p-3 text-center text-gray-500">
+                    Không tìm thấy sản phẩm
+                  </div>
                 ) : (
                   <>
                     {products.map((product) => (
@@ -378,7 +451,9 @@ export default function BannerFormModal({ open, onClose, id }) {
                     ))}
                     <div className="p-2 border-t border-gray-200 flex justify-between">
                       <button
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(prev - 1, 0))
+                        }
                         disabled={currentPage === 0}
                         className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
                       >
@@ -388,7 +463,11 @@ export default function BannerFormModal({ open, onClose, id }) {
                         Trang {currentPage + 1} / {totalPages}
                       </span>
                       <button
-                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(prev + 1, totalPages - 1)
+                          )
+                        }
                         disabled={currentPage >= totalPages - 1}
                         className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
                       >
@@ -402,11 +481,6 @@ export default function BannerFormModal({ open, onClose, id }) {
           </div>
           {errors.targetUrl && (
             <p className="mt-1 text-sm text-red-500">{errors.targetUrl}</p>
-          )}
-          {formData.targetUrl && (
-            <p className="mt-1 text-sm text-gray-500">
-              Sản phẩm đã chọn: {products.find((p) => p.id === formData.targetUrl)?.name || "Không xác định"}
-            </p>
           )}
         </div>
 

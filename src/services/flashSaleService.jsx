@@ -1,132 +1,119 @@
 import axiosInstance from "../utils/axiosInstance";
-import { fetchProductVariantDetail } from "./productVariantService";
 
 // ===============================
 // Flash Sale
 // ===============================
 
-export const getFlashSales = () => {
-  return axiosInstance.get("/flash_sale/list");
+export const getFlashSales = async () => {
+  try {
+    const response = await axiosInstance.get("/flash_sale/list");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching flash sales:", error);
+    throw new Error(error.response?.data?.message || "Failed to fetch flash sales");
+  }
 };
 
-export const addFlashSale = (data) => {
-  return axiosInstance.post("/flash_sale/add", data);
+export const getFlashSaleDetails = async (flashSaleId) => {
+  try {
+    const response = await axiosInstance.get(`/flash_sale/detail/${flashSaleId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching flash sale details for ID ${flashSaleId}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to fetch flash sale details");
+  }
 };
 
-export const editFlashSale = (id, data) => {
-  return axiosInstance.post(`/flash_sale/edit/${id}`, data);
+export const getActiveFlashSale = async () => {
+  try {
+    const response = await axiosInstance.get("/flash_sale/active");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching active flash sale:", error);
+    throw new Error(error.response?.data?.message || "Failed to fetch active flash sale");
+  }
 };
 
-export const deleteFlashSale = (id) => {
-  return axiosInstance.delete(`/flash_sale/delete/${id}`);
+export const addFlashSale = async (data) => {
+  try {
+    const response = await axiosInstance.post("/flash_sale/add", data);
+    return response.data;
+  } catch (error) {
+    console.error("Error adding flash sale:", error);
+    throw new Error(error.response?.data?.message || "Failed to add flash sale");
+  }
+};
+
+export const editFlashSale = async (id, data) => {
+  try {
+    const response = await axiosInstance.put(`/flash_sale/edit/${id}`, data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error editing flash sale with ID ${id}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to edit flash sale");
+  }
+};
+
+export const deleteFlashSale = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/flash_sale/delete/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting flash sale with ID ${id}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to delete flash sale");
+  }
 };
 
 // ===============================
 // Flash Sale Items
 // ===============================
 
-export const addFlashSaleItem = (data) => {
-  return axiosInstance.post("/flash_sale/flash_sale_items/add", data);
-};
-
-export const editFlashSaleItem = (id, data) => {
-  return axiosInstance.post(`/flash_sale/flash_sale_items/edit/${id}`, data);
-};
-
-export const deleteFlashSaleItem = (id) => {
-  return axiosInstance.delete(`/flash_sale/flash_sale_items/delete/${id}`);
-};
-
-// export const getFlashSaleItems = (flashSaleId) => {
-//   return axiosInstance.get(`/flash_sale/flash_sale_items/${flashSaleId}`);
-// };
-
 export const getFlashSaleItems = async (flashSaleId) => {
   try {
-    const res = await axiosInstance.get(
-      `/flash_sale/flash_sale_items/${flashSaleId}`
-    );
-    const items = res.data || [];
+    const response = await axiosInstance.get(`/flash_sale/detail/${flashSaleId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching flash sale items for flash sale ID ${flashSaleId}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to fetch flash sale items");
+  }
+};
 
-    const grouped = {};
+export const getFlashSaleVariantDetails = async (flashSaleId) => {
+  try {
+    const response = await axiosInstance.get(`/flash_sale/flash_sale_items/detail/${flashSaleId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching flash sale variant details for flash sale ID ${flashSaleId}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to fetch flash sale variant details");
+  }
+};
 
-    for (const item of items) {
-      const variantId = item.variantId;
-      const variantDetail = await fetchProductVariantDetail(variantId);
+export const addFlashSaleItem = async (data) => {
+  try {
+    const response = await axiosInstance.post("/flash_sale/flash_sale_items/add", data);
+    return response.data;
+  } catch (error) {
+    console.error("Error adding flash sale item:", error);
+    throw new Error(error.response?.data?.message || "Failed to add flash sale item");
+  }
+};
 
-      const productId = item.productId;
-      const productName = variantDetail.productName || "N/A";
+export const editFlashSaleItem = async (id, data) => {
+  try {
+    const response = await axiosInstance.post(`/flash_sale/flash_sale_items/edit/${id}`, data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error editing flash sale item with ID ${id}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to edit flash sale item");
+  }
+};
 
-      const basePrice = variantDetail.priceOverride || variantDetail.price || 0;
-
-      let finalPrice = 0;
-      let discountAmount = 0;
-      let discountPercentage = 0;
-
-      if (item.discountType === "PERCENTAGE") {
-        discountPercentage = item.discountedPrice;
-        finalPrice = Math.round(basePrice * (1 - discountPercentage / 100));
-        discountAmount = basePrice - finalPrice;
-      } else if (item.discountType === "AMOUNT") {
-        discountAmount = item.discountedPrice;
-        finalPrice = Math.max(basePrice - discountAmount, 0);
-        discountPercentage = null;
-      } else {
-        finalPrice = basePrice;
-        discountAmount = 0;
-        discountPercentage = 0;
-      }
-
-      const images = Array.from({ length: 3 }, (_, i) => ({
-        id: `img-${variantId}-${i + 1}`,
-        image_url: `https://picsum.photos/seed/${variantId}-${i + 1}/720/720`,
-        is_main: i === 0,
-      }));
-
-      const variantData = {
-        id: `${variantId}`,
-        images,
-        price: finalPrice,
-        originalPrice: basePrice,
-        discountAmount: discountAmount,
-        discountPercentage: discountPercentage,
-        discountType: item.discountType,
-        averageRating: 4.5,
-        totalReviews: 0,
-      };
-
-      if (!grouped[productId]) {
-        grouped[productId] = {
-          id: `${productId}`,
-          name: productName,
-          variants: [],
-        };
-      }
-
-      grouped[productId].variants.push(variantData);
-    }
-
-    const result = Object.values(grouped).map((product) => {
-      const minVariant = product.variants.reduce((prev, curr) =>
-        curr.price < prev.price ? curr : prev
-      );
-      return {
-        id: product.id,
-        name: product.name,
-        images: minVariant.images,
-        price: minVariant.price,
-        originalPrice: minVariant.originalPrice,
-        discountAmount: minVariant.discountAmount,
-        discountPercentage: minVariant.discountPercentage,
-        discountType: minVariant.discountType,
-        averageRating: minVariant.averageRating,
-        totalReviews: minVariant.totalReviews,
-      };
-    });
-
-    return result;
-  } catch (err) {
-    console.error("❌ Lỗi getFlashSaleItems:", err);
-    return [];
+export const deleteFlashSaleItem = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/flash_sale/flash_sale_items/delete/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting flash sale item with ID ${id}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to delete flash sale item");
   }
 };

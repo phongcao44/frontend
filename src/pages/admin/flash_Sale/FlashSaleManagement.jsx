@@ -21,6 +21,7 @@ import {
 import FlashSaleForm from "./FlashSaleForm";
 import FlashSaleItemManagement from "./FlashSaleItemManagement";
 import Pagination from "../../../components/Pagination";
+import { useNavigate } from "react-router-dom";
 
 const debounce = (func, wait) => {
   let timeout;
@@ -32,6 +33,7 @@ const debounce = (func, wait) => {
 
 export default function FlashSaleManagement() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { flashSales, loading, error } = useSelector((state) => state.flashSale);
   const [currentView, setCurrentView] = useState("list");
   const [selectedFlashSale, setSelectedFlashSale] = useState(null);
@@ -119,18 +121,31 @@ export default function FlashSaleManagement() {
   };
 
   const formatDateTime = (dateTime) =>
-    dateTime ? new Date(dateTime).toLocaleString("vi-VN") : "N/A";
+    dateTime
+      ? new Date(dateTime).toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Chưa xác định";
 
   const getStatusBadge = (status) => {
-    const base = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
+    const base =
+      "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium shadow-sm";
     return status === "ACTIVE"
       ? `${base} bg-green-100 text-green-800`
       : `${base} bg-red-100 text-red-800`;
   };
 
   const totalFlashSales = filteredFlashSales.length;
-  const activeFlashSales = filteredFlashSales.filter((sale) => sale.status === "ACTIVE").length;
-  const inactiveFlashSales = filteredFlashSales.filter((sale) => sale.status !== "ACTIVE").length;
+  const activeFlashSales = filteredFlashSales.filter(
+    (sale) => sale.status === "ACTIVE"
+  ).length;
+  const inactiveFlashSales = filteredFlashSales.filter(
+    (sale) => sale.status !== "ACTIVE"
+  ).length;
   const todayFlashSales = filteredFlashSales.filter((sale) => {
     if (!sale.startTime) return false;
     const saleDate = new Date(sale.startTime);
@@ -153,7 +168,9 @@ export default function FlashSaleManagement() {
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="mb-4 sm:mb-0">
-              <h1 className="text-3xl font-bold text-gray-900">Quản lý Flash Sale</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Quản lý Flash Sale
+              </h1>
               <p className="text-sm text-gray-600 mt-1">
                 Theo dõi và quản lý tất cả chương trình Flash Sale
               </p>
@@ -163,6 +180,7 @@ export default function FlashSaleManagement() {
                 onClick={handleRefresh}
                 className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
                 disabled={loading}
+                title="Làm mới danh sách"
               >
                 <RefreshCw
                   className={`h-5 w-5 ${loading ? "animate-spin" : ""}`}
@@ -170,6 +188,7 @@ export default function FlashSaleManagement() {
               </button>
               <button
                 className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                title="Tải xuống dữ liệu"
               >
                 <Download className="h-5 w-5" />
               </button>
@@ -193,8 +212,12 @@ export default function FlashSaleManagement() {
                 <Tag className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tổng Flash Sale</p>
-                <p className="text-2xl font-bold text-gray-900">{totalFlashSales}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Tổng Flash Sale
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {totalFlashSales}
+                </p>
               </div>
             </div>
           </div>
@@ -204,8 +227,12 @@ export default function FlashSaleManagement() {
                 <Tag className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Đang hoạt động</p>
-                <p className="text-2xl font-bold text-gray-900">{activeFlashSales}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Đang hoạt động
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {activeFlashSales}
+                </p>
               </div>
             </div>
           </div>
@@ -216,7 +243,9 @@ export default function FlashSaleManagement() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Tạm dừng</p>
-                <p className="text-2xl font-bold text-gray-900">{inactiveFlashSales}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {inactiveFlashSales}
+                </p>
               </div>
             </div>
           </div>
@@ -227,7 +256,9 @@ export default function FlashSaleManagement() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Hôm nay</p>
-                <p className="text-2xl font-bold text-gray-900">{todayFlashSales}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {todayFlashSales}
+                </p>
               </div>
             </div>
           </div>
@@ -303,95 +334,181 @@ export default function FlashSaleManagement() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        title="Tên và mô tả của Flash Sale"
+                      >
                         Tên Flash Sale
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        title="Thời gian bắt đầu và kết thúc"
+                      >
                         Thời gian
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        title="Trạng thái hiện tại"
+                      >
                         Trạng thái
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        title="Số lượng sản phẩm trong Flash Sale"
+                      >
                         Sản phẩm
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        title="Ngày tạo Flash Sale"
+                      >
                         Ngày tạo
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        title="Ngày cập nhật gần nhất"
+                      >
+                        Ngày cập nhật
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        title="Các thao tác khả dụng"
+                      >
                         Thao tác
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {paginatedFlashSales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                      <tr
+                        key={sale.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <Tag className="h-5 w-5 text-orange-500 mr-2" />
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
+                              <div
+                                className="text-sm font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
+                                title={sale.name}
+                              >
                                 {sale.name}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {sale.description}
+                              <div
+                                className="text-sm text-gray-500 line-clamp-2"
+                                title={sale.description}
+                              >
+                                {sale.description || "Không có mô tả"}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            <div className="flex items-center">
-                              <Calendar size={16} className="mr-1" />
-                              {formatDateTime(sale.startTime)}
+                            <div
+                              className="flex items-center mb-1"
+                              title="Thời gian bắt đầu"
+                            >
+                              <Calendar
+                                size={16}
+                                className="mr-1 text-blue-500"
+                              />
+                              <span className="font-medium bg-blue-50 px-2 py-1 rounded">
+                                {formatDateTime(sale.startTime)}
+                              </span>
                             </div>
-                            <div className="flex items-center mt-1">
-                              <Clock size={16} className="mr-1" />
-                              {formatDateTime(sale.endTime)}
+                            <div
+                              className="flex items-center"
+                              title="Thời gian kết thúc"
+                            >
+                              <Clock size={16} className="mr-1 text-blue-500" />
+                              <span className="font-medium bg-blue-50 px-2 py-1 rounded">
+                                {formatDateTime(sale.endTime)}
+                              </span>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={getStatusBadge(sale.status)}>
+                          <span
+                            className={getStatusBadge(sale.status)}
+                            title={`Trạng thái: ${
+                              sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"
+                            }`}
+                          >
                             <span
                               className={`w-2 h-2 rounded-full mr-1 ${
-                                sale.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"
+                                sale.status === "ACTIVE"
+                                  ? "bg-green-500"
+                                  : "bg-red-500"
                               }`}
                             ></span>
                             {sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <Package size={16} className="mr-1" />
-                            <span className="text-sm text-gray-900">
+                          <div
+                            className="flex items-center"
+                            title="Số lượng sản phẩm"
+                          >
+                            <Package
+                              size={16}
+                              className="mr-1 text-purple-500"
+                            />
+                            <span className="text-sm text-gray-900 font-medium">
                               {(sale.items?.length || 0)} sản phẩm
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDateTime(sale.createdAt)}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div
+                            className="flex items-center text-sm text-gray-900"
+                            title="Ngày tạo Flash Sale"
+                          >
+                            <Calendar
+                              size={16}
+                              className="mr-1 text-green-500"
+                            />
+                            <span className="font-medium bg-green-50 px-2 py-1 rounded">
+                              {formatDateTime(sale.createdAt)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div
+                            className="flex items-center text-sm text-gray-900"
+                            title="Ngày cập nhật gần nhất"
+                          >
+                            <Calendar
+                              size={16}
+                              className="mr-1 text-yellow-500"
+                            />
+                            <span className="font-medium bg-yellow-50 px-2 py-1 rounded">
+                              {formatDateTime(sale.updatedAt)}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
                             <button
-                              onClick={() => openItemsView(sale)}
-                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                              title="Xem sản phẩm"
+                              onClick={() =>
+                                navigate(`/admin/flash-sale/${sale.id}`)
+                              }
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors transform hover:scale-110"
+                              title="Xem chi tiết sản phẩm"
                             >
                               <Eye size={16} />
                             </button>
                             <button
                               onClick={() => openEditForm(sale)}
-                              className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors"
-                              title="Chỉnh sửa"
+                              className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors transform hover:scale-110"
+                              title="Chỉnh sửa Flash Sale"
                             >
                               <Edit size={16} />
                             </button>
                             <button
                               onClick={() => handleDelete(sale.id)}
-                              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                              title="Xóa"
+                              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors transform hover:scale-110"
+                              title="Xóa Flash Sale"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -414,13 +531,26 @@ export default function FlashSaleManagement() {
                     <div className="flex items-center">
                       <Tag className="h-5 w-5 text-orange-500 mr-2" />
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3
+                          className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
+                          title={sale.name}
+                        >
                           {sale.name}
                         </h3>
-                        <p className="text-sm text-gray-500">{sale.description}</p>
+                        <p
+                          className="text-sm text-gray-500 line-clamp-2"
+                          title={sale.description}
+                        >
+                          {sale.description || "Không có mô tả"}
+                        </p>
                       </div>
                     </div>
-                    <span className={getStatusBadge(sale.status)}>
+                    <span
+                      className={getStatusBadge(sale.status)}
+                      title={`Trạng thái: ${
+                        sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"
+                      }`}
+                    >
                       <span
                         className={`w-2 h-2 rounded-full mr-1 ${
                           sale.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"
@@ -429,41 +559,73 @@ export default function FlashSaleManagement() {
                       {sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"}
                     </span>
                   </div>
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar size={16} className="mr-2" />
-                      Bắt đầu: {formatDateTime(sale.startTime)}
+                  <div className="space-y-3 mb-4">
+                    <div
+                      className="flex items-center text-sm text-gray-900"
+                      title="Thời gian bắt đầu"
+                    >
+                      <Calendar size={16} className="mr-2 text-blue-500" />
+                      <span className="font-medium bg-blue-50 px-2 py-1 rounded">
+                        Bắt đầu: {formatDateTime(sale.startTime)}
+                      </span>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock size={16} className="mr-2" />
-                      Kết thúc: {formatDateTime(sale.endTime)}
+                    <div
+                      className="flex items-center text-sm text-gray-900"
+                      title="Thời gian kết thúc"
+                    >
+                      <Clock size={16} className="mr-2 text-blue-500" />
+                      <span className="font-medium bg-blue-50 px-2 py-1 rounded">
+                        Kết thúc: {formatDateTime(sale.endTime)}
+                      </span>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Package size={16} className="mr-2" />
-                      {(sale.items?.length || 0)} sản phẩm
+                    <div
+                      className="flex items-center text-sm text-gray-900"
+                      title="Số lượng sản phẩm"
+                    >
+                      <Package size={16} className="mr-2 text-purple-500" />
+                      <span className="font-medium">
+                        {(sale.items?.length || 0)} sản phẩm
+                      </span>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar size={16} className="mr-2" />
-                      Ngày tạo: {formatDateTime(sale.createdAt)}
+                    <div
+                      className="flex items-center text-sm text-gray-900"
+                      title="Ngày tạo Flash Sale"
+                    >
+                      <Calendar size={16} className="mr-2 text-green-500" />
+                      <span className="font-medium bg-green-50 px-2 py-1 rounded">
+                        Ngày tạo: {formatDateTime(sale.createdAt)}
+                      </span>
+                    </div>
+                    <div
+                      className="flex items-center text-sm text-gray-900"
+                      title="Ngày cập nhật gần nhất"
+                    >
+                      <Calendar size={16} className="mr-2 text-yellow-500" />
+                      <span className="font-medium bg-yellow-50 px-2 py-1 rounded">
+                        Ngày cập nhật: {formatDateTime(sale.updatedAt)}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => openItemsView(sale)}
-                      className="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                      className="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium transform hover:scale-105"
+                      title="Xem chi tiết sản phẩm"
                     >
                       <Eye className="h-4 w-4 inline mr-2" />
                       Xem sản phẩm
                     </button>
                     <button
                       onClick={() => openEditForm(sale)}
-                      className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors transform hover:scale-105"
+                      title="Chỉnh sửa Flash Sale"
                     >
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(sale.id)}
-                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors transform hover:scale-105"
+                      title="Xóa Flash Sale"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

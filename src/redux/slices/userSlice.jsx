@@ -16,7 +16,7 @@ export const getUsers = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const data = await fetchUsers();
-      return data;
+      return Array.isArray(data) ? { content: data } : data;
     } catch (error) {
       return rejectWithValue(error.message || "Failed to fetch users");
     }
@@ -124,12 +124,16 @@ export const fetchUserView = createAsyncThunk(
   }
 );
 
-
-// User slice
 const userSlice = createSlice({
   name: "users",
   initialState: {
-    users: [],
+    users: {
+      content: [],
+      pageable: {},
+      last: false,
+      totalPages: 0,
+      totalElements: 0,
+    },
     userDetail: null,
     loading: false,
     error: null,
@@ -151,7 +155,7 @@ const userSlice = createSlice({
       })
       .addCase(getUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload;
+        state.users.content = action.payload.content || action.payload;
       })
       .addCase(getUsers.rejected, (state, action) => {
         state.loading = false;
@@ -165,7 +169,7 @@ const userSlice = createSlice({
       })
       .addCase(createUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.users.push(action.payload.data);
+        state.users.content.push(action.payload.data);
       })
       .addCase(createUser.rejected, (state, action) => {
         state.loading = false;
@@ -180,15 +184,14 @@ const userSlice = createSlice({
       .addCase(updateUserRole.fulfilled, (state, action) => {
         state.loading = false;
         const updatedUser = action.payload;
-        state.users = state.users.map((user) =>
-          user.id === updatedUser.userId
-            ? { ...user, roles: updatedUser.roles }
-            : user
-        );
-        if (
-          state.userDetail &&
-          state.userDetail.userId === updatedUser.userId
-        ) {
+        if (state.users.content && Array.isArray(state.users.content)) {
+          state.users.content = state.users.content.map((user) =>
+            user.id === updatedUser.userId
+              ? { ...user, roles: updatedUser.roles }
+              : user
+          );
+        }
+        if (state.userDetail && state.userDetail.userId === updatedUser.userId) {
           state.userDetail = { ...state.userDetail, roles: updatedUser.roles };
         }
       })
@@ -205,14 +208,16 @@ const userSlice = createSlice({
       .addCase(removeUserRole.fulfilled, (state, action) => {
         state.loading = false;
         const { userId, roleId } = action.payload;
-        state.users = state.users.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                roles: (user.roles || []).filter((role) => role.id !== roleId),
-              }
-            : user
-        );
+        if (state.users.content && Array.isArray(state.users.content)) {
+          state.users.content = state.users.content.map((user) =>
+            user.id === userId
+              ? {
+                  ...user,
+                  roles: (user.roles || []).filter((role) => role.id !== roleId),
+                }
+              : user
+          );
+        }
         if (state.userDetail && state.userDetail.userId === userId) {
           state.userDetail = {
             ...state.userDetail,
@@ -227,7 +232,7 @@ const userSlice = createSlice({
         state.error = action.payload;
       })
 
-            // Get authenticated user's view
+      // Get authenticated user's view
       .addCase(fetchUserView.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -241,7 +246,6 @@ const userSlice = createSlice({
         state.error = action.payload;
       })
 
-
       // Update user status
       .addCase(updateUserStatus.pending, (state) => {
         state.loading = true;
@@ -250,9 +254,13 @@ const userSlice = createSlice({
       .addCase(updateUserStatus.fulfilled, (state, action) => {
         state.loading = false;
         const { userId, status } = action.payload;
-        state.users = state.users.map((user) =>
-          user.id === userId ? { ...user, status } : user
-        );
+        if (state.users.content && Array.isArray(state.users.content)) {
+          state.users.content = state.users.content.map((user) =>
+            user.id === userId ? { ...user, status } : user
+          );
+        } else {
+          console.warn("state.users.content is not an array:", state.users.content);
+        }
         if (state.userDetail && state.userDetail.userId === userId) {
           state.userDetail = { ...state.userDetail, status };
         }
@@ -269,7 +277,7 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsersPaginateAndFilter.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload.data;
+        state.users = action.payload;
       })
       .addCase(fetchUsersPaginateAndFilter.rejected, (state, action) => {
         state.loading = false;
@@ -298,12 +306,13 @@ const userSlice = createSlice({
       .addCase(updateUserDetailThunk.fulfilled, (state, action) => {
         state.loading = false;
         state.userDetail = action.payload;
-        // Cập nhật user trong danh sách nếu có
-        state.users = state.users.map(user =>
-          user.id === action.payload.userId
-            ? { ...user, ...action.payload }
-            : user
-        );
+        if (state.users.content && Array.isArray(state.users.content)) {
+          state.users.content = state.users.content.map((user) =>
+            user.id === action.payload.userId
+              ? { ...user, ...action.payload }
+              : user
+          );
+        }
       })
       .addCase(updateUserDetailThunk.rejected, (state, action) => {
         state.loading = false;

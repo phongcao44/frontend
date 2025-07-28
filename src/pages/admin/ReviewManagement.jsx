@@ -11,12 +11,10 @@ const ReviewSummaryByProduct = () => {
   const navigate = useNavigate();
   const { reviewSummary, loading } = useSelector((state) => state.review);
 
-  useEffect(() => {
-    dispatch(fetchReviewSummaryByProduct()).then((res) =>
-      console.log("Fetched summary:", res)
-    );
-  }, [dispatch]);
-  console.log("===> reviewSummary", reviewSummary);
+useEffect(() => {
+  dispatch(fetchReviewSummaryByProduct());
+}, [dispatch]);
+
 
   const columns = [
     {

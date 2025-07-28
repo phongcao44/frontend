@@ -37,9 +37,10 @@ export default function useUserManagement() {
   const [rankFilter, setRankFilter] = useState("");
 
   // Derived state
-  const customers = useMemo(() => users?.content || [], [users]);
+  const customers = useMemo(() => users?.data?.content || [], [users]);
   const totalPages = users?.totalPages || 1;
   const totalElements = users?.totalElements || 0;
+
 
   // Filter options
   const statusOptions = [
@@ -62,7 +63,10 @@ export default function useUserManagement() {
       { name: "Tất cả khách hàng", count: totalElements },
       {
         name: "Khách hàng VIP",
-        count: customers.filter((c) => c.roles.some((role) => role === "ROLE_VIP")).length || 0,
+        count:
+          customers.filter((c) =>
+            c.roles.some((role) => role.id === "ROLE_VIP")
+          ).length || 0,
       },
     ],
     [totalElements, customers]
@@ -78,11 +82,22 @@ export default function useUserManagement() {
         sortBy,
         orderBy,
         keyword: searchTerm,
-        status: statusFilter || (activeTab === "Khách hàng VIP" ? "ROLE_VIP" : ""),
+        status: statusFilter,
         rank: rankFilter,
+        role: activeTab === "Khách hàng VIP" ? "ROLE_VIP" : "",
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
-  }, [dispatch, currentPage, itemsPerPage, sortBy, orderBy, searchTerm, statusFilter, rankFilter, activeTab]);
+  }, [
+    dispatch,
+    currentPage,
+    itemsPerPage,
+    sortBy,
+    orderBy,
+    searchTerm,
+    statusFilter,
+    rankFilter,
+    activeTab,
+  ]);
 
   // Debounced search handler
   const debouncedSearch = useCallback(
@@ -103,7 +118,8 @@ export default function useUserManagement() {
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     setCurrentPage(0);
-    setStatusFilter(tabName === "Tất cả khách hàng" ? "" : "ROLE_VIP");
+    setStatusFilter(""); // Reset status filter when changing tabs
+    fetchUsers();
   };
 
   const handleRefresh = () => {
@@ -112,21 +128,24 @@ export default function useUserManagement() {
 
   const handlePageChange = (page, newItemsPerPage) => {
     setCurrentPage(page);
-    if (newItemsPerPage !== itemsPerPage) {
+    if (newItemsPerPage && newItemsPerPage !== itemsPerPage) {
       setItemsPerPage(newItemsPerPage);
     }
+    fetchUsers();
   };
 
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
     setCurrentPage(0);
-    if (e.target.value) setActiveTab("Tất cả khách hàng");
+    setActiveTab("Tất cả khách hàng"); // Reset tab to "Tất cả khách hàng" when status filter is applied
+    fetchUsers();
   };
 
   const handleRankFilterChange = (e) => {
     setRankFilter(e.target.value);
     setCurrentPage(0);
-    if (e.target.value) setActiveTab("Tất cả khách hàng");
+    setActiveTab("Tất cả khách hàng"); // Reset tab to "Tất cả khách hàng" when rank filter is applied
+    fetchUsers();
   };
 
   const handleCreateUser = () => {
@@ -134,8 +153,8 @@ export default function useUserManagement() {
       username: prompt("Enter username:") || "newuser",
       email: prompt("Enter email:") || "newuser@example.com",
       status: "ACTIVE",
-      roles: ["ROLE_USER"],
-      rank: "BRONZE",
+      roles: [{ id: "ROLE_USER" }], // Match the expected roles structure
+      rank: "DONG", // Default rank
     };
     dispatch(createUser(userData));
   };
@@ -146,8 +165,9 @@ export default function useUserManagement() {
   };
 
   const handleUpdateRole = (userId, currentRoles) => {
-    const newRole = currentRoles.includes("ROLE_VIP") ? "ROLE_USER" : "ROLE_VIP";
-    dispatch(updateUserRole({ userId, roleId: newRole }));
+    const hasVipRole = currentRoles.some((role) => role.id === "ROLE_VIP");
+    const newRoleId = hasVipRole ? "ROLE_USER" : "ROLE_VIP";
+    dispatch(updateUserRole({ userId, roleId: newRoleId }));
   };
 
   const handleEdit = (customerId) => {
@@ -157,6 +177,7 @@ export default function useUserManagement() {
   const handleDelete = (userId) => {
     if (window.confirm("Bạn có chắc muốn xóa người dùng này?")) {
       console.log(`Delete user with ID: ${userId}`);
+      // Note: No deleteUser thunk exists in the slice. Add one if needed.
     }
   };
 
@@ -214,6 +235,7 @@ export default function useUserManagement() {
         setSortBy(newSortBy);
         setOrderBy(newOrderBy);
         setCurrentPage(0);
+        fetchUsers();
       },
     },
   };

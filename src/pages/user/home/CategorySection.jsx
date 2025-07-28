@@ -1,55 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  DribbbleOutlined,
-  HeartOutlined,
-  HomeOutlined,
-  LeftOutlined,
-  ManOutlined,
-  RightOutlined,
-  SmileOutlined,
-  WomanOutlined,
-  LaptopOutlined,
-  ShoppingOutlined,
-} from "@ant-design/icons";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import { loadParentCategories } from "../../../redux/slices/categorySlice";
-
-// Icon mapping
-const iconMap = {
-  "Thời trang nữ": <WomanOutlined />,
-  "Thời trang nam": <ManOutlined />,
-  "Điện tử": <LaptopOutlined />,
-  "Nhà cửa & Đời sống": <HomeOutlined />,
-  "Sức khỏe": <HeartOutlined />,
-  "Thể thao & Dã ngoại": <DribbbleOutlined />,
-  "Mẹ & Bé": <SmileOutlined />,
-  "Thú cưng & Tạp hóa": <ShoppingOutlined />,
-};
+import { useNavigate } from "react-router-dom";
 
 const CategorySection = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { parentList, loading, error } = useSelector((state) => state.category);
   const swiperRef = useRef(null);
   const [activeCategoryId, setActiveCategoryId] = useState(null);
 
   useEffect(() => {
-    dispatch(loadParentCategories({ page: 0, limit: 8, sortBy: "name", orderBy: "asc" }));
+    dispatch(
+      loadParentCategories({
+        page: 0,
+        limit: 8,
+        sortBy: "name",
+        orderBy: "asc",
+      })
+    );
   }, [dispatch]);
 
-  const categoriesWithIcons = (parentList || []).map((category) => ({
-    ...category,
-    icon: iconMap[category.name] || <ShoppingOutlined />,
-    active: category.id === activeCategoryId,
-  }));
-
   const handleCategoryClick = (id) => {
-    setActiveCategoryId((prevId) => (prevId === id ? null : id)); // Toggle active state
+    setActiveCategoryId((prevId) => (prevId === id ? null : id));
+    navigate(`/products/category/${id}`);
   };
 
-  if (loading) return <div className="text-center text-gray-600 py-10">Loading categories...</div>;
-  if (error) return <div className="text-center text-red-500 py-10">Error: {error}</div>;
+  if (loading)
+    return (
+      <div className="text-center text-gray-600 py-10">
+        Loading categories...
+      </div>
+    );
+  if (error)
+    return <div className="text-center text-red-500 py-10">Error: {error}</div>;
 
   return (
     <div className="bg-white py-10 px-5">
@@ -86,28 +73,32 @@ const CategorySection = () => {
           onSwiper={(swiper) => (swiperRef.current = swiper)}
           slidesPerView={6}
           spaceBetween={20}
-          loop
+          loop={parentList.length > 6}
         >
-          {categoriesWithIcons.map((category) => (
+          {parentList.map((category) => (
             <SwiperSlide key={category.id}>
               <div
                 onClick={() => handleCategoryClick(category.id)}
                 className={`flex flex-col items-center justify-center h-32 border-2 rounded-lg transition-all duration-300 hover:shadow-md cursor-pointer ${
-                  category.active
+                  activeCategoryId === category.id
                     ? "bg-red-500 border-red-500"
                     : "bg-white border-gray-200"
                 }`}
               >
-                <div
-                  className={`text-3xl mb-2 ${
-                    category.active ? "text-white" : "text-gray-600"
+                <img
+                  src={category.image}
+                  alt={category.name}
+                  className={`w-12 h-12 object-contain mb-2 ${
+                    activeCategoryId === category.id
+                      ? "opacity-100"
+                      : "opacity-80"
                   }`}
-                >
-                  {category.icon}
-                </div>
+                />
                 <span
                   className={`font-medium text-sm truncate ${
-                    category.active ? "text-white" : "text-black"
+                    activeCategoryId === category.id
+                      ? "text-white"
+                      : "text-black"
                   }`}
                 >
                   {category.name}

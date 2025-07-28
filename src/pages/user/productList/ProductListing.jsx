@@ -3,12 +3,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
 import { loadProductsPaginate } from "../../../redux/slices/productSlice";
 import {
-  loadParentCategories,
+  loadFlatCategoryList,
   loadSubCategories,
 } from "../../../redux/slices/categorySlice";
 import ProductCardList from "./ProductCardList";
 
-function SubcategoryNav({ subcategories, onSubcategoryClick, selectedSubcategoryId }) {
+function SubcategoryNav({
+  subcategories,
+  onSubcategoryClick,
+  selectedSubcategoryId,
+}) {
   const validSubcategories = Array.isArray(subcategories) ? subcategories : [];
 
   return (
@@ -43,9 +47,13 @@ function ProductListing() {
   const paginatedProducts = useSelector((state) => state.products.paginated);
   const productsLoading = useSelector((state) => state.products.loading);
   const productsError = useSelector((state) => state.products.error);
-  const subCategoryMap = useSelector((state) => state.category.subCategoryMap || {});
+  const subCategoryMap = useSelector(
+    (state) => state.category.subCategoryMap || {}
+  );
   const categoryLoading = useSelector((state) => state.category.loading);
-  const parentList = useSelector((state) => state.category.parentList || []);
+  const flatCategoryList = useSelector(
+    (state) => state.category.flatCategoryList || []
+  );
 
   const validSubcategories = subCategoryMap[id] || [];
 
@@ -78,20 +86,24 @@ function ProductListing() {
   ];
 
   useEffect(() => {
-    dispatch(
-      loadParentCategories({
-        page: 0,
-        limit: 8,
-        sortBy: "name",
-        orderBy: "asc",
-      })
+    dispatch(loadFlatCategoryList());
+    const currentCategory = flatCategoryList.find(
+      (cat) => cat.id === Number(id)
     );
-    dispatch(loadSubCategories(id));
-  }, [dispatch, id]);
+    if (currentCategory && currentCategory.level < 3) {
+      dispatch(loadSubCategories(id));
+    }
+  }, [dispatch, id, flatCategoryList]);
+
+  useEffect(() => {
+    setSelectedSubcategoryId(null); // Đặt lại khi id từ URL thay đổi
+    setPage(0); // Đặt lại page về 0
+  }, [id]);
 
   const handleSubcategoryClick = (subcategoryId) => {
     setSelectedSubcategoryId(subcategoryId);
     setPage(0);
+    navigate(`/products/category/${subcategoryId}`);
   };
 
   const mapSortBy = (sortBy) => {
@@ -108,14 +120,16 @@ function ProductListing() {
   };
 
   const getPriceRange = () => {
-    const range = priceRanges.find((r) => r.id === selectedPriceRange) || priceRanges[0];
+    const range =
+      priceRanges.find((r) => r.id === selectedPriceRange) || priceRanges[0];
     return { priceMin: range.min, priceMax: range.max };
   };
 
   useEffect(() => {
     const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
     const { priceMin, priceMax } = getPriceRange();
-    const minRating = ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
+    const minRating =
+      ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
 
     const params = {
       page,
@@ -157,28 +171,37 @@ function ProductListing() {
     setPage(0);
   };
 
-  const currentCategory = parentList.find((cat) => cat.id === Number(id)) || { name: "Danh mục" };
-  const breadcrumbItems = [
-    { name: "Trang chủ", slug: "/" },
-    ...(currentCategory ? [{ name: currentCategory.name, slug: id }] : []),
-    ...(selectedSubcategoryId
-      ? [
-          {
-            name:
-              validSubcategories.find((sub) => sub.id === selectedSubcategoryId)?.name ||
-              "Danh mục con",
-            slug: selectedSubcategoryId,
-          },
-        ]
-      : []),
-  ];
+  // Build breadcrumb by tracing back through parentId
+  const buildBreadcrumb = () => {
+    const breadcrumbItems = [{ name: "Trang chủ", slug: "/" }];
+    let currentId = selectedSubcategoryId || Number(id);
+    const categoryPath = [];
 
+    while (currentId) {
+      const category = flatCategoryList.find((cat) => cat.id === currentId);
+      if (category) {
+        categoryPath.unshift({ name: category.name, slug: category.id });
+        currentId = category.parentId;
+      } else {
+        break;
+      }
+    }
+
+    return [...breadcrumbItems, ...categoryPath];
+  };
+
+  const breadcrumbItems = buildBreadcrumb();
+  const currentCategory = flatCategoryList.find(
+    (cat) => cat.id === (selectedSubcategoryId || Number(id))
+  ) || { name: "Danh mục" };
   const productsContent = paginatedProducts?.data?.content || [];
 
   if (productsLoading && page === 0)
     return <div className="text-center py-10">Đang tải...</div>;
   if (productsError)
-    return <div className="text-center py-10 text-red-500">Lỗi: {productsError}</div>;
+    return (
+      <div className="text-center py-10 text-red-500">Lỗi: {productsError}</div>
+    );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -193,7 +216,11 @@ function ProductListing() {
                     ? "text-gray-900"
                     : "hover:text-blue-600 cursor-pointer"
                 }
-                onClick={() => navigate(item.slug === "/" ? "/" : `/category/${item.slug}`)}
+                onClick={() =>
+                  navigate(
+                    item.slug === "/" ? "/" : `/products/category/${item.slug}`
+                  )
+                }
               >
                 {item.name}
               </span>
@@ -203,18 +230,20 @@ function ProductListing() {
 
         <div className="mb-8 text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-            {selectedSubcategoryId
-              ? validSubcategories.find((sub) => sub.id === selectedSubcategoryId)?.name ||
-                "Danh mục con"
-              : currentCategory.name}
+            {currentCategory.name}
           </h1>
-          <p className="text-gray-600">Tìm kiếm những sản phẩm yêu thích của bạn</p>
+          <p className="text-gray-600">
+            Tìm kiếm những sản phẩm yêu thích của bạn
+          </p>
         </div>
 
         {categoryLoading ? (
-          <div className="text-center text-gray-500">Đang tải danh mục con...</div>
+          <div className="text-center text-gray-500">
+            Đang tải danh mục con...
+          </div>
         ) : (
-          validSubcategories.length > 0 && (
+          validSubcategories.length > 0 &&
+          currentCategory.level < 3 && (
             <SubcategoryNav
               subcategories={validSubcategories}
               onSubcategoryClick={handleSubcategoryClick}
@@ -345,25 +374,31 @@ function ProductListing() {
                 key={productData.id}
                 product={{
                   ...productData,
-                  discountType: productData.discountType === "AMOUNT" ? "FIXED_AMOUNT" : productData.discountType,
+                  discountType:
+                    productData.discountType === "AMOUNT"
+                      ? "FIXED_AMOUNT"
+                      : productData.discountType,
                 }}
               />
             ))
           ) : (
-            <div className="text-center text-gray-500">Không tìm thấy sản phẩm.</div>
+            <div className="text-center text-gray-500">
+              Không tìm thấy sản phẩm.
+            </div>
           )}
         </div>
 
-        {productsContent.length > 0 && page < paginatedProducts?.totalPages - 1 && (
-          <div className="text-center">
-            <button
-              onClick={handleLoadMore}
-              className="px-8 py-3 bg-white border border-gray-200 text-gray-700 rounded-full hover:border-blue-300 hover:text-blue-600 transition-all duration-200 font-medium cursor-pointer"
-            >
-              Xem thêm sản phẩm
-            </button>
-          </div>
-        )}
+        {productsContent.length > 0 &&
+          page < paginatedProducts?.totalPages - 1 && (
+            <div className="text-center">
+              <button
+                onClick={handleLoadMore}
+                className="px-8 py-3 bg-white border border-gray-200 text-gray-700 rounded-full hover:border-blue-300 hover:text-blue-600 transition-all duration-200 font-medium cursor-pointer"
+              >
+                Xem thêm sản phẩm
+              </button>
+            </div>
+          )}
       </div>
     </div>
   );

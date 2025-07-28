@@ -32,21 +32,16 @@ export const editBanner = createAsyncThunk(
   "banner/editBanner",
   async ({ id, payload }, { rejectWithValue }) => {
     try {
-      const form = new FormData();
-      form.append("title", payload.title);
-      form.append("position", payload.position);
-      form.append("status", payload.status ? "true" : "false");
-      if (payload.image) {
-        form.append("image", payload.image);
-      }
-      form.append("startAt", new Date(payload.timeStart).toISOString());
-      form.append("endAt", new Date(payload.timeEnd).toISOString());
-      return await updateBanner(id, form);
+      // payload LÚC NÀY ĐÃ LÀ FormData, không cần append gì nữa
+      const response = await updateBanner(id, payload);
+      return response; // hoặc response.data
     } catch (error) {
+      console.error("❌ Lỗi editBanner:", error);
       return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
+
 
 export const removeBanner = createAsyncThunk(
   "banner/removeBanner",

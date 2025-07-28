@@ -58,7 +58,6 @@ export default function useUserDetail() {
     loading,
     error: reduxError,
   } = useSelector((state) => {
-    console.log("state.users:", state.users); // Debug log
     return state.users;
   });
 
@@ -241,16 +240,13 @@ export default function useUserDetail() {
       handleStatusChange: async (newStatus) => {
         setIsLoading(true);
         try {
-          console.log("Updating status to:", newStatus); // Debug log
           await dispatch(
             updateUserStatus({ userId, status: newStatus })
           ).unwrap();
-          console.log("Fetching user detail after status update"); // Debug log
           await dispatch(fetchUserDetail(userId)).unwrap();
           setUserInfo((prev) => normalizeNull({ ...prev, status: newStatus }));
           setSuccess(`Trạng thái đã được thay đổi thành ${newStatus}`);
         } catch (err) {
-          console.error("Error in handleStatusChange:", err); // Debug log
           const errorMessage =
             typeof err === "string"
               ? err

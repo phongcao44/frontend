@@ -5,7 +5,6 @@ import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 import { useNavigate } from "react-router-dom";
-
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -52,6 +51,11 @@ const CategoryBanner = () => {
     setHoveredCategory(null);
   };
 
+  // Handle category click
+  const handleCategoryClick = (categoryId) => {
+    navigate(`/products/category/${categoryId}`);
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* Category Sidebar with Mega Menu */}
@@ -66,6 +70,7 @@ const CategoryBanner = () => {
                   className="flex justify-between items-center px-3 py-3 text-sm text-gray-800 cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
                   onMouseEnter={(e) => handleCategoryHover(cat, e)}
                   onMouseLeave={handleCategoryLeave}
+                  onClick={() => handleCategoryClick(cat.id)}
                 >
                   <span className="font-medium">{cat.name}</span>
                   <FaChevronRight className="text-xs text-gray-400" />
@@ -88,8 +93,8 @@ const CategoryBanner = () => {
             onMouseLeave={handleCategoryLeave}
           >
             {/* Mega Menu Header */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center">
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-Gray-200">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center no-underline">
                 <span className="w-1 h-6 bg-blue-500 mr-3 rounded"></span>
                 {hoveredCategory.name}
               </h3>
@@ -107,8 +112,8 @@ const CategoryBanner = () => {
                       {/* Sub Category Header */}
                       <div className="border-b border-gray-100 pb-2">
                         <a
-                          href="#"
-                          className="font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-200 text-base"
+                          onClick={() => handleCategoryClick(subCategory.id)}
+                          className="font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-200 text-base no-underline cursor-pointer"
                         >
                           {subCategory.name}
                         </a>
@@ -120,16 +125,16 @@ const CategoryBanner = () => {
                           {subCategory.children.slice(0, 6).map((grandChild) => (
                             <a
                               key={grandChild.id}
-                              href="#"
-                              className="block text-gray-600 hover:text-blue-600 hover:pl-2 transition-all duration-200 text-sm py-1"
+                              onClick={() => handleCategoryClick(grandChild.id)}
+                              className="block text-gray-600 hover:text-blue-600 hover:pl-2 transition-all duration-200 text-sm py-1 no-underline cursor-pointer"
                             >
                               {grandChild.name}
                             </a>
                           ))}
                           {subCategory.children.length > 6 && (
                             <a
-                              href="#"
-                              className="block text-blue-500 hover:text-blue-600 font-medium text-sm py-1 hover:pl-2 transition-all duration-200"
+                              onClick={() => handleCategoryClick(subCategory.id)}
+                              className="block text-blue-500 hover:text-blue-600 font-medium text-sm py-1 hover:pl-2 transition-all duration-200 no-underline cursor-pointer"
                             >
                               + Xem thêm {subCategory.children.length - 6} mục
                             </a>
@@ -144,8 +149,8 @@ const CategoryBanner = () => {
                       {/* View All Link for Sub Category */}
                       <div className="pt-2 mt-3 border-t border-gray-50">
                         <a
-                          href="#"
-                          className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors duration-200 hover:gap-2 gap-1"
+                          onClick={() => handleCategoryClick(subCategory.id)}
+                          className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors duration-200 hover:gap-2 gap-1 no-underline cursor-pointer"
                         >
                           Xem tất cả
                           <FaChevronRight className="text-xs" />
@@ -168,8 +173,8 @@ const CategoryBanner = () => {
                   Danh mục: {hoveredCategory.name}
                 </span>
                 <a
-                  href="#"
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors duration-200"
+                  onClick={() => handleCategoryClick(hoveredCategory.id)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors duration-200 no-underline cursor-pointer"
                 >
                   Xem tất cả sản phẩm
                 </a>
@@ -200,9 +205,9 @@ const CategoryBanner = () => {
               navigation={
                 showNav
                   ? {
-                    prevEl: prevRef.current,
-                    nextEl: nextRef.current,
-                  }
+                      prevEl: prevRef.current,
+                      nextEl: nextRef.current,
+                    }
                   : false
               }
               onInit={(swiper) => {
@@ -225,7 +230,7 @@ const CategoryBanner = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent"></div>
                     <div className="absolute inset-0 flex flex-col justify-center items-start px-10">
-                      <h2 className="text-white text-4xl font-bold mb-4 drop-shadow-lg max-w-md">
+                      <h2 className="text-white text-4xl font-bold mb-4 drop-shadow-lg max-w-md no-underline">
                         {item.title}
                       </h2>
                       <button
