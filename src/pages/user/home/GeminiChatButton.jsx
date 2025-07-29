@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import Cookies from "js-cookie";
+import ThreeDAvatar from "../../../components/ThreeDAvatar";
 
 const GeminiChatButton = () => {
   const [showChat, setShowChat] = useState(false);
@@ -108,6 +109,7 @@ const GeminiChatButton = () => {
       >
         💬
       </button>
+      {/* <ThreeDAvatar onClick={() => setShowChat(!showChat)} /> */}
 
       {/* Khung chat */}
       {showChat && (
@@ -129,7 +131,17 @@ const GeminiChatButton = () => {
           }}
         >
           {/* Header */}
-          <div style={{ backgroundColor: "#1677ff", color: "#fff", padding: "12px 16px", fontWeight: "bold", fontSize: 16, display: "flex", justifyContent: "space-between" }}>
+          <div
+            style={{
+              backgroundColor: "#1677ff",
+              color: "#fff",
+              padding: "12px 16px",
+              fontWeight: "bold",
+              fontSize: 16,
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
             Cô Trợ Lý 🤖
             <span
               style={{ cursor: "pointer", fontWeight: "bold" }}
@@ -152,12 +164,20 @@ const GeminiChatButton = () => {
             }}
           >
             {chatHistory.map((msg, idx) => (
-              <div key={idx} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+              <div
+                key={idx}
+                style={{
+                  display: "flex",
+                  justifyContent:
+                    msg.role === "user" ? "flex-end" : "flex-start",
+                }}
+              >
                 <div
                   style={{
                     padding: "10px 14px",
                     borderRadius: 16,
-                    backgroundColor: msg.role === "user" ? "#1677ff" : "#e5e5ea",
+                    backgroundColor:
+                      msg.role === "user" ? "#1677ff" : "#e5e5ea",
                     color: msg.role === "user" ? "#fff" : "#000",
                     maxWidth: "80%",
                     whiteSpace: "pre-wrap",
@@ -172,7 +192,13 @@ const GeminiChatButton = () => {
           </div>
 
           {/* Nhập prompt */}
-          <div style={{ padding: 10, borderTop: "1px solid #eee", backgroundColor: "#fff" }}>
+          <div
+            style={{
+              padding: 10,
+              borderTop: "1px solid #eee",
+              backgroundColor: "#fff",
+            }}
+          >
             <textarea
               rows={2}
               value={prompt}

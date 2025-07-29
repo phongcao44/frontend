@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../../redux/slices/authSlice";
 import { Link, useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -43,7 +45,7 @@ const Login = () => {
       errors.email = "Email không đúng định dạng";
     }
 
-    // Password validation
+    // Password validation (commented out as in original code)
     // if (!formData.password.trim()) {
     //   errors.password = "Vui lòng nhập mật khẩu";
     // } else if (formData.password.length < 6 || formData.password.length > 20) {
@@ -61,11 +63,27 @@ const Login = () => {
     e.preventDefault();
 
     if (!validateForm()) {
+      console.log("Validation failed:", validationErrors);
       return;
     }
 
     try {
+      console.log("Attempting login with formData:", formData);
       const res = await dispatch(loginUser(formData)).unwrap();
+      console.log("Login response:", res);
+
+      // Show success toast notification in top-right corner
+      toast.success(`${formData.email} đã đăng nhập thành công`, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "light",
+        className: "custom-toast-success",
+      });
+
 
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");
@@ -76,7 +94,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Đăng nhập lỗi:", err);
-      console.log(err);
+      console.log("Error details:", err);
       const errorMessage =
         err?.data?.toLowerCase() ||
         err?.message?.toLowerCase() ||
@@ -91,22 +109,49 @@ const Login = () => {
           ? "Tài khoản không tồn tại hoặc sai mật khẩu"
           : "",
       }));
+
+      // Show error toast notification in top-right corner
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "light",
+        className: "custom-toast-error",
+      });
     }
   };
 
   const handleForgotPassword = () => {
+    toast.info("Đang chuyển hướng đến trang quên mật khẩu...", {
+      position: "top-right",
+      autoClose: 2000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: "light",
+      className: "custom-toast-info",
+    });
     navigate("/forgot-password");
   };
+
   const handleGoogleLogin = () => {
-    console.log("Google sign up clicked");
-    setError(null);
-    setValidationErrors({
-      email: "",
-      username: "",
-      password: "",
-      confirmPassword: "",
+    toast.info("Đang chuyển hướng đến đăng nhập với Google...", {
+      position: "top-right",
+      autoClose: 2000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: "light",
+      className: "custom-toast-info",
     });
+    window.location.href = "http://localhost:8080/oauth2/authorization/google";
   };
+
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
       {/* Left */}
@@ -132,8 +177,9 @@ const Login = () => {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.email ? "border-red-500" : "border-gray-300"
-                  } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                  validationErrors.email ? "border-red-500" : "border-gray-300"
+                } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               {validationErrors.email && (
                 <p className="text-red-500 text-sm mt-1">
@@ -149,10 +195,11 @@ const Login = () => {
                 placeholder="Mật khẩu"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.password
-                  ? "border-red-500"
-                  : "border-gray-300"
-                  } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                  validationErrors.password
+                    ? "border-red-500"
+                    : "border-gray-300"
+                } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               <button
                 type="button"
@@ -200,7 +247,6 @@ const Login = () => {
             </div>
 
             <div className="flex flex-col gap-4">
-
               <button
                 onClick={handleSubmit}
                 disabled={loading}
@@ -210,6 +256,7 @@ const Login = () => {
               </button>
               <a
                 href="http://localhost:8080/oauth2/authorization/google"
+                onClick={handleGoogleLogin}
                 className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-4 px-6 rounded-lg border border-gray-300 transition-colors duration-200 flex items-center justify-center gap-3"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -253,6 +300,20 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* ToastContainer for rendering notifications */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 };

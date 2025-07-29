@@ -18,15 +18,12 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
   const { cart } = useSelector((state) => state.cart);
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
   
-  // Kiểm tra xem sản phẩm có trong wishlist không
   const isInWishlist = wishlistItems.some(
     item => {
       const itemProductId = item.productId || item.product?.id;
-      return itemProductId == productId; // Sử dụng == để so sánh string và number
+      return itemProductId == productId; 
     }
   );
-
-
 
   useEffect(() => {
     if (productId) {
@@ -34,7 +31,6 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
     }
   }, [dispatch, productId]);
 
-  // Load wishlist khi component mount
   useEffect(() => {
     dispatch(getUserWishlist());
   }, [dispatch]);
@@ -67,19 +63,7 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
     setTimeout(() => setIsAdding(false), 500);
 
     const variantId = matchedVariant?.id;
-    console.log("j variantId:", variantId);
-    // const cartQuantity =
-    //   cart.items?.find((item) => item.variantId === variantId)?.quantity || 0;
- //   const totalQuantity = quantity;
-    //
-    // if (totalQuantity > maxQuantity) {
-    //   message.warning(
-    //     `Bạn đã thêm ${cartQuantity} sản phẩm, chỉ có thể thêm tối đa ${
-    //       maxQuantity - cartQuantity
-    //     } sản phẩm nữa.`
-    //   );
-    //   return;
-    // }
+    console.log("variantId:", variantId);
 
     try {
       await dispatch(addItemToCart({ variantId, quantity })).unwrap();

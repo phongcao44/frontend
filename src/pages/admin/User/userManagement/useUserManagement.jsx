@@ -9,6 +9,7 @@ import {
   updateUserRole,
   clearError,
 } from "../../../../redux/slices/userSlice";
+import { use } from "react";
 
 // Debounce utility
 const debounce = (func, wait) => {
@@ -38,8 +39,8 @@ export default function useUserManagement() {
 
   // Derived state
   const customers = useMemo(() => users?.data?.content || [], [users]);
-  const totalPages = users?.totalPages || 1;
-  const totalElements = users?.totalElements || 0;
+  const totalPages = users?.data?.totalPages || 1;
+  const totalElements = users?.data?.totalElements || 0;
 
 
   // Filter options
@@ -87,6 +88,7 @@ export default function useUserManagement() {
         role: activeTab === "Khách hàng VIP" ? "ROLE_VIP" : "",
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
+    console.log("đ ", rankFilter, statusFilter)
   }, [
     dispatch,
     currentPage,
@@ -118,7 +120,7 @@ export default function useUserManagement() {
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     setCurrentPage(0);
-    setStatusFilter(""); // Reset status filter when changing tabs
+    setStatusFilter(""); 
     fetchUsers();
   };
 

@@ -3,17 +3,8 @@ import axiosInstance from "../utils/axiosInstance";
 export const fetchCart = async () => {
   try {
     const res = await axiosInstance.get("/user/carts");
-    const data = res.data;
+    return res.data;
 
-    const itemsWithImage = data.items.map((item) => ({
-      ...item,
-      image: `https://picsum.photos/seed/${item.cartItemId}/200/200`,
-    }));
-
-    return {
-      cartId: data.cartId,
-      items: itemsWithImage,
-    };
   } catch (err) {
     console.error("❌ Fetch Cart failed:", err);
     throw err;
@@ -22,6 +13,7 @@ export const fetchCart = async () => {
 
 export const addToCart = async (payload) => {
   try {
+    console.log(payload)
     const res = await axiosInstance.post("/user/carts/add", payload);
     return res.data;
   } catch (err) {

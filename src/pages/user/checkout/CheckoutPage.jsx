@@ -25,6 +25,7 @@ const CheckoutPage = () => {
     provinceName: "",
     districtName: "",
     wardName: "",
+    useSavedAddress: false, // Added to match AddressSection expectation
   });
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [couponCode, setCouponCode] = useState("");
@@ -32,7 +33,6 @@ const CheckoutPage = () => {
   const [voucherId, setVoucherId] = useState(0);
   const [usedPoints, setUsedPoints] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [shippingFee, setShippingFee] = useState(0);
 
   useEffect(() => {
@@ -48,21 +48,23 @@ const CheckoutPage = () => {
       } catch (err) {
         console.error("Tính phí ship thất bại", err);
         setShippingFee(0);
+        setError("Không thể tính phí vận chuyển. Vui lòng kiểm tra địa chỉ.");
       }
     };
 
     fetchShippingFee();
   }, [selectedCartItems, formData.addressId]);
 
-  // Tính tổng tiền dựa trên totalPrice hoặc discountedPrice
+  // Calculate total cart price using item.totalPrice directly
   const totalCartPrice = selectedCartItems.reduce((sum, item) => {
+    // Ensure totalPrice is valid, fallback to discountedPrice or originalPrice
     const itemPrice =
-      item.totalPrice > 0
+      item.totalPrice && item.totalPrice > 0
         ? item.totalPrice
-        : item.discountedPrice > 0
-        ? item.discountedPrice
-        : item.originalPrice;
-    return sum + (itemPrice * item.quantity || 0);
+        : (item.discountedPrice && item.discountedPrice > 0
+            ? item.discountedPrice
+            : item.originalPrice || 0) * (item.quantity || 1);
+    return sum + itemPrice;
   }, 0);
 
   const totalWithShipping = totalCartPrice + shippingFee;
@@ -77,9 +79,7 @@ const CheckoutPage = () => {
   const handleVnpayPayment = async (orderId) => {
     try {
       const response = await createVnpayPayment(orderId);
-
       if (response.code === "00" && response.data) {
-        // Chuyển hướng tới trang thanh toán VNPAY
         window.location.href = response.data;
       } else {
         throw new Error(response.message || "Tạo link thanh toán thất bại");
@@ -94,10 +94,7 @@ const CheckoutPage = () => {
   const handleCodPayment = async (orderId) => {
     try {
       const response = await createCodPayment(orderId);
-
-      if (response && response.id) {
-        // window.location.href = `/payment-success?orderId=${orderId}`;
-      } else {
+      if (!response || !response.id) {
         throw new Error("Tạo thanh toán COD thất bại");
       }
     } catch (err) {
@@ -118,7 +115,6 @@ const CheckoutPage = () => {
     setError(null);
 
     try {
-      // Tạo payload theo format yêu cầu
       const payload = {
         addressId: formData.addressId,
         paymentMethod,
@@ -129,36 +125,28 @@ const CheckoutPage = () => {
 
       console.log("Checkout payload:", payload);
 
-      // Gọi API tạo đơn hàng
-      const result = await dispatch(
-        checkoutSelectedItemsThunk(payload)
-      ).unwrap();
-
+      const result = await dispatch(checkoutSelectedItemsThunk(payload)).unwrap();
       console.log("Checkout result:", result);
 
       if (paymentMethod === "COD") {
         const orderId = result.orderId || result.id;
         if (orderId) {
           await handleCodPayment(orderId);
+          Swal.fire({
+            title: "Đặt hàng thành công!",
+            text: "Đơn hàng của bạn đã được xác nhận. Bạn sẽ thanh toán khi nhận hàng.",
+            icon: "success",
+            timer: 2000,
+            showConfirmButton: false,
+          }).then(() => {
+            navigate("/payment-success", {
+              state: { orderId, paymentMethod: "COD" },
+            });
+          });
         } else {
           throw new Error("Không thể lấy mã đơn hàng");
         }
-        Swal.fire({
-          title: "Đặt hàng thành công!",
-          text: "Đơn hàng của bạn đã được xác nhận. Bạn sẽ thanh toán khi nhận hàng.",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        }).then(() => {
-          navigate("/payment-success", {
-            state: {
-              orderId: result.orderId || result.id,
-              paymentMethod: "COD",
-            },
-          });
-        });
       } else {
-        // Các phương thức khác: Chuyển hướng đến VNPAY
         const orderId = result.orderId || result.id;
         if (orderId) {
           await handleVnpayPayment(orderId);
@@ -179,7 +167,6 @@ const CheckoutPage = () => {
         <div className="max-w-6xl mx-auto px-4 mb-4 text-red-600">{error}</div>
       )}
       <div className="max-w-6xl mx-auto px-4">
-        {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-8">
           <span>Tài khoản</span>
           <span className="mx-2">/</span>
@@ -193,7 +180,6 @@ const CheckoutPage = () => {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Billing */}
           <div className="p-8">
             <h2 className="text-2xl font-semibold mb-6">
               Thông tin thanh toán
@@ -207,19 +193,17 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Order Summary */}
           <div className="p-8">
             <div className="space-y-6">
               <div className="space-y-4">
                 {selectedCartItems.length > 0 ? (
                   selectedCartItems.map((item) => {
-                    // Tính giá hiển thị cho từng item
                     const displayPrice =
-                      item.totalPrice > 0
+                      item.totalPrice && item.totalPrice > 0
                         ? item.totalPrice
-                        : item.discountedPrice > 0
-                        ? item.discountedPrice
-                        : item.originalPrice;
+                        : (item.discountedPrice && item.discountedPrice > 0
+                            ? item.discountedPrice
+                            : item.originalPrice || 0) * (item.quantity || 1);
 
                     return (
                       <div
@@ -228,9 +212,9 @@ const CheckoutPage = () => {
                       >
                         <div className="flex items-center space-x-4">
                           <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                            {item.image ? (
+                            {item.imageUrl ? (
                               <img
-                                src={item.image}
+                                src={item.imageUrl}
                                 alt={item.productName}
                                 className="w-full h-full object-cover"
                               />
@@ -245,25 +229,20 @@ const CheckoutPage = () => {
                               {item.productName}
                             </div>
                             <div className="text-sm text-gray-500">
-                              Màu: {item.color} | Size: {item.size}
+                              Màu: {item.color || "N/A"} | Size: {item.size || "N/A"}
                             </div>
                             <div className="text-sm text-gray-500">
                               Số lượng: {item.quantity}
                             </div>
-                            {/* Hiển thị giá gốc và giá giảm nếu có */}
                             <div className="text-sm">
-                              {item.discountedPrice > 0 &&
+                              {item.discountedPrice && item.discountedPrice > 0 &&
                               item.discountedPrice < item.originalPrice ? (
                                 <div className="flex items-center space-x-2">
                                   <span className="text-gray-500 line-through">
-                                    {item.originalPrice.toLocaleString("vi-VN")}{" "}
-                                    ₫
+                                    {item.originalPrice.toLocaleString("vi-VN")} ₫
                                   </span>
                                   <span className="text-red-600 font-medium">
-                                    {item.discountedPrice.toLocaleString(
-                                      "vi-VN"
-                                    )}{" "}
-                                    ₫
+                                    {item.discountedPrice.toLocaleString("vi-VN")} ₫
                                   </span>
                                 </div>
                               ) : (
@@ -276,10 +255,7 @@ const CheckoutPage = () => {
                         </div>
                         <div className="text-right">
                           <div className="text-gray-900 font-medium">
-                            {(displayPrice * item.quantity).toLocaleString(
-                              "vi-VN"
-                            )}{" "}
-                            ₫
+                            {displayPrice.toLocaleString("vi-VN")} ₫
                           </div>
                         </div>
                       </div>
@@ -290,13 +266,11 @@ const CheckoutPage = () => {
                 )}
               </div>
 
-              {/* Voucher và điểm thưởng */}
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">
                   Mã giảm giá & Điểm thưởng
                 </h3>
                 <div className="space-y-4">
-                  {/* Voucher */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Mã voucher
@@ -322,8 +296,6 @@ const CheckoutPage = () => {
                       </button>
                     </div>
                   </div>
-
-                  {/* Điểm thưởng */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Sử dụng điểm thưởng
@@ -342,7 +314,6 @@ const CheckoutPage = () => {
                 </div>
               </div>
 
-              {/* Payment Method Selection */}
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">
                   Phương thức thanh toán
@@ -367,7 +338,6 @@ const CheckoutPage = () => {
                 </div>
               </div>
 
-              {/* Order Total */}
               <div className="border-t pt-6">
                 <div className="flex justify-between mb-4">
                   <span>Tạm tính:</span>
