@@ -1,73 +1,103 @@
-# Hướng dẫn chức năng Quên Mật khẩu
+# Forgot Password Feature Implementation
 
-## Tổng quan
-Chức năng quên mật khẩu cho phép người dùng đặt lại mật khẩu khi quên mật khẩu cũ.
+## Overview
+Hệ thống quên mật khẩu đã được cập nhật để hoạt động với backend API và hiển thị popup thông báo thành công.
 
-## Luồng hoạt động
+## Flow hoạt động
 
-### 1. Trang Đăng nhập
-- Người dùng vào trang đăng nhập
-- Click nút "Quên mật khẩu?"
-- Chuyển đến trang ForgotPassword
-
-### 2. Trang Quên mật khẩu (`/forgot-password`)
-- Người dùng nhập email Gmail (@gmail.com)
-- Validation chỉ chấp nhận Gmail
+### 1. Forgot Password Page (`/forgot-password`)
+- User nhập email
 - Click "Đặt lại mật khẩu"
-- Hệ thống gọi API và tạo token demo
-- Tự động chuyển đến trang ResetPassword với token
+- Backend kiểm tra email có tồn tại không
+- Nếu thành công: Hiển thị popup thông báo "Gửi thông tin đổi mật khẩu mới thành công! Vui lòng kiểm tra email của bạn và click vào link để đặt lại mật khẩu."
+- Nếu lỗi: Hiển thị thông báo lỗi cụ thể
 
-### 3. Trang Đặt lại mật khẩu (`/reset-password/:token`)
-- Người dùng nhập mật khẩu mới và xác nhận
-- Click "Đặt lại mật khẩu"
-- Hiển thị thông báo thành công
-- Chuyển về trang đăng nhập
+### 2. Email Reset Link
+- Backend gửi email với link: `http://localhost:5173/reset-password?token=xxx`
+- User click vào link trong email
 
-## Các trang đã tạo
+### 3. Reset Password Page (`/reset-password`)
+- Tự động lấy token từ URL query parameter
+- User nhập mật khẩu mới và xác nhận
+- Gửi request đến backend để đặt lại mật khẩu
+- Nếu thành công: Redirect đến `/login` với thông báo thành công
+- Nếu lỗi: Hiển thị thông báo lỗi
 
-### 1. ForgotPassword.jsx
-- Form nhập email Gmail với validation
-- Chỉ chấp nhận email @gmail.com
-- Gọi API forgotPassword
-- Tự động chuyển đến ResetPassword với token demo
+## Files đã cập nhật
 
-### 2. ResetPassword.jsx
-- Form nhập mật khẩu mới và xác nhận
-- Validation mật khẩu
-- Gọi API resetPassword
-- Hiển thị thông báo thành công
+### 1. `src/pages/user/ForgotPassword.jsx`
+- Sử dụng Redux thunk `forgotPasswordUser`
+- Hiển thị popup thành công thay vì redirect
+- Xử lý lỗi cụ thể cho "Email không tồn tại"
+- Loại bỏ validation chỉ cho Gmail
 
-## Routes
-- `/forgot-password` - Trang quên mật khẩu
-- `/reset-password/:token` - Trang đặt lại mật khẩu
+### 2. `src/pages/user/ResetPassword.jsx`
+- Sử dụng `useSearchParams` để lấy token từ query parameter
+- Sử dụng Redux thunk `resetPasswordUser`
+- Xử lý lỗi tốt hơn với kiểm tra kiểu dữ liệu
+- Redirect đến login page với thông báo thành công
 
-## API Endpoints (Backend)
-- `POST /api/v1/auth/forgot-password` - Gửi yêu cầu đặt lại mật khẩu
-- `POST /api/v1/auth/reset-password?token={token}` - Đặt lại mật khẩu
+### 3. `src/components/SuccessPopup.jsx` (mới)
+- Component popup hiển thị thông báo thành công
+- Tự động đóng sau 5 giây
+- Có thể đóng thủ công
 
-## Demo Mode
-- Khi API chưa sẵn sàng, hệ thống sẽ tạo token demo
-- Token demo có format: `demo-token-{timestamp}`
-- Demo mode cho phép test chức năng mà không cần backend
+### 4. `src/routes/UserRoutes.jsx`
+- Cập nhật route từ `reset-password/:token` thành `reset-password`
+- Token được truyền qua query parameter
 
-## Cách sử dụng
+### 5. `src/redux/slices/authSlice.jsx`
+- Sửa lỗi typo `return data;zz` thành `return data;`
 
-1. Vào trang đăng nhập
-2. Click "Quên mật khẩu?"
-3. Nhập email Gmail (ví dụ: example@gmail.com)
-4. Click "Đặt lại mật khẩu"
-5. Nhập mật khẩu mới và xác nhận
-6. Click "Đặt lại mật khẩu"
-7. Thấy thông báo thành công
-8. Click "Đăng nhập ngay"
+## API Endpoints
 
-## Tính năng
+### Forgot Password
+```
+POST /api/v1/auth/forgot-password
+Body: { "email": "user@example.com" }
+```
 
-- ✅ Validation email Gmail (@gmail.com)
-- ✅ Validation mật khẩu
-- ✅ Hiển thị/ẩn mật khẩu
-- ✅ Loading states
-- ✅ Error handling
-- ✅ Demo mode
-- ✅ Responsive design
-- ✅ Navigation giữa các trang 
+### Reset Password
+```
+POST /api/v1/auth/reset-password?token=xxx
+Body: { "password": "newpassword123" }
+```
+
+## Error Handling
+
+### Forgot Password Errors
+- "Email không tồn tại trong hệ thống" - khi email không có trong database
+- "Có lỗi xảy ra khi gửi yêu cầu đặt lại mật khẩu" - lỗi chung
+
+### Reset Password Errors
+- "Token không hợp lệ hoặc đã hết hạn" - khi token sai hoặc hết hạn
+- "Mật khẩu không hợp lệ" - khi password không đúng format
+- "Yêu cầu không hợp lệ" - khi request format sai
+- "Có lỗi xảy ra khi đặt lại mật khẩu" - lỗi chung
+
+## Testing
+
+### Test Forgot Password
+1. Vào `/forgot-password`
+2. Nhập email hợp lệ
+3. Click "Đặt lại mật khẩu"
+4. Kiểm tra popup thông báo thành công xuất hiện
+5. Kiểm tra email field được clear
+
+### Test Reset Password
+1. Click link trong email (hoặc truy cập `/reset-password?token=xxx`)
+2. Nhập mật khẩu mới và xác nhận
+3. Click "Đặt lại mật khẩu"
+4. Kiểm tra redirect đến `/login` với thông báo thành công
+
+### Test Error Cases
+1. Nhập email không tồn tại → Kiểm tra thông báo lỗi
+2. Sử dụng token không hợp lệ → Kiểm tra thông báo lỗi
+3. Nhập mật khẩu không khớp → Kiểm tra validation
+
+## Notes
+- Popup thành công tự động đóng sau 5 giây
+- User có thể đóng popup thủ công
+- Sau khi gửi email thành công, user vẫn ở lại trang `/forgot-password`
+- Token được truyền qua query parameter thay vì URL parameter
+- Backend gửi email với link format: `http://localhost:5173/reset-password?token=xxx` 

@@ -250,21 +250,21 @@ const ProductForm = () => {
         message.error("Vui lòng chọn một chính sách đổi trả");
         return;
       }
-      if (!formData.specifications.length) {
-        message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
-        return;
-      }
+      // if (!formData.specifications.length) {
+      //   message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
+      //   return;
+      // }
       if (!fileList.length) {
         message.error("Vui lòng thêm ít nhất một hình ảnh sản phẩm");
         return;
       }
 
-      for (const spec of formData.specifications) {
-        if (!spec.key?.trim() || !spec.value?.trim()) {
-          message.error("Thông số kỹ thuật không được để trống");
-          return;
-        }
-      }
+      // for (const spec of formData.specifications) {
+      //   if (!spec.key?.trim() || !spec.value?.trim()) {
+      //     message.error("Thông số kỹ thuật không được để trống");
+      //     return;
+      //   }
+      // }
 
       const productData = {
         name: values.productName,
@@ -341,21 +341,21 @@ const ProductForm = () => {
         message.error("Vui lòng chọn một chính sách đổi trả");
         return;
       }
-      if (!currentSpecs.length) {
-        message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
-        return;
-      }
+      // if (!currentSpecs.length) {
+      //   message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
+      //   return;
+      // }
       if (!fileList.length) {
         message.error("Vui lòng thêm ít nhất một hình ảnh sản phẩm");
         return;
       }
 
-      for (const spec of currentSpecs) {
-        if (!spec.key?.trim() || !spec.value?.trim()) {
-          message.error("Thông số kỹ thuật không được để trống");
-          return;
-        }
-      }
+      // for (const spec of currentSpecs) {
+      //   if (!spec.key?.trim() || !spec.value?.trim()) {
+      //     message.error("Thông số kỹ thuật không được để trống");
+      //     return;
+      //   }
+      // }
 
       const updatedProduct = {
         name: values.productName,

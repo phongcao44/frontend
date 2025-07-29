@@ -6,6 +6,9 @@ import {
   forgotPassword,
   resetPassword,
   changePassword,
+  getGoogleLoginUrl,
+  exchangeGoogleCodeForToken,
+  redirectToGoogle,
 } from "../../services/authService";
 import Cookies from "js-cookie";
 
@@ -87,7 +90,7 @@ export const resetPasswordUser = createAsyncThunk(
   async ({ token, request }, { rejectWithValue }) => {
     try {
       const data = await resetPassword(token, request);
-      return data;zz
+      return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -99,6 +102,71 @@ export const changePasswordUser = createAsyncThunk(
   async (request, { rejectWithValue }) => {
     try {
       const data = await changePassword(request);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// Google OAuth Actions
+export const googleLoginUser = createAsyncThunk(
+  "auth/googleLogin",
+  async (googleData, { rejectWithValue }) => {
+    try {
+      // Lưu token và thông tin user từ Google response
+      const userInfo = {
+        id: googleData?.user?.id || "",
+        username: googleData?.user?.username || "",
+        email: googleData?.user?.email || "",
+        status: googleData?.user?.status || "ACTIVE",
+        createdAt: googleData?.user?.createdAt || "",
+        updatedAt: googleData?.user?.updatedAt || "",
+        userPoint: googleData?.user?.userPoint || 0,
+        roles: googleData?.roles || [],
+      };
+
+      Cookies.set("access_token", googleData?.accessToken || "", {
+        sameSite: "Strict",
+        secure: true,
+        path: "/",
+      });
+
+      Cookies.set("user", JSON.stringify(userInfo), {
+        sameSite: "Strict",
+        secure: true,
+        path: "/",
+      });
+
+      return {
+        data: {
+          user: userInfo,
+          accessToken: googleData?.accessToken,
+          roles: googleData?.roles
+        }
+      };
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const initiateGoogleLogin = createAsyncThunk(
+  "auth/initiateGoogleLogin",
+  async (_, { rejectWithValue }) => {
+    try {
+      await redirectToGoogle();
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const handleGoogleCallback = createAsyncThunk(
+  "auth/handleGoogleCallback",
+  async ({ code, redirectUri }, { rejectWithValue }) => {
+    try {
+      const data = await exchangeGoogleCodeForToken(code, redirectUri);
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -197,6 +265,45 @@ const authSlice = createSlice({
         state.error = action.payload || action.error.message;
       })
       .addCase(changePasswordUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+
+      // Google OAuth
+      .addCase(googleLoginUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(googleLoginUser.fulfilled, (state, action) => {
+        state.user = action.payload.data;
+        state.loading = false;
+        state.isLoggedIn = true;
+      })
+      .addCase(googleLoginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+
+      .addCase(initiateGoogleLogin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(initiateGoogleLogin.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(initiateGoogleLogin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+
+      .addCase(handleGoogleCallback.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(handleGoogleCallback.fulfilled, (state, action) => {
+        state.loading = false;
+      })
+      .addCase(handleGoogleCallback.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
       });

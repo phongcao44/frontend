@@ -208,8 +208,9 @@ export default function OrderCancelled() {
     }).length;
 
     const statusOptions = [
-        { value: "", label: "Đơn hàng đã hủy theo trạng thái" },
         { value: "CANCELLED", label: "Tất cả đơn hàng đã hủy" },
+        { value: "", label: "Đơn hàng đã hủy theo trạng thái" },
+
     ];
 
     return (

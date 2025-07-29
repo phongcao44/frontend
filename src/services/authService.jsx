@@ -52,6 +52,11 @@ export const forgotPassword = async (request) => {
 //  Reset Password
 export const resetPassword = async (token, request) => {
   try {
+    console.log("Sending reset password request:", {
+      url: `/auth/reset-password?token=${token}`,
+      data: request
+    });
+    
     const response = await axiosInstance.post(
       `/auth/reset-password?token=${token}`,
       request
@@ -59,6 +64,7 @@ export const resetPassword = async (token, request) => {
     return response.data;
   } catch (err) {
     console.error("Reset Password failed:", err);
+    console.error("Error response:", err.response?.data);
     throw err;
   }
 };
@@ -71,5 +77,41 @@ export const changePassword = async (request) => {
   } catch (err) {
     console.error("Change Password failed:", err);
     throw err;
+  }
+};
+
+// Google OAuth - Lấy URL redirect để đăng nhập Google
+export const getGoogleLoginUrl = async () => {
+  try {
+    const response = await axiosInstance.get("/auth/google-login");
+    return response.data.data.redirectUrl;
+  } catch (error) {
+    console.error("Lỗi khi lấy Google login URL:", error);
+    throw error;
+  }
+};
+
+// Google OAuth - Xử lý code từ Google callback
+export const exchangeGoogleCodeForToken = async (code, redirectUri) => {
+  try {
+    const response = await axiosInstance.post("/auth/google/code", {
+      code: code,
+      redirectUri: redirectUri
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error("Lỗi khi trao đổi code lấy token:", error);
+    throw error;
+  }
+};
+
+// Google OAuth - Redirect đến Google OAuth
+export const redirectToGoogle = async () => {
+  try {
+    const redirectUrl = await getGoogleLoginUrl();
+    window.location.href = redirectUrl;
+  } catch (error) {
+    console.error("Lỗi khi redirect đến Google:", error);
+    throw error;
   }
 };
