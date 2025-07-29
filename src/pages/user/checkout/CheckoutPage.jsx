@@ -96,7 +96,7 @@ const CheckoutPage = () => {
       const response = await createCodPayment(orderId);
 
       if (response && response.id) {
-        // window.location.href = `/payment-success?orderId=${orderId}`;
+        window.location.href = `/payment-success/${orderId}`;
       } else {
         throw new Error("Tạo thanh toán COD thất bại");
       }

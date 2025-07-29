@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { forgotPassword } from "../../services/authService";
+import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { forgotPasswordUser } from "../../redux/slices/authSlice";
 import { Mail, ArrowLeft, AlertCircle } from "lucide-react";
+import SuccessPopup from "../../components/SuccessPopup";
 
 const ForgotPassword = () => {
-  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [emailError, setEmailError] = useState("");
 
   const validateEmail = (email) => {
@@ -18,10 +21,6 @@ const ForgotPassword = () => {
     if (!emailRegex.test(email)) {
       return "Email không đúng định dạng";
     }
-    // Kiểm tra phải là Gmail
-    if (!email.toLowerCase().endsWith('@gmail.com')) {
-      return "Chỉ chấp nhận email Gmail (@gmail.com)";
-    }
     return "";
   };
 
@@ -30,6 +29,7 @@ const ForgotPassword = () => {
     setEmail(value);
     setEmailError("");
     setError("");
+    setSuccess(false);
   };
 
   const handleSubmit = async (e) => {
@@ -44,20 +44,22 @@ const ForgotPassword = () => {
     try {
       setLoading(true);
       setError("");
+      setSuccess(false);
       
-      // Gọi API forgot password
-      await forgotPassword({ email });
+      await dispatch(forgotPasswordUser({ email })).unwrap();
       
-      // Tạo token demo và chuyển đến trang ResetPassword
-      const demoToken = "demo-token-" + Date.now();
-      navigate(`/reset-password/${demoToken}`);
+      setSuccess(true);
+      setEmail(""); // Clear email field after success
       
     } catch (err) {
       console.error("Forgot password error:", err);
+      const errorMessage = err?.data?.toLowerCase() || err?.message?.toLowerCase() || "Có lỗi xảy ra khi gửi yêu cầu đặt lại mật khẩu";
       
-      // Nếu API lỗi, vẫn chuyển đến trang ResetPassword với token demo
-      const demoToken = "demo-token-" + Date.now();
-      navigate(`/reset-password/${demoToken}`);
+      if (errorMessage.includes("email does not exist")) {
+        setError("Email không tồn tại trong hệ thống");
+      } else {
+        setError("Có lỗi xảy ra khi gửi yêu cầu đặt lại mật khẩu");
+      }
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,7 @@ const ForgotPassword = () => {
             
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Quên mật khẩu?</h1>
             <p className="text-gray-600">
-              Nhập email Gmail của bạn để đặt lại mật khẩu
+              Nhập email của bạn để đặt lại mật khẩu
             </p>
           </div>
 
@@ -107,7 +109,7 @@ const ForgotPassword = () => {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="email"
-                  placeholder="Nhập email Gmail (ví dụ: example@gmail.com)"
+                  placeholder="Nhập email của bạn"
                   value={email}
                   onChange={handleEmailChange}
                   className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200 ${
@@ -118,9 +120,6 @@ const ForgotPassword = () => {
               {emailError && (
                 <p className="text-red-500 text-sm mt-1">{emailError}</p>
               )}
-              <p className="text-gray-500 text-sm mt-1">
-                Chỉ chấp nhận địa chỉ email Gmail (@gmail.com)
-              </p>
             </div>
 
             <button
@@ -130,7 +129,7 @@ const ForgotPassword = () => {
             >
               {loading ? "Đang xử lý..." : "Đặt lại mật khẩu"}
             </button>
-          </form>
+                      </form>
 
           <div className="mt-8 text-center">
             <span className="text-gray-600">Nhớ mật khẩu? </span>
@@ -143,6 +142,16 @@ const ForgotPassword = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Popup */}
+      {success && (
+        <SuccessPopup
+          message="Gửi thông tin đổi mật khẩu mới thành công! Vui lòng kiểm tra email của bạn và click vào link để đặt lại mật khẩu."
+          onClose={() => setSuccess(false)}
+          autoClose={true}
+          duration={5000}
+        />
+      )}
     </div>
   );
 };

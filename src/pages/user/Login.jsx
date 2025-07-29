@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../../redux/slices/authSlice";
+import { loginUser, initiateGoogleLogin } from "../../redux/slices/authSlice";
 import { Link, useNavigate } from "react-router-dom";
 
 const Login = () => {
@@ -97,15 +97,17 @@ const Login = () => {
   const handleForgotPassword = () => {
     navigate("/forgot-password");
   };
-  const handleGoogleLogin = () => {
-    console.log("Google sign up clicked");
-    setError(null);
-    setValidationErrors({
-      email: "",
-      username: "",
-      password: "",
-      confirmPassword: "",
-    });
+  const handleGoogleLogin = async () => {
+    try {
+      console.log("Google login clicked");
+      await dispatch(initiateGoogleLogin()).unwrap();
+    } catch (error) {
+      console.error("Lỗi khi đăng nhập Google:", error);
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "Có lỗi xảy ra khi đăng nhập Google",
+      }));
+    }
   };
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
@@ -208,8 +210,8 @@ const Login = () => {
               >
                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </button>
-              <a
-                href="http://localhost:8080/oauth2/authorization/google"
+              <button
+                onClick={handleGoogleLogin}
                 className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-4 px-6 rounded-lg border border-gray-300 transition-colors duration-200 flex items-center justify-center gap-3"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -231,7 +233,7 @@ const Login = () => {
                   />
                 </svg>
                 Đăng nhập với Google
-              </a>
+              </button>
 
               <button
                 onClick={handleForgotPassword}
