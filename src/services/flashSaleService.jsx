@@ -13,7 +13,10 @@ export const getFlashSales = async () => {
     throw new Error(error.response?.data?.message || "Failed to fetch flash sales");
   }
 };
-
+export const getTop1FlashSale = async () => {
+  const response = await axiosInstance.get("/flash_sale/flash_sale_items/top1");
+  return response.data;
+};
 export const getFlashSaleDetails = async (flashSaleId) => {
   try {
     const response = await axiosInstance.get(`/flash_sale/detail/${flashSaleId}`);
