@@ -1,32 +1,69 @@
+/* eslint-disable react/prop-types */
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getOrderDetail } from "../../../services/orderService";
-import { Package, Calendar, MapPin, CreditCard, Gift, ArrowLeft, Eye, X, Truck, CheckCircle, XCircle, AlertCircle, RotateCcw, Clock } from 'lucide-react';
+import { useDispatch, useSelector } from "react-redux";
+import { fetchMyOrderDetail, cancelUserOrder } from "../../../redux/slices/orderSlice";
+import { toast } from "react-toastify";
+import { Package, MapPin, CreditCard, Gift, ArrowLeft, X, Truck, CheckCircle, XCircle, AlertCircle, RotateCcw, Clock } from 'lucide-react';
+import 'react-toastify/dist/ReactToastify.css'; 
 
 export default function OrderDetail({ order: orderProp }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [order, setOrder] = useState(orderProp || null);
-  const [loading, setLoading] = useState(!orderProp);
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
+  const { currentOrder: order, loading, error } = useSelector((state) => state.order);
   const [showImage, setShowImage] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+
+  const cancelReasons = [
+    'Tôi muốn thay đổi địa chỉ giao hàng',
+    'Tôi muốn thay đổi sản phẩm trong đơn hàng',
+    'Tôi tìm được giá tốt hơn ở nơi khác',
+    'Tôi không cần sản phẩm này nữa',
+    'Đặt nhầm sản phẩm',
+    'Thời gian giao hàng quá lâu',
+    'Khác'
+  ];
 
   useEffect(() => {
     if (orderProp) return;
-    async function fetchOrder() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getOrderDetail(id);
-        setOrder(data);
-      } catch (err) {
-        setError(err.message || "Không thể tải chi tiết đơn hàng");
-      } finally {
-        setLoading(false);
-      }
+    if (id) {
+      dispatch(fetchMyOrderDetail(id));
     }
-    if (id) fetchOrder();
-  }, [orderProp, id]);
+  }, [orderProp, id, dispatch]);
+
+  const canCancelOrder = () => {
+    return order && (order.status === 'PENDING' || order.status === 'CONFIRMED');
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelReason) {
+      toast.error('Vui lòng chọn lý do hủy đơn hàng', { autoClose: 3000 });
+      return;
+    }
+
+    if (cancelReason === 'Khác' && !customReason.trim()) {
+      toast.error('Vui lòng nhập lý do hủy đơn hàng', { autoClose: 3000 });
+      return;
+    }
+
+    try {
+      setCancelling(true);
+      const reason = cancelReason === 'Khác' ? customReason : cancelReason;
+      await dispatch(cancelUserOrder({ orderId: order.orderId, cancellationReason: reason })).unwrap();
+      setShowCancelModal(false);
+      setCancelReason('');
+      setCustomReason('');
+      toast.success('Hủy đơn hàng thành công!', { autoClose: 3000 });
+    } catch (err) {
+      toast.error('Có lỗi xảy ra khi hủy đơn hàng: ' + (err || 'Vui lòng thử lại'), { autoClose: 3000 });
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
@@ -48,7 +85,6 @@ export default function OrderDetail({ order: orderProp }) {
   
   if (!order) return null;
 
-  // Helper for status color
   const statusColor = {
     RETURNED: 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 border-orange-200',
     CANCELLED: 'bg-gradient-to-r from-red-100 to-pink-100 text-red-700 border-red-200',
@@ -71,6 +107,7 @@ export default function OrderDetail({ order: orderProp }) {
     }
   };
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto p-6">
@@ -83,15 +120,36 @@ export default function OrderDetail({ order: orderProp }) {
                   <Package className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Đơn hàng #{order.orderId || order.id}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">Đơn hàng #{order.orderCode || order.id}</h1>
                   <p className="text-gray-500 text-sm mt-1">
                     Ngày tạo: {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : ''}
                   </p>
+                  {order.cancellationReason && order.status === "CANCELLED"  && (
+                    <p className="text-red-600 text-sm mt-1">
+                      Lý do hủy: {order.cancellationReason}
+                    </p>
+                  )}
+                  {order.cancelledAt && order.status === "CANCELLED"  && (
+                    <p className="text-gray-500 text-sm mt-1">
+                      Thời gian hủy: {new Date(order.cancelledAt).toLocaleString("vi-VN")}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm border ${statusColor[order.status] || statusColor.default}`}>
-                {getStatusIcon(order.status)}
-                {order.status}
+              <div className="flex items-center gap-4">
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm border ${statusColor[order.status] || statusColor.default}`}>
+                  {getStatusIcon(order.status)}
+                  {order.status}
+                </div>
+                {canCancelOrder() && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors font-medium text-sm shadow-sm hover:shadow-md"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Hủy đơn hàng
+                  </button>
+                )}
               </div>
             </div>
 
@@ -264,6 +322,93 @@ export default function OrderDetail({ order: orderProp }) {
             Quay lại
           </button>
         </div>
+
+        {/* Cancel Order Modal */}
+        {showCancelModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-900">Hủy đơn hàng</h3>
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-gray-600 mb-4">
+                    Bạn có chắc chắn muốn hủy đơn hàng <strong>#{order.orderCode || order.id}</strong>?
+                  </p>
+                  <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                    Lưu ý: Sau khi hủy đơn hàng, bạn sẽ không thể khôi phục lại được.
+                  </p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Lý do hủy đơn hàng <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    {cancelReasons.map((reason, index) => (
+                      <label key={index} className="flex items-center">
+                        <input
+                          type="radio"
+                          name="cancelReason"
+                          value={reason}
+                          checked={cancelReason === reason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{reason}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {cancelReason === 'Khác' && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nhập lý do cụ thể <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={customReason}
+                      onChange={(e) => setCustomReason(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      placeholder="Vui lòng nhập lý do hủy đơn hàng..."
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={cancelling || !cancelReason || (cancelReason === 'Khác' && !customReason.trim())}
+                    className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    {cancelling ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Đang hủy...
+                      </>
+                    ) : (
+                      'Xác nhận hủy'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Image Modal */}
         {showImage && (

@@ -33,6 +33,7 @@ import OrderSuccessPage from "../pages/user/order-success/OrderSuccessPage";
 import ProductSearch from "../pages/user/productList/ProductSearch";
 import Blog from "../pages/user/Blog";
 import BlogDetail from "../pages/user/BlogDetail";
+import OAuth2Redirect from "../pages/user/OAuth2Redirect";
 
 const UserRoutes = () => {
   return (
@@ -61,14 +62,14 @@ const UserRoutes = () => {
         </Route>
 
         <Route path="payment-success/:orderId" element={<OrderSuccessPage />} />
+        <Route path="/payment-failed/:orderId" element={<ErrorPage />} />
 
         {/* Auth */}
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SignUp />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
-        <Route path="reset-password/:token" element={<ResetPassword />} />
-        {/* <Route path="forgot-password" element={<ForgotPassword />} />
-        <Route path="reset-password/:token" element={<ResetPassword />} /> */}
+        <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="oauth2/redirect" element={<OAuth2Redirect />} />
 
         {/* Info */}
         <Route path="about" element={<About />} />

@@ -1,7 +1,6 @@
 /* eslint-disable react/prop-types */
 import { X, AlertTriangle } from "lucide-react";
 
-// Modals for email, role, and reset password
 export default function Modals({
   showEmailModal,
   showRoleModal,
@@ -77,7 +76,7 @@ export default function Modals({
         </div>
       )}
 
-      {/* Role Modal */}
+      {/* Role Modal - FIXED LOGIC */}
       {showRoleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -91,9 +90,30 @@ export default function Modals({
               </button>
             </div>
             <div className="space-y-4">
+              
               {(allRoles || []).map((role) => {
-                const userRoleIds = (userRoles || []).flat().map((r) => r.id);
-                const isGranted = userRoleIds.includes(role.id);
+                // FIX 1: Check if userRoles is properly structured
+                const userRolesList = Array.isArray(userRoles) ? userRoles : [];
+                
+                // FIX 2: Handle different data structures
+                // Check by both id and name to be safe
+                const isGranted = userRolesList.some(userRole => {
+                  // If userRole has granted property, use it
+                  if (userRole.hasOwnProperty('granted')) {
+                    return (userRole.id === role.id || userRole.name === role.name) && userRole.granted;
+                  }
+                  // Otherwise, just check if the role exists in userRoles
+                  return userRole.id === role.id || userRole.name === role.name;
+                });
+
+                // FIX 3: Alternative check - convert to string for comparison
+                const isGrantedAlt = userRolesList.some(userRole => 
+                  String(userRole.id) === String(role.id) && 
+                  (userRole.granted === undefined || userRole.granted === true)
+                );
+
+
+
                 return (
                   <div
                     key={role.id}
@@ -114,27 +134,19 @@ export default function Modals({
                           ? "bg-green-100 text-green-800 hover:bg-green-200"
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
+                      disabled={handlers.isLoading}
                     >
                       {isGranted ? "Đã cấp" : "Chưa cấp"}
                     </button>
                   </div>
                 );
               })}
-              <div className="flex gap-3 pt-4">
+              <div className="flex justify-end pt-4">
                 <button
                   onClick={handlers.toggleRoleModal}
-                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   Đóng
-                </button>
-                <button
-                  onClick={() => {
-                    handlers.toggleRoleModal();
-                    handlers.setSuccess("Quyền hạn đã được cập nhật");
-                  }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Lưu thay đổi
                 </button>
               </div>
             </div>

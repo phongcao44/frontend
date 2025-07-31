@@ -59,17 +59,22 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
       return;
     }
 
+    if (!matchedVariant?.id) {
+      console.error("Error: matchedVariant.id is undefined or null", { matchedVariant });
+      message.error("Lỗi: Không tìm thấy biến thể sản phẩm!");
+      return;
+    }
+
     setIsAdding(true);
-    setTimeout(() => setIsAdding(false), 500);
-
-    const variantId = matchedVariant?.id;
-    console.log("variantId:", variantId);
-
     try {
-      await dispatch(addItemToCart({ variantId, quantity })).unwrap();
+      console.log("Adding to cart:", { variantId: matchedVariant.id, quantity });
+      await dispatch(addItemToCart({ variantId: matchedVariant.id, quantity })).unwrap();
       message.success("Đã thêm vào giỏ hàng!");
     } catch (error) {
-      message.error("Thêm giỏ hàng thất bại!");
+      console.error("Add to cart failed:", error);
+      message.error(`Thêm giỏ hàng thất bại: ${error.message || "Lỗi không xác định"}`);
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -87,16 +92,20 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
       return;
     }
 
-    setIsBuying(true);
+    if (!matchedVariant?.id) {
+      console.error("Error: matchedVariant.id is undefined or null", { matchedVariant });
+      message.error("Lỗi: Không tìm thấy biến thể sản phẩm!");
+      return;
+    }
 
+    setIsBuying(true);
     try {
-      // Thêm sản phẩm vào giỏ hàng
+      console.log("Buying now:", { variantId: matchedVariant.id, quantity });
       const result = await dispatch(addItemToCart({ 
         variantId: matchedVariant.id, 
         quantity 
       })).unwrap();
       
-      // Tạo cart item từ kết quả API và matchedVariant
       const unitPrice = matchedVariant.finalPriceAfterDiscount || matchedVariant.priceOverride;
       const cartItem = {
         cartItemId: result.cartItemId,
@@ -105,22 +114,21 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
         productName: matchedVariant.productName || "Sản phẩm",
         quantity: quantity,
         originalPrice: unitPrice,
-        totalPrice: unitPrice, // Chỉ gửi giá đơn vị, không nhân quantity
-        discountedPrice: unitPrice, // Chỉ gửi giá đơn vị, không nhân quantity
+        totalPrice: unitPrice,
+        discountedPrice: unitPrice,
         colorName: matchedVariant.colorName,
         sizeName: matchedVariant.sizeName,
         image: `https://picsum.photos/seed/${result.cartItemId}/200/200`
       };
 
-      // Chuyển hướng đến trang checkout với sản phẩm vừa thêm
       navigate("/checkout", { 
         state: { 
           selectedCartItems: [cartItem] 
         } 
       });
-      
     } catch (error) {
-      message.error("Không thể thêm sản phẩm vào giỏ hàng!");
+      console.error("Buy now failed:", error);
+      message.error(`Không thể thêm sản phẩm vào giỏ hàng: ${error.message || "Lỗi không xác định"}`);
     } finally {
       setIsBuying(false);
     }
@@ -134,7 +142,6 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
   const handleWishlistToggle = async () => {
     try {
       if (!isInWishlist) {
-        // Thêm vào wishlist
         await dispatch(addProductToWishlist(productId)).unwrap();
         Swal.fire({
           title: 'Thành công!',
@@ -143,7 +150,6 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
           timer: 1500
         });
       } else {
-        // Xóa khỏi wishlist
         const wishlistItem = wishlistItems.find(item => {
           const itemProductId = item.productId || item.product?.id;
           return itemProductId == productId;
@@ -158,10 +164,10 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
             cancelButtonColor: '#d33',
             confirmButtonText: 'Xóa',
             cancelButtonText: 'Hủy'
-                      }).then(async (result) => {
-              if (result.isConfirmed) {
-                await dispatch(removeProductFromWishlist(wishlistItem.wishListId)).unwrap();
-                Swal.fire(
+          }).then(async (result) => {
+            if (result.isConfirmed) {
+              await dispatch(removeProductFromWishlist(wishlistItem.wishListId)).unwrap();
+              Swal.fire(
                 'Đã xóa!',
                 'Sản phẩm đã được xóa khỏi danh sách yêu thích.',
                 'success'
@@ -244,8 +250,7 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
 };
 
 AddToCart.propTypes = {
-  productId: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-    .isRequired,
+  productId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   matchedVariant: PropTypes.object,
   maxQuantity: PropTypes.number,
   selectedColorId: PropTypes.number,

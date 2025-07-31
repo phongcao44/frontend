@@ -9,17 +9,22 @@ import {
   Shield,
 } from "lucide-react";
 import { Formik, Form, Field } from "formik";
+import Pagination from "../../../../components/Pagination";
 
-// Tab content with skeleton
 export default function TabContent({
   selectedTab,
   userInfo,
   userRoles,
   orders,
+  totalPages,
+  totalItems, // Added
+  itemsPerPage, // Added
+  pagination,
   vouchers,
   isLoading,
   handlers,
   formatCurrency,
+  formatDate,
 }) {
   const tabs = [
     { id: "overview", label: "Tổng quan", icon: User },
@@ -60,6 +65,7 @@ export default function TabContent({
         {renderSkeleton()}
       </div>
     );
+
 
   return (
     <div className="bg-white rounded-lg border border-gray-200">
@@ -179,42 +185,54 @@ export default function TabContent({
             <div className="flex items-center justify-between">
               <h4 className="font-semibold text-gray-900">Đơn hàng gần đây</h4>
               <span className="text-sm text-gray-500">
-                {(orders || []).length} đơn hàng
+                {userInfo.totalOrders || 0} đơn hàng
               </span>
             </div>
-            <div className="space-y-3">
-              {(orders || []).map((order) => (
-                <div
-                  key={order?.id}
-                  className="p-4 border border-gray-200 rounded-lg"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        #{order?.id || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {order?.date || "N/A"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">
-                        {formatCurrency(order?.total)}
-                      </p>
-                      <span
-                        className={`inline-block px-2 py-1 text-xs rounded-full ${
-                          order?.status === "Delivered"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {order?.status || "N/A"}
-                      </span>
+            {orders.length === 0 ? (
+              <p className="text-sm text-gray-500">Không có đơn hàng nào.</p>
+            ) : (
+              <div className="space-y-3">
+                {(orders || []).map((order) => (
+                  <div
+                    key={order?.orderCode || order?.orderId}
+                    className="p-4 border border-gray-200 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          #{order?.orderId || "N/A"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {order?.createdAt ? formatDate(order.createdAt) : "N/A"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-gray-900">
+                          {formatCurrency(order?.total)}
+                        </p>
+                        <span
+                          className={`inline-block px-2 py-1 text-xs rounded-full ${
+                            order?.status === "Delivered"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {order?.status || "N/A"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+            <Pagination
+              currentPage={pagination.page}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={(page, limit) =>
+                handlers.handlePaginationChange({ page, limit })
+              }
+            />
           </div>
         )}
         {selectedTab === "loyalty" && (
@@ -253,33 +271,37 @@ export default function TabContent({
         {selectedTab === "vouchers" && (
           <div className="space-y-4">
             <h4 className="font-semibold text-gray-900">Voucher đã sử dụng</h4>
-            <div className="space-y-3">
-              {(vouchers || []).map((voucher) => (
-                <div
-                  key={voucher?.id}
-                  className="p-4 border border-gray-200 rounded-lg"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {voucher?.code || "N/A"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Sử dụng: {voucher?.usedAt || "N/A"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-green-600">
-                        {voucher?.discount || "N/A"}
-                      </p>
-                      <span className="text-xs text-gray-500">
-                        {voucher?.status || "N/A"}
-                      </span>
+            {vouchers.length === 0 ? (
+              <p className="text-sm text-gray-500">Không có voucher nào.</p>
+            ) : (
+              <div className="space-y-3">
+                {(vouchers || []).map((voucher) => (
+                  <div
+                    key={voucher?.id}
+                    className="p-4 border border-gray-200 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {voucher?.code || "N/A"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Sử dụng: {voucher?.usedAt ? formatDate(voucher.usedAt) : "N/A"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-green-600">
+                          {voucher?.discount || "N/A"}
+                        </p>
+                        <span className="text-xs text-gray-500">
+                          {voucher?.status || "N/A"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

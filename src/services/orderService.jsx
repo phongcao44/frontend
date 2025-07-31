@@ -7,6 +7,7 @@ export const fetchPaginatedOrders = async ({
   orderBy = "desc",
   status = "",
   keyword = "",
+  userId = "",
 }) => {
   try {
     const response = await axiosInstance.get("/admin/order/paginate", {
@@ -17,6 +18,7 @@ export const fetchPaginatedOrders = async ({
         orderBy,
         status,
         keyword,
+        userId,
       },
     });
     return response.data;
@@ -67,7 +69,7 @@ export const fetchOrderDetail = async (id) => {
 export const getMyOrders = async (status = null) => {
   try {
     const response = await axiosInstance.get("/user/order/list", {
-      params: { status }
+      params: { status },
     });
     return response.data;
   } catch (error) {
@@ -89,5 +91,28 @@ export const getOrderDetail = async (orderId) => {
       throw new Error("Bạn không có quyền xem đơn hàng này");
     }
     throw error.response?.data || "Có lỗi xảy ra khi tải chi tiết đơn hàng";
+  }
+};
+
+export const cancelOrder = async (orderId, cancellationReason) => {
+  try {
+    const response = await axiosInstance.put(`/user/order/cancel/${orderId}`, {
+      cancellationReason,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("cancelOrder error:", error);
+    if (error.response?.status === 404) {
+      throw new Error("Không tìm thấy đơn hàng");
+    }
+    if (error.response?.status === 403) {
+      throw new Error("Bạn không có quyền hủy đơn hàng này");
+    }
+    if (error.response?.status === 400) {
+      throw new Error(
+        error.response?.data?.message || "Lý do hủy đơn hàng không hợp lệ"
+      );
+    }
+    throw error.response?.data || "Có lỗi xảy ra khi hủy đơn hàng";
   }
 };

@@ -2,19 +2,31 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import Cookies from "js-cookie";
-import ThreeDAvatar from "../../../components/ThreeDAvatar";
+import { Send, MessageCircle, X, ShoppingCart, Package, CreditCard, Headphones, Bot, User } from 'lucide-react';
 
 const GeminiChatButton = () => {
   const [showChat, setShowChat] = useState(false);
   const [prompt, setPrompt] = useState("");
-  const [chatHistory, setChatHistory] = useState([]);
+  const [chatHistory, setChatHistory] = useState([
+    {
+      role: "ai",
+      text: "Xin chào! Tôi là trợ lý ảo của shop. Tôi có thể giúp bạn về sản phẩm, đơn hàng, thanh toán và nhiều vấn đề khác. Bạn cần hỗ trợ gì hôm nay? 😊"
+    }
+  ]);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const handleSend = async () => {
-    if (!prompt.trim()) return;
+  const quickActions = [
+    { icon: ShoppingCart, label: 'Sản phẩm', prompt: 'Tôi muốn tìm hiểu về sản phẩm của shop' },
+    { icon: Package, label: 'Đơn hàng', prompt: 'Tôi muốn tra cứu đơn hàng của mình' },
+    { icon: CreditCard, label: 'Thanh toán', prompt: 'Cho tôi biết các phương thức thanh toán' },
+    { icon: Headphones, label: 'Hỗ trợ', prompt: 'Tôi cần hỗ trợ từ nhân viên tư vấn' }
+  ];
 
-    const userMessage = { role: "user", text: prompt };
+  const handleSend = async (message = prompt) => {
+    if (!message.trim()) return;
+
+    const userMessage = { role: "user", text: message };
     setChatHistory((prev) => [...prev, userMessage]);
     setPrompt("");
     setLoading(true);
@@ -31,14 +43,14 @@ const GeminiChatButton = () => {
       if (!userId) {
         setChatHistory((prev) => [
           ...prev,
-          { role: "ai", text: "❌ Không xác định được người dùng (userId)." },
+          { role: "ai", text: "❌ Xin lỗi, không xác định được tài khoản của bạn. Vui lòng đăng nhập lại để sử dụng dịch vụ hỗ trợ." },
         ]);
         setLoading(false);
         return;
       }
 
       const res = await axios.post("http://localhost:8080/api/gemini", {
-        prompt,
+        prompt: message,
         userId,
       });
 
@@ -48,7 +60,7 @@ const GeminiChatButton = () => {
       console.error("❌ Lỗi API:", error);
       setChatHistory((prev) => [
         ...prev,
-        { role: "ai", text: "❌ Lỗi khi gửi yêu cầu đến AI." },
+        { role: "ai", text: "❌ Xin lỗi, hiện tại hệ thống đang gặp sự cố. Vui lòng thử lại sau hoặc liên hệ hotline 1900-xxxx để được hỗ trợ trực tiếp." },
       ]);
     } finally {
       setLoading(false);
@@ -62,180 +74,171 @@ const GeminiChatButton = () => {
     }
   };
 
+  const handleQuickAction = (actionPrompt) => {
+    handleSend(actionPrompt);
+  };
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatHistory]);
 
+  const formatTime = (timestamp) => {
+    return new Date().toLocaleTimeString('vi-VN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
   return (
-    <>
-      <style>
-        {`
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        `}
-      </style>
-
-      {/* Nút mở chat */}
-      <button
-        onClick={() => setShowChat(!showChat)}
-        style={{
-          position: "fixed",
-          bottom: 30,
-          right: 30,
-          backgroundColor: "#1677ff",
-          color: "#fff",
-          border: "none",
-          borderRadius: "50%",
-          width: 60,
-          height: 60,
-          fontSize: 28,
-          boxShadow: "0 8px 16px rgba(0,0,0,0.3)",
-          cursor: "pointer",
-          zIndex: 9999,
-          transition: "transform 0.2s ease",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      >
-        💬
-      </button>
-      {/* <ThreeDAvatar onClick={() => setShowChat(!showChat)} /> */}
-
-      {/* Khung chat */}
-      {showChat && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 100,
-            right: 40,
-            width: 380,
-            height: 540,
-            backgroundColor: "#fff",
-            borderRadius: 12,
-            display: "flex",
-            flexDirection: "column",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
-            zIndex: 10000,
-            overflow: "hidden",
-            animation: "slideUp 0.3s ease",
-          }}
+    <div className="fixed bottom-4 right-4 z-50">
+      {/* Chat Toggle Button */}
+      {!showChat && (
+        <button
+          onClick={() => setShowChat(true)}
+          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full p-4 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
         >
+          <MessageCircle size={24} />
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
+            AI
+          </span>
+        </button>
+      )}
+
+      {/* Chat Window */}
+      {showChat && (
+        <div className="bg-white rounded-lg shadow-2xl w-96 h-[600px] flex flex-col border border-gray-200 animate-in slide-in-from-bottom-5 duration-300">
           {/* Header */}
-          <div
-            style={{
-              backgroundColor: "#1677ff",
-              color: "#fff",
-              padding: "12px 16px",
-              fontWeight: "bold",
-              fontSize: 16,
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            Cô Trợ Lý 🤖
-            <span
-              style={{ cursor: "pointer", fontWeight: "bold" }}
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-t-lg flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <Bot size={24} />
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">Cô Trợ Lý AI</h3>
+                <span className="text-xs opacity-90">Đang online • Phản hồi ngay</span>
+              </div>
+            </div>
+            <button
               onClick={() => setShowChat(false)}
+              className="hover:bg-white/20 p-2 rounded-full transition-colors duration-200"
             >
-              ✖
-            </span>
+              <X size={20} />
+            </button>
           </div>
 
-          {/* Nội dung chat */}
-          <div
-            style={{
-              flex: 1,
-              padding: "10px 12px",
-              overflowY: "auto",
-              backgroundColor: "#f9f9f9",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-            }}
-          >
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {chatHistory.map((msg, idx) => (
               <div
                 key={idx}
-                style={{
-                  display: "flex",
-                  justifyContent:
-                    msg.role === "user" ? "flex-end" : "flex-start",
-                }}
+                className={`flex ${msg.role === "user" ? 'justify-end' : 'justify-start'}`}
               >
-                <div
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: 16,
-                    backgroundColor:
-                      msg.role === "user" ? "#1677ff" : "#e5e5ea",
-                    color: msg.role === "user" ? "#fff" : "#000",
-                    maxWidth: "80%",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    fontSize: 14,
-                  }}
-                >
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+                <div className={`max-w-[85%] ${msg.role === "user" ? 'order-2' : 'order-1'}`}>
+                  <div
+                    className={`p-3 rounded-2xl shadow-sm ${
+                      msg.role === "user"
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md'
+                        : 'bg-white text-gray-800 rounded-bl-md border border-gray-200'
+                    }`}
+                  >
+                    <div className="prose prose-sm max-w-none">
+                      <ReactMarkdown 
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="ml-4 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="ml-4 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="mb-1">{children}</li>
+                        }}
+                      >
+                        {msg.text}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                  <div className={`text-xs text-gray-500 mt-1 px-1 ${msg.role === "user" ? 'text-right' : 'text-left'}`}>
+                    {formatTime()}
+                  </div>
+                </div>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 ${
+                  msg.role === "user" 
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 order-1 ml-3' 
+                    : 'bg-gradient-to-r from-gray-400 to-gray-600 order-2 mr-3'
+                }`}>
+                  {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
                 </div>
               </div>
             ))}
+            
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-white p-4 rounded-2xl rounded-bl-md shadow-sm border border-gray-200 max-w-[85%]">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                    <span className="text-sm text-gray-500">Đang suy nghĩ...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Nhập prompt */}
-          <div
-            style={{
-              padding: 10,
-              borderTop: "1px solid #eee",
-              backgroundColor: "#fff",
-            }}
-          >
-            <textarea
-              rows={2}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Nhấn Enter để gửi, Shift+Enter để xuống dòng"
-              style={{
-                width: "100%",
-                resize: "none",
-                padding: 10,
-                borderRadius: 8,
-                border: "1px solid #ccc",
-                marginBottom: 8,
-                fontSize: 14,
-              }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: "10px",
-                backgroundColor: loading ? "#999" : "#1677ff",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                fontWeight: "bold",
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "background-color 0.2s ease",
-              }}
-            >
-              {loading ? "Đang phản hồi..." : "Gửi"}
-            </button>
+          {/* Quick Actions */}
+          <div className="px-4 py-3 border-t border-gray-200 bg-white">
+            <div className="grid grid-cols-4 gap-2">
+              {quickActions.map((action, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleQuickAction(action.prompt)}
+                  disabled={loading}
+                  className="flex flex-col items-center p-3 rounded-xl hover:bg-gray-50 transition-colors duration-200 text-xs disabled:opacity-50 disabled:cursor-not-allowed border border-gray-100 hover:border-blue-200 hover:shadow-sm"
+                >
+                  <action.icon size={18} className="text-blue-500 mb-1" />
+                  <span className="text-gray-600 font-medium">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
+            <div className="flex space-x-3">
+              <textarea
+                rows={1}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Nhập tin nhắn..."
+                className="flex-1 border border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-24 min-h-[48px]"
+                style={{ 
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#cbd5e0 transparent'
+                }}
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={loading || !prompt.trim()}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl px-4 py-3 transition-all duration-200 flex items-center justify-center min-w-[48px]"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <Send size={18} />
+                )}
+              </button>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 text-center">
+              Được hỗ trợ bởi AI • Phản hồi có thể không chính xác 100%
+            </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

@@ -18,11 +18,13 @@ const { Title, Text } = Typography;
 export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [variantForm, setVariantForm] = useState({
-    id: null, // Thêm id vào variantForm
+    id: null,
     colorId: null,
     sizeId: null,
     price: 0,
     stock: 0,
+    sku: null,
+    barcode: null,
   });
   const [isAddingNew, setIsAddingNew] = useState(false);
 
@@ -58,11 +60,13 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (selectedVariant) {
       setVariantForm({
-        id: selectedVariant.id, // Thêm id vào variantForm
+        id: selectedVariant.id,
         colorId: selectedVariant.colorId || null,
         sizeId: selectedVariant.sizeId || null,
         price: selectedVariant.priceOverride || 0,
         stock: selectedVariant.stockQuantity || 0,
+        sku: selectedVariant.sku || null,
+        barcode: selectedVariant.barcode || null,
       });
     }
   }, [selectedVariant]);
@@ -120,11 +124,13 @@ export default function ProductDetailPage() {
     setIsAddingNew(true);
     setSelectedVariant(null);
     setVariantForm({
-      id: null, // Đặt id là null khi thêm mới
+      id: null,
       colorId: null,
       sizeId: null,
       price: 0,
       stock: 0,
+      sku: null,
+      barcode: null,
     });
   };
 
@@ -143,6 +149,8 @@ export default function ProductDetailPage() {
     }
   };
 
+  console.log(product)
+
   return (
     <div
       style={{
@@ -160,7 +168,10 @@ export default function ProductDetailPage() {
                 <Image
                   width={60}
                   height={60}
-                  src={product?.images?.[0]?.image_url || "https://via.placeholder.com/60"}
+                  src={
+                    product?.imageUrl ||
+                    "https://via.placeholder.com/60"
+                  }
                   style={{ borderRadius: 8 }}
                 />
               </Col>
@@ -168,7 +179,9 @@ export default function ProductDetailPage() {
                 <Title level={4} style={{ margin: 0 }}>
                   {product?.name || "Tên sản phẩm"}
                 </Title>
-                <Text type="secondary">{product?.description || "Chưa có mô tả"}</Text>
+                <Text type="secondary">
+                  {product?.description || "Chưa có mô tả"}
+                </Text>
                 <br />
                 <Button
                   type="link"
@@ -213,6 +226,10 @@ export default function ProductDetailPage() {
                   <Row gutter={16} align="middle" style={{ width: "100%" }}>
                     <Col span={20}>
                       <Text strong>{renderVariantName(item)}</Text>
+                      <br />
+                      <Text type="secondary">
+                        ID: {item.id} | SKU: {item.sku || "Không có SKU"}
+                      </Text>
                       <br />
                       <Text type="secondary">
                         Tồn: {item.stockQuantity || 0} | Giá: {item.priceOverride?.toLocaleString() || 0} ₫

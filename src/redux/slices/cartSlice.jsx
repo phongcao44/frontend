@@ -15,7 +15,7 @@ export const getCart = createAsyncThunk("cart/getCart", async (_, thunkAPI) => {
   try {
     return await fetchCart();
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
   }
 });
 
@@ -23,9 +23,10 @@ export const addItemToCart = createAsyncThunk(
   "cart/addItemToCart",
   async (payload, thunkAPI) => {
     try {
-      return await addToCart(payload);
+      const response = await addToCart(payload);
+      return { cartItem: response, payload }; // Trả về cả cartItem và payload gốc
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
@@ -36,7 +37,7 @@ export const updateCartItemQuantity = createAsyncThunk(
     try {
       return await updateCartItem(cartItemId, quantity);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
@@ -47,7 +48,7 @@ export const removeItemFromCart = createAsyncThunk(
     try {
       return await removeCartItem(cartItemId);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
@@ -58,7 +59,7 @@ export const clearUserCart = createAsyncThunk(
     try {
       return await clearCart();
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
@@ -69,7 +70,7 @@ export const checkoutUserCart = createAsyncThunk(
     try {
       return await checkoutCart(payload);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
@@ -80,7 +81,7 @@ export const checkoutSingleCartItem = createAsyncThunk(
     try {
       return await checkoutByCartItem(cartItemId, payload);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
@@ -91,7 +92,7 @@ export const checkoutSelectedItemsThunk = createAsyncThunk(
     try {
       return await checkoutSelectedItems(payload);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
@@ -99,7 +100,7 @@ export const checkoutSelectedItemsThunk = createAsyncThunk(
 const cartSlice = createSlice({
   name: "cart",
   initialState: {
-    cart: null,
+    cart: { items: [] }, // Khởi tạo cart với mảng items
     loading: false,
     error: null,
   },
@@ -112,7 +113,7 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(getCart.fulfilled, (state, action) => {
-        state.cart = action.payload;
+        state.cart = action.payload || { items: [] }; // Đảm bảo cart luôn có items
         state.loading = false;
       })
       .addCase(getCart.rejected, (state, action) => {
@@ -126,8 +127,11 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(addItemToCart.fulfilled, (state, action) => {
-     //   state.cart = action.payload;
-        state.cart.push(action.payload);
+        const { cartItem } = action.payload;
+        if (!state.cart) {
+          state.cart = { items: [] };
+        }
+        state.cart.items.push(cartItem); // Thêm cartItem vào mảng items
         state.loading = false;
       })
       .addCase(addItemToCart.rejected, (state, action) => {
@@ -141,7 +145,7 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(updateCartItemQuantity.fulfilled, (state, action) => {
-        state.cart = action.payload;
+        state.cart = action.payload || { items: [] };
         state.loading = false;
       })
       .addCase(updateCartItemQuantity.rejected, (state, action) => {
@@ -155,7 +159,7 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(removeItemFromCart.fulfilled, (state, action) => {
-        state.cart = action.payload;
+        state.cart = action.payload || { items: [] };
         state.loading = false;
       })
       .addCase(removeItemFromCart.rejected, (state, action) => {
@@ -168,8 +172,8 @@ const cartSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(clearUserCart.fulfilled, (state, action) => {
-        state.cart = action.payload;
+      .addCase(clearUserCart.fulfilled, (state) => {
+        state.cart = { items: [] };
         state.loading = false;
       })
       .addCase(clearUserCart.rejected, (state, action) => {
@@ -182,8 +186,8 @@ const cartSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(checkoutUserCart.fulfilled, (state, action) => {
-        state.cart = null;
+      .addCase(checkoutUserCart.fulfilled, (state) => {
+        state.cart = { items: [] };
         state.loading = false;
       })
       .addCase(checkoutUserCart.rejected, (state, action) => {
@@ -196,8 +200,8 @@ const cartSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(checkoutSingleCartItem.fulfilled, (state, action) => {
-        state.cart = null;
+      .addCase(checkoutSingleCartItem.fulfilled, (state) => {
+        state.cart = { items: [] };
         state.loading = false;
       })
       .addCase(checkoutSingleCartItem.rejected, (state, action) => {
@@ -205,12 +209,13 @@ const cartSlice = createSlice({
         state.error = action.payload;
       })
 
+      // === checkoutSelectedItems ===
       .addCase(checkoutSelectedItemsThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(checkoutSelectedItemsThunk.fulfilled, (state, action) => {
-        state.cart = null;
+      .addCase(checkoutSelectedItemsThunk.fulfilled, (state) => {
+        state.cart = { items: [] };
         state.loading = false;
       })
       .addCase(checkoutSelectedItemsThunk.rejected, (state, action) => {
@@ -220,4 +225,4 @@ const cartSlice = createSlice({
   },
 });
 
-export default cartSlice.reducer;
+export default cartSlice.reducer; 

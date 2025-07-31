@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,22 +8,25 @@ import {
   updateUserRole,
   clearError,
 } from "../../../../redux/slices/userSlice";
-import { use } from "react";
 
-// Debounce utility
+// Debounce utility with cancel
 const debounce = (func, wait) => {
   let timeout;
-  return (...args) => {
+  const debounced = (...args) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func.apply(null, args), wait);
   };
+  debounced.cancel = () => clearTimeout(timeout);
+  return debounced;
 };
 
-// Custom hook for user management logic
 export default function useUserManagement() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { users, loading, error } = useSelector((state) => state.users);
+  
+  // Ref để theo dõi request đang pending
+  const pendingRequestRef = useRef(null);
 
   // State management
   const [activeTab, setActiveTab] = useState("Tất cả khách hàng");
@@ -34,26 +36,27 @@ export default function useUserManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState("createdAt");
   const [orderBy, setOrderBy] = useState("desc");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [rankFilter, setRankFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [rankFilter, setRankFilter] = useState(null);
 
   // Derived state
-  const customers = useMemo(() => users?.data?.content || [], [users]);
+  const customers = useMemo(() => {
+    return users?.data?.content || [];
+  }, [users]);
   const totalPages = users?.data?.totalPages || 1;
   const totalElements = users?.data?.totalElements || 0;
 
-
   // Filter options
   const statusOptions = [
-    { value: "", label: "Tất cả trạng thái" },
+    { value: null, label: "Tất cả trạng thái" },
     { value: "ACTIVE", label: "Hoạt động" },
     { value: "INACTIVE", label: "Không hoạt động" },
   ];
 
   const rankOptions = [
-    { value: "", label: "Tất cả rank" },
-    { value: "BAC", label: "Bạc" },
+    { value: null, label: "Tất cả rank" },
     { value: "DONG", label: "Đồng" },
+    { value: "BAC", label: "Bạc" },
     { value: "VANG", label: "Vàng" },
     { value: "KIMCUONG", label: "Kim Cương" },
   ];
@@ -64,90 +67,169 @@ export default function useUserManagement() {
       { name: "Tất cả khách hàng", count: totalElements },
       {
         name: "Khách hàng VIP",
-        count:
-          customers.filter((c) =>
-            c.roles.some((role) => role.id === "ROLE_VIP")
-          ).length || 0,
+        count: customers.filter((c) => c.userRank === "KIMCUONG").length || 0,
       },
     ],
     [totalElements, customers]
   );
 
-  // Fetch users with filters
-  const fetchUsers = useCallback(() => {
-    setIsLoading(true);
-    dispatch(
-      fetchUsersPaginateAndFilter({
-        page: currentPage,
-        size: itemsPerPage,
-        sortBy,
-        orderBy,
-        keyword: searchTerm,
-        status: statusFilter,
-        rank: rankFilter,
-        role: activeTab === "Khách hàng VIP" ? "ROLE_VIP" : "",
-      })
-    ).finally(() => setTimeout(() => setIsLoading(false), 500));
-    console.log("đ ", rankFilter, statusFilter)
-  }, [
-    dispatch,
-    currentPage,
-    itemsPerPage,
-    sortBy,
-    orderBy,
-    searchTerm,
-    statusFilter,
-    rankFilter,
-    activeTab,
-  ]);
+  // Fetch users function - không sử dụng useCallback ở đây
+  const fetchUsers = (params = {}) => {
+    // Hủy request trước đó nếu có
+    if (pendingRequestRef.current) {
+      pendingRequestRef.current.abort();
+    }
 
-  // Debounced search handler
-  const debouncedSearch = useCallback(
-    debounce((value) => {
-      fetchUsers();
+    setIsLoading(true);
+    
+    // Lấy giá trị mới nhất từ params hoặc state hiện tại
+    const {
+      page = currentPage,
+      size = itemsPerPage,
+      sortBy: newSortBy = sortBy,
+      orderBy: newOrderBy = orderBy,
+      keyword = searchTerm,
+      status = statusFilter,
+      rank = rankFilter,
+      tab = activeTab
+    } = params;
+
+    const filters = {
+      page,
+      size,
+      sortBy: newSortBy,
+      orderBy: newOrderBy,
+      ...(keyword && { keyword }), // Chỉ thêm nếu có giá trị
+      ...(status && { status }), // Chỉ thêm nếu có giá trị
+      ...(tab === "Khách hàng VIP" 
+        ? { rank: "KIMCUONG" } 
+        : rank && { rank } // Chỉ thêm nếu có giá trị
+      ),
+    };
+
+    console.log('Fetching with filters:', filters); // Debug log
+
+    const requestPromise = dispatch(fetchUsersPaginateAndFilter(filters));
+    pendingRequestRef.current = requestPromise;
+
+    requestPromise
+      .unwrap()
+      .then(() => {
+        setIsLoading(false);
+        pendingRequestRef.current = null;
+      })
+      .catch((err) => {
+        // Chỉ set loading false nếu không phải lỗi do abort
+        if (err.name !== 'AbortError') {
+          setIsLoading(false);
+        }
+        pendingRequestRef.current = null;
+      });
+
+    return requestPromise;
+  };
+
+  // Debounced search - tách riêng cho search
+  const debouncedFetchUsers = useMemo(
+    () => debounce((searchValue) => {
+      fetchUsers({ 
+        keyword: searchValue, 
+        page: 0 // Reset về trang đầu khi search
+      });
     }, 500),
-    [fetchUsers]
+    [currentPage, itemsPerPage, sortBy, orderBy, statusFilter, rankFilter, activeTab]
   );
 
   // Handlers
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setIsLoading(true);
+    const value = e.target.value;
+    setSearchTerm(value);
     setCurrentPage(0);
-    debouncedSearch(e.target.value);
+    
+    // Hủy debounce trước đó và tạo mới
+    debouncedFetchUsers.cancel();
+    debouncedFetchUsers(value);
   };
 
   const handleTabChange = (tabName) => {
+    debouncedFetchUsers.cancel();
     setActiveTab(tabName);
     setCurrentPage(0);
-    setStatusFilter(""); 
-    fetchUsers();
+    
+    if (tabName === "Khách hàng VIP") {
+      setRankFilter(null);
+    }
+    
+    // Gọi fetchUsers ngay lập tức với tab mới
+    fetchUsers({ 
+      tab: tabName, 
+      page: 0,
+      rank: tabName === "Khách hàng VIP" ? "KIMCUONG" : rankFilter
+    });
   };
 
   const handleRefresh = () => {
-    fetchUsers();
+    debouncedFetchUsers.cancel();
+    setCurrentPage(0);
+    fetchUsers({ page: 0 });
   };
 
   const handlePageChange = (page, newItemsPerPage) => {
+    debouncedFetchUsers.cancel();
     setCurrentPage(page);
+    
     if (newItemsPerPage && newItemsPerPage !== itemsPerPage) {
       setItemsPerPage(newItemsPerPage);
+      fetchUsers({ page, size: newItemsPerPage });
+    } else {
+      fetchUsers({ page });
     }
-    fetchUsers();
   };
 
   const handleStatusFilterChange = (e) => {
-    setStatusFilter(e.target.value);
+    debouncedFetchUsers.cancel();
+    const newStatus = e.target.value || null;
+    setStatusFilter(newStatus);
     setCurrentPage(0);
-    setActiveTab("Tất cả khách hàng"); // Reset tab to "Tất cả khách hàng" when status filter is applied
-    fetchUsers();
+    
+    // Gọi fetchUsers ngay lập tức với filter mới
+    fetchUsers({ 
+      status: newStatus, 
+      page: 0 
+    });
   };
 
   const handleRankFilterChange = (e) => {
-    setRankFilter(e.target.value);
+    debouncedFetchUsers.cancel();
+    const newRank = e.target.value || null;
+    setRankFilter(newRank);
     setCurrentPage(0);
-    setActiveTab("Tất cả khách hàng"); // Reset tab to "Tất cả khách hàng" when rank filter is applied
-    fetchUsers();
+    
+    if (activeTab === "Khách hàng VIP") {
+      setActiveTab("Tất cả khách hàng");
+    }
+    
+    // Gọi fetchUsers ngay lập tức với filter mới
+    fetchUsers({ 
+      rank: newRank, 
+      page: 0,
+      tab: activeTab === "Khách hàng VIP" ? "Tất cả khách hàng" : activeTab
+    });
+  };
+
+  const handleSortChange = (e) => {
+    debouncedFetchUsers.cancel();
+    const [newSortBy, newOrderBy] = e.target.value.split(":");
+    setSortBy(newSortBy);
+    setOrderBy(newOrderBy);
+    setCurrentPage(0);
+    
+    // Gọi fetchUsers ngay lập tức với sort mới
+    fetchUsers({ 
+      sortBy: newSortBy, 
+      orderBy: newOrderBy, 
+      page: 0 
+    });
   };
 
   const handleCreateUser = () => {
@@ -155,8 +237,8 @@ export default function useUserManagement() {
       username: prompt("Enter username:") || "newuser",
       email: prompt("Enter email:") || "newuser@example.com",
       status: "ACTIVE",
-      roles: [{ id: "ROLE_USER" }], // Match the expected roles structure
-      rank: "DONG", // Default rank
+      roles: ["ROLE_USER"],
+      rank: "DONG",
     };
     dispatch(createUser(userData));
   };
@@ -167,7 +249,7 @@ export default function useUserManagement() {
   };
 
   const handleUpdateRole = (userId, currentRoles) => {
-    const hasVipRole = currentRoles.some((role) => role.id === "ROLE_VIP");
+    const hasVipRole = currentRoles.includes("ROLE_VIP");
     const newRoleId = hasVipRole ? "ROLE_USER" : "ROLE_VIP";
     dispatch(updateUserRole({ userId, roleId: newRoleId }));
   };
@@ -179,14 +261,21 @@ export default function useUserManagement() {
   const handleDelete = (userId) => {
     if (window.confirm("Bạn có chắc muốn xóa người dùng này?")) {
       console.log(`Delete user with ID: ${userId}`);
-      // Note: No deleteUser thunk exists in the slice. Add one if needed.
     }
   };
 
-  // Effect for fetching users
+  // Effect để fetch dữ liệu lần đầu
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    
+    // Cleanup function
+    return () => {
+      if (pendingRequestRef.current) {
+        pendingRequestRef.current.abort();
+      }
+      debouncedFetchUsers.cancel();
+    };
+  }, []); // Chỉ chạy một lần khi component mount
 
   // Effect for clearing errors
   useEffect(() => {
@@ -232,13 +321,7 @@ export default function useUserManagement() {
       rankOptions,
       handleStatusFilterChange,
       handleRankFilterChange,
-      handleSortChange: (e) => {
-        const [newSortBy, newOrderBy] = e.target.value.split(":");
-        setSortBy(newSortBy);
-        setOrderBy(newOrderBy);
-        setCurrentPage(0);
-        fetchUsers();
-      },
+      handleSortChange,
     },
   };
 }

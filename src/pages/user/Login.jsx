@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../../redux/slices/authSlice";
+import { loginUser, initiateGoogleLogin } from "../../redux/slices/authSlice";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -137,19 +137,17 @@ const Login = () => {
     });
     navigate("/forgot-password");
   };
-
-  const handleGoogleLogin = () => {
-    toast.info("Đang chuyển hướng đến đăng nhập với Google...", {
-      position: "top-right",
-      autoClose: 2000,
-      hideProgressBar: true,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      theme: "light",
-      className: "custom-toast-info",
-    });
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+  const handleGoogleLogin = async () => {
+    try {
+      console.log("Google login clicked");
+      await dispatch(initiateGoogleLogin()).unwrap();
+    } catch (error) {
+      console.error("Lỗi khi đăng nhập Google:", error);
+      setValidationErrors((prev) => ({
+        ...prev,
+        email: "Có lỗi xảy ra khi đăng nhập Google",
+      }));
+    }
   };
 
   return (
@@ -254,8 +252,7 @@ const Login = () => {
               >
                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </button>
-              <a
-                href="http://localhost:8080/oauth2/authorization/google"
+              <button
                 onClick={handleGoogleLogin}
                 className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-4 px-6 rounded-lg border border-gray-300 transition-colors duration-200 flex items-center justify-center gap-3"
               >
@@ -278,7 +275,7 @@ const Login = () => {
                   />
                 </svg>
                 Đăng nhập với Google
-              </a>
+              </button>
 
               <button
                 onClick={handleForgotPassword}

@@ -7,6 +7,7 @@ import {
   fetchPaginatedOrders,
   getMyOrders,
   getOrderDetail,
+  cancelOrder, 
 } from "../../services/orderService";
 
 export const loadOrders = createAsyncThunk(
@@ -67,6 +68,7 @@ export const loadPaginatedOrders = createAsyncThunk(
       orderBy = "desc",
       status = "",
       keyword = "",
+      userId = "", 
     },
     { rejectWithValue }
   ) => {
@@ -78,6 +80,7 @@ export const loadPaginatedOrders = createAsyncThunk(
         orderBy,
         status,
         keyword,
+        userId, 
       });
       return data;
     } catch (error) {
@@ -106,6 +109,18 @@ export const fetchMyOrderDetail = createAsyncThunk(
       return data;
     } catch (error) {
       return rejectWithValue(error.message || "Failed to fetch order detail");
+    }
+  }
+);
+
+export const cancelUserOrder = createAsyncThunk(
+  "order/cancelUserOrder",
+  async ({ orderId, cancellationReason }, { rejectWithValue }) => {
+    try {
+      const data = await cancelOrder(orderId, cancellationReason);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to cancel order");
     }
   }
 );
@@ -234,6 +249,25 @@ const orderSlice = createSlice({
         state.currentOrder = action.payload;
       })
       .addCase(fetchMyOrderDetail.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(cancelUserOrder.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(cancelUserOrder.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        state.myOrders = state.myOrders.map((order) =>
+          order.orderId === updated.orderId ? { ...order, ...updated } : order
+        );
+        if (state.currentOrder?.orderId === updated.orderId) {
+          state.currentOrder = { ...state.currentOrder, ...updated };
+        }
+      })
+      .addCase(cancelUserOrder.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
