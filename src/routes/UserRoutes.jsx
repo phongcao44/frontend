@@ -62,6 +62,7 @@ const UserRoutes = () => {
         </Route>
 
         <Route path="payment-success/:orderId" element={<OrderSuccessPage />} />
+        <Route path="/payment-failed/:orderId" element={<ErrorPage />} />
 
         {/* Auth */}
         <Route path="login" element={<Login />} />

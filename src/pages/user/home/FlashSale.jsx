@@ -51,6 +51,8 @@ const FlashSale = () => {
     loadActiveFlashSale();
   }, [dispatch]);
 
+  console.log(activeFlashSale)
+
 
   return (
     <div className="py-10 px-5 bg-white">

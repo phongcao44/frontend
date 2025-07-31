@@ -1,13 +1,13 @@
+import { useEffect } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import useUserDetail from "./useUserDetail";
 import UserProfileCard from "./UserProfileCard";
 import TabContent from "./TabContent";
 import ContactInfo from "./ContactInfo";
 import AddressInfo from "./AddressInfo";
-import QuickActions from "./QuickActions";
 import Modals from "./Modals";
 import { Key, X } from "lucide-react";
 
-// Main component for user detail UI
 export default function UserDetail() {
   const {
     showEmailModal,
@@ -19,6 +19,10 @@ export default function UserDetail() {
     address,
     userRoles,
     orders,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    pagination,
     vouchers,
     error,
     success,
@@ -30,6 +34,50 @@ export default function UserDetail() {
     getStatusColor,
     getStatusIcon,
   } = useUserDetail();
+
+  // Handle notifications with react-hot-toast
+  useEffect(() => {
+    if (error) {
+      toast.error(error, {
+        id: "error-user-detail", // Fixed ID to prevent duplicate toasts
+        position: "top-right",
+        duration: 3000,
+        style: {
+          background: "#FEF2F2",
+          color: "#991B1B",
+          border: "1px solid #FECACA",
+          padding: "12px 16px",
+          borderRadius: "8px",
+          fontSize: "14px",
+        },
+        iconTheme: {
+          primary: "#991B1B",
+          secondary: "#FEF2F2",
+        },
+      });
+      handlers.clearError();
+    }
+    if (success) {
+      toast.success(success, {
+        id: "success-user-detail", // Fixed ID to prevent duplicate toasts
+        position: "top-right",
+        duration: 3000,
+        style: {
+          background: "#ECFDF5",
+          color: "#065F46",
+          border: "1px solid #6EE7B7",
+          padding: "12px 16px",
+          borderRadius: "8px",
+          fontSize: "14px",
+        },
+        iconTheme: {
+          primary: "#065F46",
+          secondary: "#ECFDF5",
+        },
+      });
+      handlers.clearSuccess();
+    }
+  }, [error, success, handlers]);
 
   // Debug log for status change
   const handleStatusChangeWithLog = (...args) => {
@@ -51,42 +99,8 @@ export default function UserDetail() {
                 Thông tin chi tiết và quản lý tài khoản người dùng
               </p>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handlers.toggleResetPasswordModal}
-                className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors"
-                disabled={isLoading}
-              >
-                <Key className="h-4 w-4" />
-                Reset mật khẩu
-              </button>
-            </div>
           </div>
         </div>
-
-        {/* Error/Success Messages */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-6 text-sm text-red-800 flex items-center justify-between">
-            <span>{error}</span>
-            <button
-              onClick={handlers.clearError}
-              className="text-red-600 hover:text-red-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-        {success && (
-          <div className="bg-green-50 border border-green-200 p-4 rounded-lg mb-6 text-sm text-green-800 flex items-center justify-between">
-            <span>{success}</span>
-            <button
-              onClick={handlers.clearSuccess}
-              className="text-green-600 hover:text-green-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Section */}
@@ -106,6 +120,10 @@ export default function UserDetail() {
               userInfo={userInfo || {}}
               userRoles={userRoles || []}
               orders={orders || []}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              pagination={pagination}
               vouchers={vouchers || []}
               isLoading={isLoading}
               handlers={handlers}
@@ -128,13 +146,6 @@ export default function UserDetail() {
               isLoading={isLoading}
               handlers={handlers}
             />
-            {userInfo && (
-              <QuickActions
-                handlers={{ ...handlers, handleStatusChange: handleStatusChangeWithLog }}
-                isLoading={isLoading}
-                currentStatus={userInfo.status || "INACTIVE"}
-              />
-            )}
           </div>
         </div>
 
@@ -149,6 +160,8 @@ export default function UserDetail() {
           handlers={handlers}
         />
       </div>
+      {/* Toast container for react-hot-toast */}
+      <Toaster />
     </div>
   );
 }

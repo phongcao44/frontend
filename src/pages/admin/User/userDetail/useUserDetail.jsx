@@ -9,7 +9,15 @@ import {
   removeUserRole,
   updateUserDetailThunk,
 } from "../../../../redux/slices/userSlice";
+import { loadPaginatedOrders } from "../../../../redux/slices/orderSlice";
 import { useParams } from "react-router-dom";
+
+// Static list of all roles (replace with API fetch if needed)
+const allRoles = [
+  { id: "1", name: "ADMIN", description: "Administrator" },
+  { id: "2", name: "MODERATOR", description: "Moderator" },
+  { id: "3", name: "USER", description: "Regular User" },
+];
 
 const normalizeNull = (data) => {
   if (data === null) return undefined;
@@ -24,17 +32,7 @@ const normalizeNull = (data) => {
   return data;
 };
 
-// Validation schemas for Formik
-const contactValidationSchema = Yup.object({
-  email: Yup.string()
-    .email("Email không hợp lệ")
-    .required("Vui lòng nhập email"),
-  phone: Yup.string()
-    .matches(/^\d{10}$/, "Số điện thoại phải có 10 số")
-    .required("Vui lòng nhập số điện thoại"),
-  marketingConsent: Yup.boolean(),
-});
-
+// Validation schema for address
 const addressValidationSchema = Yup.object({
   name: Yup.string().required("Vui lòng nhập tên"),
   street: Yup.string(),
@@ -43,66 +41,118 @@ const addressValidationSchema = Yup.object({
   zipCode: Yup.string(),
 });
 
+// Validation schema for profile
 const profileValidationSchema = Yup.object({
-  name: Yup.string().required("Vui lòng nhập tên người dùng"),
-  email: Yup.string()
-    .email("Email không hợp lệ")
-    .required("Vui lòng nhập email"),
+  name: Yup.string().required("Vui lòng nhập tên"),
 });
 
 export default function useUserDetail() {
   const dispatch = useDispatch();
   const { userId } = useParams();
   const {
-    userDetail = {}, // Fallback to empty object
-    loading,
+    userDetail = {},
+    loading: userLoading,
     error: reduxError,
-  } = useSelector((state) => {
-    return state.users;
-  });
+  } = useSelector((state) => state.users);
+  const {
+    list: { content: orders, totalElements, totalPages },
+    loading: orderLoading,
+    error: orderError,
+  } = useSelector((state) => state.order);
 
   // State for modals, tabs, and UI
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("overview");
-  const [isEditingContact, setIsEditingContact] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isEditingContact, setIsEditingContact] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 0,
+    limit: 5,
+    sortBy: "createdAt",
+    orderBy: "desc",
+    status: "",
+    keyword: "",
+  });
 
-  // User data state
   const [userInfo, setUserInfo] = useState(null);
   const [address, setAddress] = useState(null);
   const [userRoles, setUserRoles] = useState([]);
 
-  // Static data (replace with API fetch if needed)
-  const orders = useMemo(
-    () =>
-      normalizeNull([
-        {
-          id: "ORD001",
-          date: "2024-12-10",
-          total: 350000,
-          status: "Delivered",
-        },
-        {
-          id: "ORD002",
-          date: "2024-12-05",
-          total: 280000,
-          status: "Processing",
-        },
-        {
-          id: "ORD003",
-          date: "2024-11-28",
-          total: 450000,
-          status: "Delivered",
-        },
-      ]),
-    []
-  );
+  // Fetch user details and orders on mount or when pagination/userId changes
+  useEffect(() => {
+    if (userId) {
+      dispatch(fetchUserDetail(userId));
+      dispatch(
+        loadPaginatedOrders({
+          userId,
+          page: pagination.page,
+          limit: pagination.limit,
+          sortBy: pagination.sortBy,
+          orderBy: pagination.orderBy,
+          status: pagination.status,
+          keyword: pagination.keyword,
+        })
+      );
+    }
+  }, [dispatch, userId, pagination]);
+
+  // Map API data to local state when userDetail changes
+  useEffect(() => {
+    if (userDetail && Object.keys(userDetail).length > 0) {
+      const normalizedData = normalizeNull(userDetail);
+
+      setUserInfo({
+        id: normalizedData.userId || "",
+        name: normalizedData.userName || "",
+        email: normalizedData.userEmail || "",
+        phone: normalizedData.phone || "",
+        marketingConsent: normalizedData.marketingConsent ?? false,
+        avatar: undefined,
+        status: normalizedData.status || "INACTIVE",
+        createdAt: normalizedData.createTime || "",
+        updatedAt: normalizedData.updateTime || "",
+        loyaltyPoints:
+          normalizedData.address?.[0]?.user?.userPoint?.totalPoints || 0,
+        memberTier: normalizedData.rank || "",
+        totalOrders: totalElements || 0,
+        totalSpent: orders.reduce((sum, order) => sum + (order.total || 0), 0),
+      });
+
+      setAddress({
+        name: normalizedData.address?.[0]?.recipientName || undefined,
+        country: normalizedData.address?.[0]?.province || undefined,
+        street: normalizedData.address?.[0]?.fullAddress || undefined,
+        city: normalizedData.address?.[0]?.district || undefined,
+        zipCode: normalizedData.address?.[0]?.wardCode || undefined,
+      });
+
+      // Process roles properly - Create array with ALL roles and their granted status
+      const processedRoles = allRoles.map((allRole) => {
+        const userHasRole = Array.isArray(normalizedData.role)
+          ? normalizedData.role.some(
+              (userRole) =>
+                String(userRole.id) === String(allRole.id) ||
+                String(userRole.name) === String(allRole.name)
+            )
+          : false;
+
+        return {
+          id: String(allRole.id),
+          name: allRole.name,
+          description: allRole.description,
+          granted: userHasRole,
+        };
+      });
+
+      setUserRoles(processedRoles);
+    }
+  }, [userDetail, orders, totalElements]);
 
   const vouchers = useMemo(
     () =>
@@ -125,72 +175,13 @@ export default function useUserDetail() {
     []
   );
 
-  // Fetch user details on mount
-  useEffect(() => {
-    if (userId) {
-      dispatch(fetchUserDetail(userId));
-    }
-  }, [dispatch, userId]);
-
-  // Map API data to local state when userDetail changes
-  useEffect(() => {
-    if (userDetail && Object.keys(userDetail).length > 0) {
-      const normalizedData = normalizeNull(userDetail);
-      setUserInfo({
-        id: normalizedData.userId || "",
-        name: normalizedData.userName || "",
-        email: normalizedData.userEmail || "",
-        avatar: undefined,
-        status: normalizedData.status || "INACTIVE",
-        createdAt: normalizedData.createTime || "",
-        updatedAt: normalizedData.updateTime || "",
-        loyaltyPoints:
-          normalizedData.address?.[0]?.user?.userPoint?.totalPoints || 0,
-        memberTier: normalizedData.rank || "",
-        totalOrders: 0,
-        totalSpent: 0,
-      });
-
-      setAddress({
-        name: normalizedData.address?.[0]?.recipientName || undefined,
-        country: normalizedData.address?.[0]?.province || undefined,
-        street: normalizedData.address?.[0]?.fullAddress || undefined,
-        city: normalizedData.address?.[0]?.district || undefined,
-        zipCode: normalizedData.address?.[0]?.wardCode || undefined,
-      });
-
-      const apiRoles = Array.isArray(normalizedData.role)
-        ? normalizedData.role.map((role) => ({
-            id: role.id || "",
-            name: role.name || "",
-            description: role.description || "",
-            granted: true, // Assuming roles from API are granted
-          }))
-        : [];
-      setUserRoles(apiRoles);
-    }
-  }, [userDetail]);
-
-  const allRoles = useMemo(
-    () => [
-      {
-        id: 1,
-        name: "ROLE_ADMIN",
-        description: "Quản trị viên toàn hệ thống",
-      },
-      {
-        id: 2,
-        name: "ROLE_MODERATOR",
-        description: "Quản lý nội dung và sản phẩm",
-      },
-      {
-        id: 3,
-        name: "ROLE_USER",
-        description: "Khách hàng thông thường",
-      },
-    ],
-    []
-  );
+  // Handle pagination change
+  const handlePaginationChange = useCallback((newPagination) => {
+    setPagination((prev) => ({
+      ...prev,
+      ...newPagination,
+    }));
+  }, []);
 
   // Format date utility
   const formatDate = useCallback((dateString) => {
@@ -259,41 +250,67 @@ export default function useUserDetail() {
 
       handleRoleToggle: async (roleId) => {
         setIsLoading(true);
+        const previousRoles = [...userRoles]; // Store current roles for rollback
+        const currentRole = userRoles.find(
+          (r) => String(r.id) === String(roleId)
+        );
+        const isCurrentlyGranted = currentRole ? currentRole.granted : false;
+
+        // Optimistically update UI
+        const updatedRoles = userRoles.map((role) =>
+          String(role.id) === String(roleId)
+            ? { ...role, granted: !isCurrentlyGranted }
+            : role
+        );
+        setUserRoles(updatedRoles);
+
         try {
-          const role = userRoles.find((r) => r.id === roleId);
-          if (role?.granted) {
+          if (isCurrentlyGranted) {
             await dispatch(removeUserRole({ userId, roleId })).unwrap();
           } else {
             await dispatch(updateUserRole({ userId, roleId })).unwrap();
           }
-          setUserRoles((roles) =>
-            normalizeNull(
-              roles.map((r) =>
-                r.id === roleId ? { ...r, granted: !r.granted } : r
-              )
-            )
-          );
+
+          await dispatch(fetchUserDetail(userId)).unwrap();
+
+          const roleData = allRoles.find(
+            (r) => String(r.id) === String(roleId)
+          ) || {
+            name: "Unknown Role",
+          };
+
           setSuccess(
-            `Quyền ${role?.name || "Unknown"} đã được ${
-              role?.granted ? "xóa" : "cấp"
+            `Quyền ${roleData.name} đã được ${
+              isCurrentlyGranted ? "xóa" : "cấp"
             }`
           );
         } catch (err) {
-          setError(err || "Không thể thay đổi quyền");
-        } finally {
-          setIsLoading(false);
-        }
-      },
+          console.error("Role toggle error details:", {
+            message: err?.message,
+            response: err?.response?.data,
+            status: err?.response?.status,
+          });
+          // Revert optimistic update
+          setUserRoles(previousRoles);
 
-      handleContactSave: async (values) => {
-        setIsLoading(true);
-        try {
-          await dispatch(updateUserDetailThunk({ userId, ...values })).unwrap();
-          setUserInfo((prev) => normalizeNull({ ...prev, ...values }));
-          setSuccess("Thông tin liên hệ đã được cập nhật");
-          setIsEditingContact(false);
-        } catch (err) {
-          setError(err || "Không thể cập nhật thông tin liên hệ");
+          let errorMessage = "Không thể thay đổi quyền";
+          if (err?.response?.data?.message) {
+            switch (err.response.data.message) {
+              case "Cannot remove ROLE_ADMIN from any user":
+                errorMessage = "Không thể xóa quyền quản trị (admin)";
+                break;
+              case "User must have at least one role":
+                errorMessage = "Người dùng phải có ít nhất một quyền";
+                break;
+              default:
+                errorMessage = err.response.data.message;
+                break;
+            }
+          } else if (err?.message) {
+            errorMessage = err.message;
+          }
+
+          setError(errorMessage);
         } finally {
           setIsLoading(false);
         }
@@ -309,7 +326,21 @@ export default function useUserDetail() {
           setSuccess("Địa chỉ đã được cập nhật");
           setIsEditingAddress(false);
         } catch (err) {
-          setError(err || "Không thể cập nhật địa chỉ");
+          setError(err?.message || "Không thể cập nhật địa chỉ");
+        } finally {
+          setIsLoading(false);
+        }
+      },
+
+      handleContactSave: async (values) => {
+        setIsLoading(true);
+        try {
+          await dispatch(updateUserDetailThunk({ userId, ...values })).unwrap();
+          setUserInfo((prev) => normalizeNull({ ...prev, ...values }));
+          setSuccess("Thông tin liên hệ đã được cập nhật");
+          setIsEditingContact(false);
+        } catch (err) {
+          setError(err?.message || "Không thể cập nhật thông tin liên hệ");
         } finally {
           setIsLoading(false);
         }
@@ -323,7 +354,7 @@ export default function useUserDetail() {
           setSuccess("Thông tin cá nhân đã được cập nhật");
           setIsEditingProfile(false);
         } catch (err) {
-          setError(err || "Không thể cập nhật thông tin cá nhân");
+          setError(err?.message || "Không thể cập nhật thông tin cá nhân");
         } finally {
           setIsLoading(false);
         }
@@ -338,14 +369,28 @@ export default function useUserDetail() {
       toggleRoleModal: () => setShowRoleModal((prev) => !prev),
       toggleResetPasswordModal: () =>
         setShowResetPasswordModal((prev) => !prev),
+      toggleEditContact: () => setIsEditingContact((prev) => !prev),
+      toggleEditProfile: () => setIsEditingProfile((prev) => !prev),
       setSelectedTab,
-      setIsEditingContact,
       setIsEditingAddress,
       setIsEditingProfile,
       clearError: () => setError(""),
       clearSuccess: () => setSuccess(""),
+      isLoading,
+      isEditingContact,
+      isEditingProfile,
+      profileValidationSchema,
+      handlePaginationChange,
     }),
-    [dispatch, userId, userRoles]
+    [
+      dispatch,
+      userId,
+      userRoles,
+      isLoading,
+      handlePaginationChange,
+      isEditingContact,
+      isEditingProfile,
+    ]
   );
 
   // Memoized props for UserProfileCard
@@ -361,40 +406,28 @@ export default function useUserDetail() {
         totalOrders: userInfo?.totalOrders,
         totalSpent: userInfo?.totalSpent,
         loyaltyPoints: userInfo?.loyaltyPoints,
-        isVerified: userInfo?.isVerified,
       },
-      isLoading: isLoading || loading,
+      isLoading: isLoading || userLoading || orderLoading,
       handlers: {
-        setIsEditingProfile,
         toggleRoleModal: handlers.toggleRoleModal,
         handleStatusChange: handlers.handleStatusChange,
-        handleProfileSave: handlers.handleProfileSave,
+        toggleEditProfile: handlers.toggleEditProfile,
       },
       formatDate,
       formatCurrency,
       getStatusColor,
       getStatusIcon,
-      profileValidationSchema,
     }),
     [
-      userInfo?.id,
-      userInfo?.name,
-      userInfo?.email,
-      userInfo?.status,
-      userInfo?.createdAt,
-      userInfo?.updatedAt,
-      userInfo?.totalOrders,
-      userInfo?.totalSpent,
-      userInfo?.loyaltyPoints,
-      userInfo?.isVerified,
+      userInfo,
       isLoading,
-      loading,
+      userLoading,
+      orderLoading,
       handlers,
       formatDate,
       formatCurrency,
       getStatusColor,
       getStatusIcon,
-      profileValidationSchema,
     ]
   );
 
@@ -403,24 +436,27 @@ export default function useUserDetail() {
     showRoleModal,
     showResetPasswordModal,
     selectedTab,
-    isEditingContact,
     isEditingAddress,
+    isEditingContact,
     isEditingProfile,
     userInfo,
     allRoles,
     address,
     userRoles,
     orders,
+    totalPages,
+    totalItems: totalElements,
+    itemsPerPage: pagination.limit,
+    pagination,
     vouchers,
-    error: error || reduxError,
+    error: error || reduxError || orderError,
     success,
-    isLoading: isLoading || loading,
+    isLoading: isLoading || userLoading || orderLoading,
     handlers,
     formatDate,
     formatCurrency,
     getStatusColor,
     getStatusIcon,
-    contactValidationSchema,
     addressValidationSchema,
     profileValidationSchema,
     userProfileProps,

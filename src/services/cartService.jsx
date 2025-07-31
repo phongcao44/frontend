@@ -3,19 +3,10 @@ import axiosInstance from "../utils/axiosInstance";
 export const fetchCart = async () => {
   try {
     const res = await axiosInstance.get("/user/carts");
-    const data = res.data;
+    return res.data;
 
-    const itemsWithImage = data.items.map((item) => ({
-      ...item,
-      image: `https://picsum.photos/seed/${item.cartItemId}/200/200`,
-    }));
-
-    return {
-      cartId: data.cartId,
-      items: itemsWithImage,
-    };
   } catch (err) {
-    console.error("❌ Fetch Cart failed:", err);
+    console.error("Fetch Cart failed:", err);
     throw err;
   }
 };
@@ -25,7 +16,7 @@ export const addToCart = async (payload) => {
     const res = await axiosInstance.post("/user/carts/add", payload);
     return res.data;
   } catch (err) {
-    console.error("❌ Add to Cart failed:", err);
+    console.error("Add to Cart failed:", err);
     throw err;
   }
 };
@@ -41,7 +32,7 @@ export const updateCartItem = async (cartItemId, quantity) => {
     );
     return res.data;
   } catch (err) {
-    console.error("❌ Update Cart Item failed:", err);
+    console.error("Update Cart Item failed:", err);
     throw err;
   }
 };
@@ -51,7 +42,7 @@ export const removeCartItem = async (cartItemId) => {
     const res = await axiosInstance.delete(`/user/carts/remove/${cartItemId}`);
     return res.data;
   } catch (err) {
-    console.error("❌ Remove Cart Item failed:", err);
+    console.error("Remove Cart Item failed:", err);
     throw err;
   }
 };
@@ -61,7 +52,7 @@ export const clearCart = async () => {
     const res = await axiosInstance.delete("/user/carts/clear");
     return res.data;
   } catch (err) {
-    console.error("❌ Clear Cart failed:", err);
+    console.error("Clear Cart failed:", err);
     throw err;
   }
 };
@@ -71,7 +62,7 @@ export const checkoutCart = async (orderPayload) => {
     const res = await axiosInstance.post("/user/carts/checkout", orderPayload);
     return res.data;
   } catch (err) {
-    console.error("❌ Checkout Cart failed:", err);
+    console.error("Checkout Cart failed:", err);
     throw err;
   }
 };
@@ -84,7 +75,7 @@ export const checkoutByCartItem = async (cartItemId, orderPayload) => {
     );
     return res.data;
   } catch (err) {
-    console.error("❌ Checkout By CartItem failed:", err);
+    console.error("Checkout By CartItem failed:", err);
     throw err;
   }
 };
@@ -97,7 +88,7 @@ export const checkoutSelectedItems = async (orderPayload) => {
     );
     return res.data;
   } catch (err) {
-    console.error("❌ Checkout Selected Items failed:", err);
+    console.error("Checkout Selected Items failed:", err);
     throw err;
   }
 };

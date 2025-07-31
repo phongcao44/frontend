@@ -75,9 +75,11 @@ export const fetchUsersPaginateAndFilter = createAsyncThunk(
   "users/fetchUsersPaginateAndFilter",
   async (params, { rejectWithValue }) => {
     try {
+      console.log("Gửi API với tham số:", params); // Log tham số gửi đi
       const data = await getAllUsersPaginateAndFilter(params);
       return data;
     } catch (error) {
+      console.error("API error:", error.response?.data || error.message);
       return rejectWithValue(
         error.message || error.toString() || "Failed to fetch paginated users"
       );
