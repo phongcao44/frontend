@@ -17,6 +17,7 @@ const ProductCardList = ({ product }) => {
     name,
     imageUrl,
     price,
+    lowestPrice,
     discountedPrice,
     discountOverrideByFlashSale,
     discountType,
@@ -35,9 +36,7 @@ const ProductCardList = ({ product }) => {
     } else if (discountType === "FIXED_AMOUNT") {
       discountLabel = `- ${discountOverrideByFlashSale.toLocaleString("vi-VN")}đ`;
     }
-  } else if (discountedPrice > price) {
-    discountLabel = `-${Math.round((1 - price / discountedPrice) * 100)}%`;
-  }
+  } 
 
   const handleNavigate = () => {
     navigate(`/product/${id}`);
@@ -132,9 +131,9 @@ const ProductCardList = ({ product }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="text-lg font-bold text-gray-900">
-              {price.toLocaleString("vi-VN")}đ
+              {lowestPrice.toLocaleString("vi-VN")}đ
             </span>
-            {(flashSale ? discountOverrideByFlashSale !== null : discountedPrice > price) && (
+            {(flashSale ? discountOverrideByFlashSale !== null : discountedPrice > lowestPrice) && (
               <span className="text-sm text-gray-400 line-through">
                 {originalPrice.toLocaleString("vi-VN")}đ
               </span>

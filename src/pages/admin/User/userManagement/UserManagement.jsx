@@ -19,6 +19,8 @@ export default function UserManagement() {
     filters,
   } = useUserManagement();
 
+  console.log(pagination)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
@@ -37,13 +39,6 @@ export default function UserManagement() {
               >
                 <RefreshCw className={`h-5 w-5 ${isLoading ? "animate-spin" : ""}`} />
               </button>
-              {/* Placeholder for Download button - implement or remove */}
-              {/* <button
-                onClick={() => alert("Download functionality not implemented")}
-                className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
-              >
-                <Download className="h-5 w-5" />
-              </button> */}
               <button
                 onClick={handlers.handleCreateUser}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105"
@@ -92,23 +87,26 @@ export default function UserManagement() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
               <select
-                value={statusFilter}
+                value={statusFilter ?? ""}
                 onChange={filters.handleStatusFilterChange}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {filters.statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <option key={option.value ?? "null"} value={option.value ?? ""}>
                     {option.label}
                   </option>
                 ))}
               </select>
               <select
-                value={rankFilter}
+                value={activeTab === "Khách hàng VIP" ? "" : rankFilter ?? ""}
                 onChange={filters.handleRankFilterChange}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={activeTab === "Khách hàng VIP"}
+                className={`px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  activeTab === "Khách hàng VIP" ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 {filters.rankOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <option key={option.value ?? "null"} value={option.value ?? ""}>
                     {option.label}
                   </option>
                 ))}
@@ -150,7 +148,23 @@ export default function UserManagement() {
         {/* Empty State */}
         {!isLoading && !error && customers.length === 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
-            <p className="text-sm text-gray-600">Không tìm thấy khách hàng nào.</p>
+            <p className="text-sm text-gray-600">
+              {activeTab === "Khách hàng VIP"
+                ? `Không tìm thấy khách hàng Kim Cương${
+                    statusFilter
+                      ? ` với trạng thái ${filters.statusOptions.find((o) => o.value === statusFilter)?.label}`
+                      : ""
+                  }${searchTerm ? ` khớp với "${searchTerm}"` : ""}.`
+                : `Không tìm thấy khách hàng nào${
+                    statusFilter
+                      ? ` với trạng thái ${filters.statusOptions.find((o) => o.value === statusFilter)?.label}`
+                      : ""
+                  }${
+                    rankFilter && activeTab !== "Khách hàng VIP"
+                      ? ` và rank ${filters.rankOptions.find((o) => o.value === rankFilter)?.label}`
+                      : ""
+                  }${searchTerm ? ` khớp với "${searchTerm}"` : ""}.`}
+            </p>
           </div>
         )}
 

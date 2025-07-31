@@ -11,6 +11,8 @@ import {
   addFlashSaleItem,
   editFlashSaleItem,
   deleteFlashSaleItem,
+    getTop1FlashSale,
+
 } from "../../services/flashSaleService";
 
 // FLASH SALE
@@ -146,6 +148,17 @@ export const removeFlashSaleItem = createAsyncThunk(
     }
   }
 );
+export const fetchTop1FlashSale = createAsyncThunk(
+  "flashSale/fetchTop1FlashSale",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await getTop1FlashSale();
+      return response;
+    } catch (err) {
+      return rejectWithValue(err.message || "Failed to fetch top 1 flash sale");
+    }
+  }
+);
 
 // SLICE
 const flashSaleSlice = createSlice({
@@ -157,6 +170,8 @@ const flashSaleSlice = createSlice({
     flashSaleVariantDetails: [], // Kept as array to preserve original logic
     activeFlashSale: null, // Added for active flash sale
     loading: false,
+    top1FlashSale: null,
+
     error: null,
   },
   reducers: {
@@ -332,7 +347,19 @@ const flashSaleSlice = createSlice({
       .addCase(removeFlashSaleItem.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
+      })
+        .addCase(fetchTop1FlashSale.pending, (state) => {
+      state.loading = true;
+    })
+    .addCase(fetchTop1FlashSale.fulfilled, (state, action) => {
+      state.loading = false;
+      state.top1FlashSale = action.payload;  // 👈 Phải có dòng này!
+    })
+    .addCase(fetchTop1FlashSale.rejected, (state) => {
+      state.loading = false;
+      state.top1FlashSale = null;
+    });
+      
   },
 });
 
