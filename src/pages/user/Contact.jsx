@@ -1,7 +1,39 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { submitContactForm, resetContactState } from "../../redux/slices/contactSlice";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const Contact = () => {
+  const dispatch = useDispatch();
+  const { loading, success, error } = useSelector((state) => state.contact);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    dispatch(submitContactForm(formData));
+  };
+
+  useEffect(() => {
+    if (success) {
+      alert("Gửi liên hệ thành công!");
+      setFormData({ name: "", email: "", phone: "", message: "" });
+      dispatch(resetContactState());
+    } else if (error) {
+      alert("Gửi thất bại: " + error);
+      dispatch(resetContactState());
+    }
+  }, [success, error, dispatch]);
+
   return (
     <div style={styles.container}>
       <div style={styles.breadcrumb}>
@@ -32,14 +64,41 @@ const Contact = () => {
         </div>
 
         {/* RIGHT SIDE */}
-        <form style={styles.right}>
+        <form style={styles.right} onSubmit={handleSubmit}>
           <div style={styles.row}>
-            <input type="text" placeholder="Your Name *" style={styles.input} />
-            <input type="email" placeholder="Your Email *" style={styles.input} />
-            <input type="text" placeholder="Your Phone *" style={styles.input} />
+            <input
+              name="name"
+              placeholder="Your Name *"
+              style={styles.input}
+              value={formData.name}
+              onChange={handleChange}
+            />
+            <input
+              name="email"
+              placeholder="Your Email *"
+              style={styles.input}
+              value={formData.email}
+              onChange={handleChange}
+            />
+            <input
+              name="phone"
+              placeholder="Your Phone *"
+              style={styles.input}
+              value={formData.phone}
+              onChange={handleChange}
+            />
           </div>
-          <textarea placeholder="Your Massage" style={styles.textarea} rows="6" />
-          <button type="submit" style={styles.button}>Send Massage</button>
+          <textarea
+            name="message"
+            placeholder="Your Message"
+            style={styles.textarea}
+            rows="6"
+            value={formData.message}
+            onChange={handleChange}
+          />
+          <button type="submit" style={styles.button} disabled={loading}>
+            {loading ? "Sending..." : "Send Message"}
+          </button>
         </form>
       </div>
     </div>
@@ -47,7 +106,6 @@ const Contact = () => {
 };
 
 export default Contact;
-
 const styles = {
   container: {
     maxWidth: 1200,

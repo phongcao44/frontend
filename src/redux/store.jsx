@@ -21,9 +21,11 @@ import voucherReducer from "./slices/voucherSlice";
 import productSpecificationReducer from "./slices/productSpecificationSlice";
 import wishlistReducer from "./slices/wishlistSlice";
 import blogReducer from "./slices/blogSlice"; 
+import contactReducer from "./slices/contactSlice.jsx";
 
 export const store = configureStore({
   reducer: {
+    contact: contactReducer,
     category: categoryReducer,
     products: productReducer,
     size: sizeReducer,
