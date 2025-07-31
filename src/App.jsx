@@ -3,6 +3,7 @@ import AppRouter from "./routes/AppRouter";
 import { generateToken, messaging } from "./notification/firebase"; // điều chỉnh path nếu cần
 import { onMessage } from "firebase/messaging";
 import Cookies from "js-cookie";
+import "leaflet/dist/leaflet.css";
 
 
 const App = () => {

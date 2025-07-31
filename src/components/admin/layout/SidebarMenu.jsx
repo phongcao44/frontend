@@ -113,6 +113,11 @@ const SidebarMenu = () => {
           icon: <FileTextOutlined />, 
           label: "Quản lý bài viết",
         },
+        {
+          key: "/admin/shipper",
+          icon: <UserOutlined />, 
+          label: "Quản lý shipper",
+        },
       ]}
     />
   );
