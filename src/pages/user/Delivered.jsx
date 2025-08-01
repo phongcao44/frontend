@@ -49,15 +49,17 @@ const DeliveredProductsPage = () => {
                   {/* <td className="px-4 py-3">
                     {new Date(item.createdAt).toLocaleDateString("vi-VN")}
                   </td> */}
-                  
+
                   <td className="px-4 py-3">{item.productName}</td>
 
-                  <td className="px-4 py-3 flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-green-400 to-teal-400 text-white flex items-center justify-center text-sm">
-                      👤
-                    </div>
-                    {item.customerName || "Bạn"}
-                  </td>
+<td className="px-4 py-3">
+  <img
+    src={item.mediaUrl}
+    alt={item.productName}
+    className="w-12 h-12 object-cover rounded-md border"
+  />
+</td>
+
 
                   <td className="px-4 py-3">
                     <span

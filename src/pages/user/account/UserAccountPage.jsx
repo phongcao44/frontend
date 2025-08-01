@@ -11,6 +11,8 @@ import AddressForm from './AddressForm';
 import WishList from '../WishList';
 import { fetchUserVouchers, fetchCollectibleVouchers, userCollectVoucher } from '../../../redux/slices/voucherSlice';
 import Swal from 'sweetalert2';
+import { ProductFilled } from '@ant-design/icons';
+import DeliveredProductSection from "../../../components/user/DeliveredProductSection";
 
 export default function UserAccountPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -81,7 +83,7 @@ export default function UserAccountPage() {
       try {
         await dispatch(removeAddress(addressId)).unwrap();
         await dispatch(fetchUserView());
-        
+
         // Hiển thị thông báo thành công
         Swal.fire({
           title: 'Thành công!',
@@ -110,7 +112,7 @@ export default function UserAccountPage() {
   const handleCollectVoucher = async (voucher) => {
     // Thử các cách khác nhau để lấy userId
     const userId = userDetail?.id || userDetail?.userId || userDetail?.user?.id;
-    
+
     const payload = {
       userId: userId,
       voucherCode: voucher.code
@@ -118,17 +120,17 @@ export default function UserAccountPage() {
     console.log('Payload gửi lên BE:', payload);
     console.log('userDetail:', userDetail);
     console.log('userId được lấy:', userId);
-    
+
     // Kiểm tra userId trước khi gửi
     if (!userId) {
       setError('Không thể xác định ID người dùng. Vui lòng đăng nhập lại.');
       return;
     }
-    
+
     try {
       await dispatch(userCollectVoucher(payload)).unwrap();
       console.log('Thu thập voucher thành công!');
-      
+
       // Hiển thị thông báo thành công
       Swal.fire({
         title: 'Thành công!',
@@ -139,7 +141,7 @@ export default function UserAccountPage() {
         toast: true,
         position: 'top-end'
       });
-      
+
       // Refresh both lists after collecting
       await dispatch(fetchUserVouchers());
       await dispatch(fetchCollectibleVouchers());
@@ -176,6 +178,7 @@ export default function UserAccountPage() {
     { id: 'addresses', label: 'Địa chỉ', icon: MapPin },
     { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart },
     { id: 'myVouchers', label: 'Voucher của tôi', icon: Settings },
+    { id: 'deliveredProduct', label: 'Sản phẩm đã giao', icon: ProductFilled }
   ];
 
   const renderProfile = () => {
@@ -198,7 +201,7 @@ export default function UserAccountPage() {
 
             {/* Edit Button */}
             <div className="flex justify-end mb-8">
-              <button 
+              <button
                 onClick={() => setIsEditing(true)}
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
               >
@@ -218,7 +221,7 @@ export default function UserAccountPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">Thông tin cơ bản</h3>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
@@ -229,7 +232,7 @@ export default function UserAccountPage() {
                     <span className="text-gray-900 font-medium">{userDetail?.userName || 'Chưa cập nhật'}</span>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
                     <Mail className="w-4 h-4 text-blue-500" />
@@ -250,7 +253,7 @@ export default function UserAccountPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">Trạng thái tài khoản</h3>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
@@ -266,7 +269,7 @@ export default function UserAccountPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
                     <Gift className="w-4 h-4 text-blue-500" />
@@ -288,7 +291,7 @@ export default function UserAccountPage() {
               </div>
               <h3 className="text-xl font-bold text-gray-900">Lịch sử tài khoản</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
@@ -301,7 +304,7 @@ export default function UserAccountPage() {
                   </span>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-blue-500" />
@@ -324,7 +327,7 @@ export default function UserAccountPage() {
               </div>
               <h3 className="text-xl font-bold text-gray-900">Điểm tích lũy</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
@@ -338,7 +341,7 @@ export default function UserAccountPage() {
                   <span className="text-gray-600 ml-2">điểm</span>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
                   <Gift className="w-4 h-4 text-blue-500" />
@@ -424,7 +427,7 @@ export default function UserAccountPage() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-gray-700 font-medium">{addr.fullAddress}</p>
@@ -492,7 +495,7 @@ export default function UserAccountPage() {
           Thu thập voucher
         </button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {userVouchers && userVouchers.length > 0 ? (
           userVouchers.map((voucher) => (
@@ -511,13 +514,13 @@ export default function UserAccountPage() {
                   Đã có
                 </div>
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Calendar className="w-4 h-4" />
                   <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
                 </div>
-                
+
                 <div className="bg-white rounded-lg p-3 border border-blue-100">
                   <div className="flex items-center gap-2">
                     {voucher.discountPercent > 0 ? (
@@ -578,7 +581,7 @@ export default function UserAccountPage() {
               ✕
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {collectibleVouchers && collectibleVouchers.length > 0 ? (
               collectibleVouchers.map((voucher) => (
@@ -597,13 +600,13 @@ export default function UserAccountPage() {
                       Có thể thu thập
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="w-4 h-4" />
                       <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
                     </div>
-                    
+
                     <div className="bg-white rounded-lg p-3 border border-green-100">
                       <div className="flex items-center gap-2">
                         {voucher.discountPercent > 0 ? (
@@ -622,7 +625,7 @@ export default function UserAccountPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <button
                     className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group-hover:scale-105"
                     onClick={() => handleCollectVoucher(voucher)}
@@ -663,6 +666,9 @@ export default function UserAccountPage() {
         return <WishList />;
       case 'myVouchers':
         return renderMyVouchers();
+      case 'deliveredProduct':
+        return <DeliveredProductSection />;
+
       default:
         return null;
     }
@@ -696,7 +702,7 @@ export default function UserAccountPage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Tài khoản của tôi</h1>
-            <button 
+            <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
@@ -724,7 +730,7 @@ export default function UserAccountPage() {
                   </p>
                 </div>
               </div>
-              
+
               <nav className="pt-6">
                 <ul className="space-y-2">
                   {menuItems.map((item) => {
@@ -733,11 +739,10 @@ export default function UserAccountPage() {
                       <li key={item.id}>
                         <button
                           onClick={() => setActiveTab(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                            activeTab === item.id 
-                              ? 'bg-blue-50 text-blue-600 font-semibold' 
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${activeTab === item.id
+                              ? 'bg-blue-50 text-blue-600 font-semibold'
                               : 'text-gray-700 hover:bg-gray-50'
-                          }`}
+                            }`}
                         >
                           <Icon className="w-5 h-5" />
                           {item.label}
