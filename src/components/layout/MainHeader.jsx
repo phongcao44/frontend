@@ -5,24 +5,23 @@ import TopBanner from "./TopBanner";
 import AccountDropdown from "./AccountDropdown";
 import Cookies from "js-cookie";
 import { useSelector } from "react-redux";
+import { checkAuthFromStorage } from "../../utils/authUtils";
 
 const MainHeader = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const cart = useSelector((state) => state.cart.cart);
   const itemCount = cart?.items?.length || 0;
 
-
   const activePath = location.pathname;
-
+  const authState = useSelector((state) => state.auth.isLoggedIn);
   const token = Cookies.get("access_token");
 
-  useEffect(() => {
-    setIsLoggedIn(!!token);
-  }, [token]);
+  // Check both Redux state and localStorage
+  const isLoggedInFromStorage = checkAuthFromStorage();
+  const finalIsLoggedIn = authState || isLoggedInFromStorage || !!token;
 
   const showDrawer = () => setDrawerVisible(true);
   const closeDrawer = () => setDrawerVisible(false);
@@ -64,7 +63,7 @@ const MainHeader = () => {
           </div>
 
           <div className="hidden md:flex flex-1 md:ml-6 lg:ml-10">
-            <NavMenu activePath={activePath} isLoggedIn={isLoggedIn} />
+            <NavMenu activePath={activePath} />
           </div>
 
           <div className="flex items-center justify-end flex-1 md:flex-none gap-3 sm:gap-3 md:gap-4">
@@ -115,7 +114,7 @@ const MainHeader = () => {
                 {itemCount}
               </span>
             </Link>
-            {isLoggedIn ? (
+            {finalIsLoggedIn ? (
               <AccountDropdown />
             ) : (
               <Link to="/signup" aria-label="Sign Up">
@@ -163,7 +162,7 @@ const MainHeader = () => {
           </button>
         </div>
         <div className="p-0 bg-white">
-          <NavMenu activePath={activePath} vertical isLoggedIn={isLoggedIn} />
+          <NavMenu activePath={activePath} vertical />
         </div>
       </div>
       {drawerVisible && (
