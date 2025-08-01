@@ -42,7 +42,7 @@ import FlashSaleItemManagement from "../pages/admin/flash_Sale/FlashSaleItemMana
 import VoucherManagement from "../pages/admin/voucher/VoucherManagement";
 import PostManagement from "../pages/admin/posts/PostManagement";
 
-
+import OrderManagementShipper from "../pages/admin/shipper/OrderManagementShipper";
 export default function AdminRoutes() {
   return (
     <Route
@@ -105,6 +105,7 @@ export default function AdminRoutes() {
       {/* Fallback */}
       <Route path="/admin/*" element={<ErrorPage />} />
       
+      <Route path="/admin/shipper" element={<OrderManagementShipper />} />
     </Route>
   );
 }

@@ -11,6 +11,7 @@ import {
   redirectToGoogle,
 } from "../../services/authService";
 import Cookies from "js-cookie";
+import { saveAuthToStorage, clearAuthFromStorage, getAuthFromStorage } from "../../utils/authUtils";
 
 export const loginUser = createAsyncThunk(
   "auth/login",
@@ -41,6 +42,8 @@ export const loginUser = createAsyncThunk(
         path: "/",
       });
 
+      // Save to localStorage with expiration
+      saveAuthToStorage(userInfo, data?.data?.accessToken);
 
       return data;
     } catch (error) {
@@ -66,8 +69,16 @@ export const logoutUser = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const data = await logout();
+      // Clear localStorage and cookies
+      clearAuthFromStorage();
+      Cookies.remove("access_token");
+      Cookies.remove("user");
       return data;
     } catch (error) {
+      // Even if logout API fails, clear local storage and cookies
+      clearAuthFromStorage();
+      Cookies.remove("access_token");
+      Cookies.remove("user");
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -138,6 +149,9 @@ export const googleLoginUser = createAsyncThunk(
         path: "/",
       });
 
+      // Save to localStorage with expiration
+      saveAuthToStorage(userInfo, googleData?.accessToken);
+
       return {
         data: {
           user: userInfo,
@@ -189,6 +203,20 @@ const authSlice = createSlice({
     setUser: (state, action) => {
       state.user = action.payload;
     },
+    // New action to restore auth state from localStorage
+    restoreAuthState: (state) => {
+      const authData = getAuthFromStorage();
+      if (authData) {
+        state.user = authData.user;
+        state.isLoggedIn = true;
+      }
+    },
+    // New action to clear auth state
+    clearAuthState: (state) => {
+      state.user = null;
+      state.isLoggedIn = false;
+      clearAuthFromStorage();
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -223,6 +251,11 @@ const authSlice = createSlice({
 
       // Logout
       .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null;
+        state.isLoggedIn = false;
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        // Even if logout API fails, clear the state
         state.user = null;
         state.isLoggedIn = false;
       })
@@ -310,5 +343,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearAuthError, setUser } = authSlice.actions;
+export const { clearAuthError, setUser, restoreAuthState, clearAuthState } = authSlice.actions;
 export default authSlice.reducer;

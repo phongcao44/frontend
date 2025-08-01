@@ -5,6 +5,7 @@ import {
   createProductVariant,
   updateProductVariant,
   deleteProductVariant,
+  updateProductVariantStock,
 } from "../../services/productVariantService";
 
 export const loadAllVariants = createAsyncThunk(
@@ -25,6 +26,11 @@ export const addProductVariant = createAsyncThunk(
 export const editProductVariant = createAsyncThunk(
   "productVariants/edit",
   async ({ id, variantData }) => await updateProductVariant(id, variantData)
+);
+
+export const updateVariantStockQuantity = createAsyncThunk(
+  "productVariants/updateStockQuantity",
+  async ({ id, stockQuantity }) => await updateProductVariantStock(id, stockQuantity)
 );
 
 export const removeProductVariant = createAsyncThunk(
@@ -70,6 +76,12 @@ const productVariantSlice = createSlice({
 
       // Edit
       .addCase(editProductVariant.fulfilled, (state, action) => {
+        const idx = state.list.findIndex((v) => v.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+
+      // Update Stock Quantity
+      .addCase(updateVariantStockQuantity.fulfilled, (state, action) => {
         const idx = state.list.findIndex((v) => v.id === action.payload.id);
         if (idx !== -1) state.list[idx] = action.payload;
       })

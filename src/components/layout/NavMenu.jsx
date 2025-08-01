@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { logoutUser } from "../../redux/slices/authSlice";
+import { checkAuthFromStorage } from "../../utils/authUtils";
 
 const menuItems = [
   { key: "home", label: "Home", path: "/" },
@@ -15,7 +16,11 @@ const NavMenu = ({ activePath, vertical = false }) => {
   const isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
   const dispatch = useDispatch();
 
-  const filteredMenuItems = isLoggedIn
+  // Check localStorage for auth state as fallback
+  const isLoggedInFromStorage = checkAuthFromStorage();
+  const finalIsLoggedIn = isLoggedIn || isLoggedInFromStorage;
+
+  const filteredMenuItems = finalIsLoggedIn
     ? [
         ...menuItems.filter((item) => item.key !== "signup"),
         { key: "logout", label: "Logout", action: () => dispatch(logoutUser()) },
