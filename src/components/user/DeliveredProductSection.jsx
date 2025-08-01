@@ -67,23 +67,28 @@ const DeliveredProductSection = () => {
                                 <td className="px-4 py-3">
                                     {Number(item.price || 0).toLocaleString("vi-VN")}
                                 </td>
-                                <td className="px-4 py-3">
-                                    <button
-                                        onClick={() =>
-                                            navigate("/return-form", {
-                                                state: {
-                                                    orderId: item.orderId,
-                                                    itemId: item.itemId,
-                                                    productName: item.productName,
-                                                    mediaUrl: item.mediaUrl,
-                                                },
-                                            })
-                                        }
-                                        className="text-red-600 hover:text-red-800 transition text-sm underline"
-                                    >
-                                        Trả hàng
-                                    </button>
-                                </td>
+<td className="px-4 py-3">
+  {item.alreadyRequested ? (
+    <span className="text-gray-400 italic text-sm">Đã gửi yêu cầu</span>
+  ) : (
+    <button
+      onClick={() =>
+        navigate("/return-form", {
+          state: {
+            orderId: item.orderId,
+            itemId: item.itemId,
+            productName: item.productName,
+            mediaUrl: item.mediaUrl,
+          },
+        })
+      }
+      className="text-red-600 hover:text-red-800 transition text-sm underline"
+    >
+      Trả hàng
+    </button>
+  )}
+</td>
+
                             </tr>
                         ))}
                     </tbody>

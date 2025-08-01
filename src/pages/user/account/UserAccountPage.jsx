@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { User, Package, MapPin, Settings, Heart, LogOut, Edit, Trash2, Gift, Tag, Calendar, Percent, DollarSign, Phone, Mail, CheckCircle } from 'lucide-react';
+import { User, Package, MapPin, Settings, Heart, LogOut, Edit, Trash2, Gift, Tag, Calendar, Percent, DollarSign, Phone, Mail, CheckCircle, RotateCcw } from 'lucide-react';
 import { fetchUserView } from '../../../redux/slices/userSlice';
 import { removeAddress } from '../../../redux/slices/addressSlice';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,8 @@ import { fetchUserVouchers, fetchCollectibleVouchers, userCollectVoucher } from 
 import Swal from 'sweetalert2';
 import { ProductFilled } from '@ant-design/icons';
 import DeliveredProductSection from "../../../components/user/DeliveredProductSection";
+import MyReturnRequests from '../../../components/user/returnRequestSection';
+
 
 export default function UserAccountPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -66,7 +68,20 @@ export default function UserAccountPage() {
     setIsAddressFormOpen(false);
     setSelectedAddress(null);
   };
-
+  const renderReturnRequests = () => (
+    <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg flex items-center justify-center">
+          <RotateCcw className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Yêu cầu trả hàng</h2>
+          <p className="text-sm text-gray-500">Xem lại các đơn hàng bạn đã yêu cầu đổi/trả</p>
+        </div>
+      </div>
+      <MyReturnRequests />
+    </div>
+  );
   const handleDeleteAddress = async (addressId) => {
     const result = await Swal.fire({
       title: 'Xác nhận xóa',
@@ -178,7 +193,9 @@ export default function UserAccountPage() {
     { id: 'addresses', label: 'Địa chỉ', icon: MapPin },
     { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart },
     { id: 'myVouchers', label: 'Voucher của tôi', icon: Settings },
-    { id: 'deliveredProduct', label: 'Sản phẩm đã giao', icon: ProductFilled }
+    { id: 'deliveredProduct', label: 'Sản phẩm đã giao', icon: ProductFilled },
+    { id: 'returns', label: 'Yêu cầu trả hàng', icon: RotateCcw },
+
   ];
 
   const renderProfile = () => {
@@ -668,6 +685,9 @@ export default function UserAccountPage() {
         return renderMyVouchers();
       case 'deliveredProduct':
         return <DeliveredProductSection />;
+    case 'returns':
+  return <MyReturnRequests />;
+
 
       default:
         return null;
@@ -740,8 +760,8 @@ export default function UserAccountPage() {
                         <button
                           onClick={() => setActiveTab(item.id)}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${activeTab === item.id
-                              ? 'bg-blue-50 text-blue-600 font-semibold'
-                              : 'text-gray-700 hover:bg-gray-50'
+                            ? 'bg-blue-50 text-blue-600 font-semibold'
+                            : 'text-gray-700 hover:bg-gray-50'
                             }`}
                         >
                           <Icon className="w-5 h-5" />
