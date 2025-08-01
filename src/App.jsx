@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import AppRouter from "./routes/AppRouter";
 import { generateToken, messaging } from "./notification/firebase";
 import { onMessage } from "firebase/messaging";
+import "leaflet/dist/leaflet.css";
 
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";

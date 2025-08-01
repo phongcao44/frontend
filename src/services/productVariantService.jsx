@@ -126,6 +126,27 @@ export const fetchProductVariantDetail = async (id) => {
 };
 
 /**
+ * Update only stock quantity of a product variant by ID
+ * @param {number|string} id
+ * @param {number} stockQuantity
+ * @returns {Promise<any>}
+ */
+export const updateProductVariantStock = async (id, stockQuantity) => {
+  try {
+    console.log('Updating stock quantity for variant ID:', id, 'New quantity:', stockQuantity);
+    
+    const response = await axiosInstance.put(
+      `/admin/product-variants/update-stock/${id}`,
+      { stockQuantity }
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error(`updateProductVariantStock error (ID: ${id}):`, error);
+    throw error;
+  }
+};
+
+/**
  * Extract and format API error
  * @param {any} error
  * @returns {Error}
