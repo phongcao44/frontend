@@ -20,8 +20,9 @@ import returnPolicyReducer from "./slices/returnPolicySlice";
 import voucherReducer from "./slices/voucherSlice";
 import productSpecificationReducer from "./slices/productSpecificationSlice";
 import wishlistReducer from "./slices/wishlistSlice";
-import blogReducer from "./slices/blogSlice"; 
+import blogReducer from "./slices/blogSlice";
 import contactReducer from "./slices/contactSlice.jsx";
+import notificationReducer from "./slices/notificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -47,6 +48,7 @@ export const store = configureStore({
     voucher: voucherReducer,
     productSpecification: productSpecificationReducer,
     wishlist: wishlistReducer,
-     blogs: blogReducer,
+    blogs: blogReducer,
+    notification: notificationReducer,
   },
 });

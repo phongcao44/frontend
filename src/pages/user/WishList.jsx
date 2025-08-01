@@ -1,11 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
-import { ShoppingCart } from "lucide-react";
 import {
   getUserWishlist,
   removeProductFromWishlist,
@@ -69,6 +68,8 @@ const WishList = () => {
   const justForYouPrevRef = useRef(null);
   const justForYouNextRef = useRef(null);
 
+  console.log("Wishlist items:", wishlistItems);
+
   // Fetch wishlist on mount
   useEffect(() => {
     dispatch(getUserWishlist());
@@ -89,7 +90,7 @@ const WishList = () => {
       }).then(async (result) => {
         if (result.isConfirmed) {
           try {
-            await dispatch(removeProductFromWishlist(item.wishListId)).unwrap();
+            await dispatch(removeProductFromWishlist(item.wishlistId)).unwrap();
             Swal.fire(
               "Đã xóa!",
               "Sản phẩm đã được xóa khỏi danh sách yêu thích.",
@@ -119,7 +120,7 @@ const WishList = () => {
   // Add item to cart
   const handleAddToCart = async (item) => {
     try {
-      const variantId = item.variants?.[0]?.id;
+      const variantId = item.product.variants?.[0]?.id;
       if (!variantId) {
         Swal.fire({
           title: "Lỗi!",
@@ -137,53 +138,17 @@ const WishList = () => {
       });
     } catch (err) {
       console.error("Error adding to cart:", err);
-      Swal.fire({
-        title: "Lỗi!",
-        text: err?.message || "Không thể thêm sản phẩm vào giỏ hàng",
-        icon: "error",
-      });
-    }
-  };
-
-  // Move all items to cart
-  const moveAllToBag = async () => {
-    if (wishlistItems.length === 0) {
-      Swal.fire({
-        title: "Danh sách trống!",
-        text: "Không có sản phẩm nào trong danh sách yêu thích để chuyển.",
-        icon: "info",
-      });
-      return;
-    }
-    try {
-      for (const item of wishlistItems) {
-        const variantId = item.variants?.[0]?.id;
-        if (variantId) {
-          await dispatch(addItemToCart({ variantId, quantity: 1 })).unwrap();
-        }
-      }
-      Swal.fire({
-        title: "Thành công!",
-        text: "Tất cả sản phẩm đã được thêm vào giỏ hàng.",
-        icon: "success",
-        timer: 1500,
-      });
-      for (const item of wishlistItems) {
-        await dispatch(removeProductFromWishlist(item.wishListId)).unwrap();
-      }
-    } catch (err) {
-      console.error("Error moving all to cart:", err);
-      Swal.fire({
-        title: "Lỗi!",
-        text: err?.message || "Không thể chuyển tất cả sản phẩm vào giỏ hàng.",
-        icon: "error",
-      });
+      Swal.fire(
+        "Lỗi!",
+        err?.message || "Không thể thêm sản phẩm vào giỏ hàng",
+        "error"
+      );
     }
   };
 
   // Navigate to product details
   const handleProductClick = (item) => {
-    navigate(`/product/${item.productId}`);
+    navigate(`/product/${item.product.id}`);
   };
 
   if (loading) {
@@ -229,7 +194,7 @@ const WishList = () => {
           </span>
         </div>
 
-        {/* Title + Nav + Move All To Bag */}
+        {/* Title + Nav */}
         <div className="flex items-center mb-10 flex-wrap gap-5">
           <div className="flex items-center justify-between w-full">
             <h2 className="text-4xl font-semibold m-0">
@@ -252,14 +217,6 @@ const WishList = () => {
                   <RightOutlined />
                 </button>
               </div>
-              <button
-                onClick={moveAllToBag}
-                className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200 disabled:opacity-50"
-                disabled={wishlistItems.length === 0}
-                aria-label="Move all items to shopping bag"
-              >
-                Move All To Bag
-              </button>
             </div>
           </div>
         </div>
@@ -302,9 +259,9 @@ const WishList = () => {
             }}
           >
             {wishlistItems.map((item) => (
-              <SwiperSlide key={item.productId}>
+              <SwiperSlide key={item.wishlistId}>
                 <ProductCard
-                  product={item}
+                  product={item.product}
                   showRemove={true}
                   onRemove={() => handleRemoveFromWishlist(item)}
                   onAddToCart={() => handleAddToCart(item)}
@@ -377,28 +334,28 @@ const WishList = () => {
               }}
             >
               {wishlistItems.map((item) => (
-                <SwiperSlide key={item.productId}>
+                <SwiperSlide key={item.wishlistId}>
                   <ProductCard
                     product={{
-                      id: item.productId,
-                      name: item.productName,
+                      id: item.product.id,
+                      name: item.product.name,
                       price:
-                        item.variants?.[0]?.finalPriceAfterDiscount ||
-                        item.variants?.[0]?.priceOverride ||
-                        item.price,
-                      originalPrice: item.variants?.[0]?.priceOverride,
-                      image: item.imageUrl || "/placeholder.png",
-                      rating: item.averageRating,
-                      reviews: item.totalReviews,
-                      discount: item.variants?.[0]?.discountPercent
-                        ? `-${item.variants[0].discountPercent}%`
+                        item.product.variants?.[0]?.finalPriceAfterDiscount ||
+                        item.product.variants?.[0]?.priceOverride ||
+                        item.product.price,
+                      originalPrice: item.product.variants?.[0]?.priceOverride,
+                      image: item.product.imageUrl || "/placeholder.png",
+                      rating: item.product.averageRating,
+                      reviews: item.product.totalReviews,
+                      discount: item.product.variants?.[0]?.discountOverrideByFlashSale
+                        ? `-${item.product.variants[0].discountOverrideByFlashSale}%`
                         : null,
-                      inStock: true,
-                      ...item,
+                      inStock: item.product.status === "IN_STOCK",
+                      ...item.product,
                     }}
                     showRemove={false}
                     onAddToCart={() => handleAddToCart(item)}
-                    onClick={() => navigate(`/product/${item.productId}`)}
+                    onClick={() => handleProductClick(item)}
                   />
                 </SwiperSlide>
               ))}

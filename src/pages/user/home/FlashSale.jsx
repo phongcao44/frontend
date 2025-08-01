@@ -51,7 +51,7 @@ const FlashSale = () => {
     loadActiveFlashSale();
   }, [dispatch]);
 
-  console.log(activeFlashSale)
+  console.log(flashSaleItems)
 
 
   return (

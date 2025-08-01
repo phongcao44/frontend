@@ -42,6 +42,8 @@ const VariantSelector = ({ productId, onVariantChange }) => {
     [variants]
   );
 
+  console.log(variants)
+
   // Memoize colors
   const colors = useMemo(
     () => [

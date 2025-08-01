@@ -9,35 +9,39 @@ const { Title, Text } = Typography;
 
 const ExploreProducts = () => {
   const dispatch = useDispatch();
- const scrollContainerRef = useRef(null);
+  const scrollContainerRef = useRef(null);
   const paginatedProducts = useSelector((state) => state.products.paginated);
   const [page, setPage] = useState(0);
+  const [allProductsLoaded, setAllProductsLoaded] = useState(false);
+  const [displayedProducts, setDisplayedProducts] = useState([]);
 
   useEffect(() => {
     const params = {
       page,
-      limit: 20,
+      limit: 8,
     };
     dispatch(loadProductsPaginate(params));
   }, [dispatch, page]);
 
-  const scrollLeft = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({
-        left: -300, // Adjust scroll distance as needed
-        behavior: "smooth",
-      });
+  useEffect(() => {
+    if (paginatedProducts?.data?.content) {
+      if (page === 0) {
+        setDisplayedProducts(paginatedProducts.data.content);
+      } else {
+        setDisplayedProducts((prev) => [...prev, ...paginatedProducts.data.content]);
+      }
+      if (paginatedProducts.data.last) {
+        setAllProductsLoaded(true);
+      }
+    }
+  }, [paginatedProducts]);
+
+  const handleLoadMore = () => {
+    if (!paginatedProducts?.data?.last) {
+      setPage((prevPage) => prevPage + 1);
     }
   };
 
-  const scrollRight = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({
-        left: 300, // Adjust scroll distance as needed
-        behavior: "smooth",
-      });
-    }
-  };
 
   return (
     <div>
@@ -75,45 +79,45 @@ const ExploreProducts = () => {
         <Title level={2} style={{ margin: 0 }}>
           Explore Our Products
         </Title>
-        <Space>
-          <Button shape="circle" icon={<LeftOutlined />} onClick={scrollLeft} />
-          <Button shape="circle" icon={<RightOutlined />} onClick={scrollRight} />
-        </Space>
       </div>
 
       <div
         ref={scrollContainerRef}
         style={{
-          display: "flex",
-          overflowX: "auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: "24px",
           paddingBottom: "16px",
+          overflowX: "auto",
           scrollBehavior: "smooth",
-          scrollbarWidth: "none", /* For Firefox */
-          "-ms-overflow-style": "none", /* For IE and Edge */
+          scrollbarWidth: "none",
+          "-ms-overflow-style": "none",
         }}
       >
-        {paginatedProducts?.data?.content?.map((product) => (
-          <div key={product.id} style={{ flex: "0 0 auto", width: "250px" }}>
+        {displayedProducts.map((product) => (
+          <div key={product.id}>
             <ProductCard product={product} />
           </div>
         ))}
       </div>
 
       <div style={{ textAlign: "center", marginTop: 32 }}>
-        <Button
-          type="primary"
-          danger
-          size="large"
-          style={{
-            backgroundColor: "#db4444",
-            height: 48,
-            paddingLeft: 32,
-            paddingRight: 32,
-          }}
-        >
-          View All Products
-        </Button>
+        {!allProductsLoaded && (
+          <Button
+            type="primary"
+            danger
+            size="large"
+            onClick={handleLoadMore}
+            style={{
+              backgroundColor: "#db4444",
+              height: 48,
+              paddingLeft: 32,
+              paddingRight: 32,
+            }}
+          >
+            Load More
+          </Button>
+        )}
       </div>
     </div>
   );

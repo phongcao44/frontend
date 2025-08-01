@@ -1,9 +1,6 @@
 import { Divider } from "antd";
 import "swiper/css";
 import "swiper/css/pagination";
-import GeminiChatButton from "./home/GeminiChatButton";
-
-import CartIcon from "../../components/CartItem";
 import BestSelling from "./home/BestSelling";
 import Promo from "./home/Promo";
 import ExploreProducts from "./home/ExploreProducts";
@@ -16,7 +13,6 @@ const Home = () => {
   const divider = (
     <Divider style={{ borderColor: "#d9d9d9", margin: "32px 0" }} />
   );
-
   return (
     <>
     <section style={{ maxWidth: 1200, margin: "auto", padding: 0, paddingBottom: 100, }}>
@@ -33,12 +29,8 @@ const Home = () => {
       <ExploreProducts />
 
       {divider}
-      <NewArrival />
-      
-      
+      <NewArrival /> 
     </section>
-    <GeminiChatButton />
-
     </>
   );
 };

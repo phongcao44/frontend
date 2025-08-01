@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser, initiateGoogleLogin } from "../../redux/slices/authSlice";
+import { setNotification } from "../../redux/slices/notificationSlice";
 import { Link, useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -38,22 +37,11 @@ const Login = () => {
       password: "",
     };
 
-    // Email validation
     if (!formData.email.trim()) {
       errors.email = "Vui lòng nhập email";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = "Email không đúng định dạng";
     }
-
-    // Password validation (commented out as in original code)
-    // if (!formData.password.trim()) {
-    //   errors.password = "Vui lòng nhập mật khẩu";
-    // } else if (formData.password.length < 6 || formData.password.length > 20) {
-    //   errors.password = "Mật khẩu phải có độ dài từ 6 đến 20 ký tự";
-    // } else if (!/(?=.*[A-Z])(?=.*[a-z])(?=.*\d)/.test(formData.password)) {
-    //   errors.password =
-    //     "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số";
-    // }
 
     setValidationErrors(errors);
     return !Object.values(errors).some((error) => error !== "");
@@ -72,19 +60,15 @@ const Login = () => {
       const res = await dispatch(loginUser(formData)).unwrap();
       console.log("Login response:", res);
 
-      // Show success toast notification in top-right corner
-      toast.success(`${formData.email} đã đăng nhập thành công`, {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "light",
-        className: "custom-toast-success",
-      });
+      // Dispatch thông báo thành công
+      dispatch(
+        setNotification({
+          message: `${formData.email} đã đăng nhập thành công`,
+          type: "success",
+        })
+      );
 
-
+      // Chuyển hướng ngay lập tức
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");
       } else if (res?.data?.roles?.includes("ROLE_MODERATOR")) {
@@ -94,7 +78,6 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Đăng nhập lỗi:", err);
-      console.log("Error details:", err);
       const errorMessage =
         err?.data?.toLowerCase() ||
         err?.message?.toLowerCase() ||
@@ -110,33 +93,26 @@ const Login = () => {
           : "",
       }));
 
-      // Show error toast notification in top-right corner
-      toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "light",
-        className: "custom-toast-error",
-      });
+      // Dispatch thông báo lỗi
+      dispatch(
+        setNotification({
+          message: errorMessage,
+          type: "error",
+        })
+      );
     }
   };
 
   const handleForgotPassword = () => {
-    toast.info("Đang chuyển hướng đến trang quên mật khẩu...", {
-      position: "top-right",
-      autoClose: 2000,
-      hideProgressBar: true,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      theme: "light",
-      className: "custom-toast-info",
-    });
+    dispatch(
+      setNotification({
+        message: "Đang chuyển hướng đến trang quên mật khẩu...",
+        type: "info",
+      })
+    );
     navigate("/forgot-password");
   };
+
   const handleGoogleLogin = async () => {
     try {
       console.log("Google login clicked");
@@ -147,6 +123,12 @@ const Login = () => {
         ...prev,
         email: "Có lỗi xảy ra khi đăng nhập Google",
       }));
+      dispatch(
+        setNotification({
+          message: "Có lỗi xảy ra khi đăng nhập Google",
+          type: "error",
+        })
+      );
     }
   };
 
@@ -297,20 +279,6 @@ const Login = () => {
           </div>
         </div>
       </div>
-
-      {/* ToastContainer for rendering notifications */}
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
     </div>
   );
 };
