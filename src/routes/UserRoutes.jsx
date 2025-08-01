@@ -34,6 +34,8 @@ import ProductSearch from "../pages/user/productList/ProductSearch";
 import Blog from "../pages/user/Blog";
 import BlogDetail from "../pages/user/BlogDetail";
 import OAuth2Redirect from "../pages/user/OAuth2Redirect";
+import FlashSaleProducts from "../pages/user/productList/FlashSaleProducts";
+import BestSellingProducts from "../pages/user/productList/BestSellingProducts";
 
 const UserRoutes = () => {
   return (
@@ -51,6 +53,9 @@ const UserRoutes = () => {
         <Route path="wishlist" element={<WishList />} />
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<CheckoutPage />} />
+
+        <Route path="flashsale" element={<FlashSaleProducts />} />
+        <Route path="bestselling" element={<BestSellingProducts />} />
 
         {/* User Account */}
 

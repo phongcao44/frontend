@@ -1,10 +1,12 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import AppRouter from "./routes/AppRouter";
-import { generateToken, messaging } from "./notification/firebase"; // điều chỉnh path nếu cần
+import { generateToken, messaging } from "./notification/firebase";
 import { onMessage } from "firebase/messaging";
-import Cookies from "js-cookie";
 import "leaflet/dist/leaflet.css";
 
+import { toast, ToastContainer } from "react-toastify";
+import { useDispatch, useSelector } from "react-redux";
+import { clearNotification } from "./redux/slices/notificationSlice";
 
 const App = () => {
   useEffect(() => {
@@ -22,9 +24,51 @@ const App = () => {
     };
   }, []);
 
+  const dispatch = useDispatch();
+  const { message, type } = useSelector((state) => state.notification);
+
+  useEffect(() => {
+    if (message && type) {
+      // Hiển thị toast dựa trên type
+      const toastOptions = {
+        position: "top-right",
+        autoClose: type === "success" ? 3000 : 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "light",
+        className: `custom-toast-${type}`,
+      };
+
+      if (type === "success") {
+        toast.success(message, toastOptions);
+      } else if (type === "error") {
+        toast.error(message, toastOptions);
+      } else if (type === "info") {
+        toast.info(message, toastOptions);
+      }
+
+      // Xóa thông báo sau khi hiển thị
+      dispatch(clearNotification());
+    }
+  }, [message, type, dispatch]);
+
   return (
     <>
       <AppRouter />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </>
   );
 };

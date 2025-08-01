@@ -283,10 +283,6 @@ const Cart = () => {
                     {subtotal.toLocaleString("vi-VN")} ₫
                   </span>
                 </div>
-                <div className="flex justify-between py-3 border-b">
-                  <span>Shipping:</span>
-                  <span className="text-green-600">Free</span>
-                </div>
                 <div className="flex justify-between py-3 text-lg font-medium">
                   <span>Total:</span>
                   <span className="text-red-500">

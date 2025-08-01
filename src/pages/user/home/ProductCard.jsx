@@ -290,7 +290,7 @@ const ProductCard = ({ product, onRemove }) => {
     e.stopPropagation();
 
     // Kiểm tra xem sản phẩm có nhiều biến thể không
-    if (variants && variants.length > 1) {
+    if (variants) {
       // Nếu có nhiều biến thể, hiển thị modal
       setShowVariantModal(true);
       return;
