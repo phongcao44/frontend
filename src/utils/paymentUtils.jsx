@@ -41,3 +41,19 @@ export const translatePaymentMethod = (method) => {
       return "Không rõ";
   }
 };
+
+export const getPaymentMethodColor = (method) => {
+  if (!method) return "default";
+  switch (method) {
+    case "COD":
+      return "orange";
+    case "BANK_TRANSFER":
+      return "blue";
+    case "PAYPAL":
+      return "cyan";
+    case "CREDIT_CARD":
+      return "purple";
+    default:
+      return "default";
+  }
+};

@@ -222,11 +222,70 @@ export default function FlashSaleItemManagement({ onBack }) {
     setEditingItemId(null);
   };
 
+  // Validation cho form chỉnh sửa
+  const validateEditForm = () => {
+    // Kiểm tra thông tin cơ bản
+    if (!editForm.discountValue || !editForm.quantity) {
+      Swal.fire("Lỗi", "Vui lòng điền đầy đủ thông tin", "error");
+      return false;
+    }
+
+    // Kiểm tra số lượng
+    const quantity = parseInt(editForm.quantity);
+    if (quantity <= 0) {
+      Swal.fire("Lỗi", "Số lượng phải lớn hơn 0", "error");
+      return false;
+    }
+
+    // Kiểm tra số lượng đã bán
+    const soldQuantity = parseInt(editForm.soldQuantity);
+    if (soldQuantity < 0) {
+      Swal.fire("Lỗi", "Số lượng đã bán không được âm", "error");
+      return false;
+    }
+
+    // Kiểm tra số lượng tổng
+    if (quantity < soldQuantity) {
+      Swal.fire("Lỗi", "Số lượng tổng không được nhỏ hơn số lượng đã bán", "error");
+      return false;
+    }
+
+    // Kiểm tra giá trị giảm giá
+    const discountValue = parseFloat(editForm.discountValue);
+    if (discountValue < 0) {
+      Swal.fire("Lỗi", "Giá trị giảm giá không được âm", "error");
+      return false;
+    }
+
+    // Kiểm tra phần trăm giảm giá
+    if (editForm.discountType === "PERCENTAGE") {
+      if (discountValue > 100) {
+        Swal.fire("Lỗi", "Phần trăm giảm giá không được vượt quá 100%", "error");
+        return false;
+      }
+      if (discountValue === 0) {
+        Swal.fire("Lỗi", "Phần trăm giảm giá phải lớn hơn 0%", "error");
+        return false;
+      }
+    }
+
+    // Kiểm tra số tiền giảm giá
+    if (editForm.discountType === "AMOUNT") {
+      if (discountValue === 0) {
+        Swal.fire("Lỗi", "Số tiền giảm giá phải lớn hơn 0", "error");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   // Xử lý submit form chỉnh sửa
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    if (!editForm.discountValue || !editForm.quantity) {
-      Swal.fire("Lỗi", "Vui lòng điền đầy đủ thông tin", "error");
+    
+    // Validation
+    if (!validateEditForm()) {
       return;
     }
 
@@ -254,11 +313,70 @@ export default function FlashSaleItemManagement({ onBack }) {
       });
   };
 
+  // Kiểm tra sản phẩm đã tồn tại trong Flash Sale
+  const isProductVariantExists = (productId, variantId) => {
+    return flashSaleVariantDetails.some(
+      (item) => item.productId === productId && item.variantId === variantId
+    );
+  };
+
+  // Validation cho form thêm sản phẩm
+  const validateAddForm = () => {
+    // Kiểm tra thông tin cơ bản
+    if (!form.productId || !form.variantId || !form.discountValue || !form.quantity) {
+      Swal.fire("Lỗi", "Vui lòng điền đầy đủ thông tin", "error");
+      return false;
+    }
+
+    // Kiểm tra sản phẩm đã tồn tại
+    if (isProductVariantExists(parseInt(form.productId), parseInt(form.variantId))) {
+      Swal.fire("Lỗi", "Sản phẩm này đã tồn tại trong Flash Sale!", "error");
+      return false;
+    }
+
+    // Kiểm tra số lượng
+    const quantity = parseInt(form.quantity);
+    if (quantity <= 0) {
+      Swal.fire("Lỗi", "Số lượng phải lớn hơn 0", "error");
+      return false;
+    }
+
+    // Kiểm tra giá trị giảm giá
+    const discountValue = parseFloat(form.discountValue);
+    if (discountValue < 0) {
+      Swal.fire("Lỗi", "Giá trị giảm giá không được âm", "error");
+      return false;
+    }
+
+    // Kiểm tra phần trăm giảm giá
+    if (form.discountType === "PERCENTAGE") {
+      if (discountValue > 100) {
+        Swal.fire("Lỗi", "Phần trăm giảm giá không được vượt quá 100%", "error");
+        return false;
+      }
+      if (discountValue === 0) {
+        Swal.fire("Lỗi", "Phần trăm giảm giá phải lớn hơn 0%", "error");
+        return false;
+      }
+    }
+
+    // Kiểm tra số tiền giảm giá
+    if (form.discountType === "AMOUNT") {
+      if (discountValue === 0) {
+        Swal.fire("Lỗi", "Số tiền giảm giá phải lớn hơn 0", "error");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   // Xử lý submit form thêm sản phẩm
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.productId || !form.variantId || !form.discountValue || !form.quantity) {
-      Swal.fire("Lỗi", "Vui lòng điền đầy đủ thông tin", "error");
+    
+    // Validation
+    if (!validateAddForm()) {
       return;
     }
 
@@ -417,14 +535,20 @@ export default function FlashSaleItemManagement({ onBack }) {
               <Select
                 options={productOptions}
                 value={productOptions.find((option) => option.value === form.productId) || null}
-                onChange={(selected) =>
+                onChange={(selected) => {
+                  const newProductId = selected ? parseInt(selected.value) : 0;
                   setForm({
                     ...form,
-                    productId: selected ? parseInt(selected.value) : 0,
+                    productId: newProductId,
                     variantId: 0,
                     discountValue: "",
-                  })
-                }
+                  });
+                  
+                  // Kiểm tra sản phẩm đã tồn tại
+                  if (newProductId && isProductVariantExists(newProductId, 0)) {
+                    Swal.fire("Cảnh báo", "Sản phẩm này đã có trong Flash Sale. Vui lòng chọn biến thể khác hoặc sản phẩm khác.", "warning");
+                  }
+                }}
                 onInputChange={handleProductSearchChange}
                 placeholder="Chọn hoặc tìm kiếm sản phẩm"
                 isClearable
@@ -444,7 +568,16 @@ export default function FlashSaleItemManagement({ onBack }) {
               </label>
               <select
                 value={form.variantId}
-                onChange={(e) => setForm({ ...form, variantId: parseInt(e.target.value), discountValue: "" })}
+                onChange={(e) => {
+                  const newVariantId = parseInt(e.target.value);
+                  setForm({ ...form, variantId: newVariantId, discountValue: "" });
+                  
+                  // Kiểm tra biến thể đã tồn tại
+                  if (newVariantId && isProductVariantExists(form.productId, newVariantId)) {
+                    Swal.fire("Lỗi", "Biến thể này đã tồn tại trong Flash Sale!", "error");
+                    setForm({ ...form, variantId: 0, discountValue: "" });
+                  }
+                }}
                 required
                 disabled={!form.productId || !variants.length}
                 className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -482,7 +615,29 @@ export default function FlashSaleItemManagement({ onBack }) {
               <input
                 type="number"
                 value={safe(form.discountValue)}
-                onChange={(e) => setForm({ ...form, discountValue: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setForm({ ...form, discountValue: value });
+                  
+                  // Validation real-time
+                  if (value && form.discountType === "PERCENTAGE") {
+                    const numValue = parseFloat(value);
+                    if (numValue > 100) {
+                      e.target.setCustomValidity("Phần trăm không được vượt quá 100%");
+                    } else if (numValue < 0) {
+                      e.target.setCustomValidity("Phần trăm không được âm");
+                    } else {
+                      e.target.setCustomValidity("");
+                    }
+                  } else if (value && form.discountType === "AMOUNT") {
+                    const numValue = parseFloat(value);
+                    if (numValue < 0) {
+                      e.target.setCustomValidity("Số tiền không được âm");
+                    } else {
+                      e.target.setCustomValidity("");
+                    }
+                  }
+                }}
                 required
                 min={form.discountType === "PERCENTAGE" ? "0" : "1000"}
                 max={form.discountType === "PERCENTAGE" ? "100" : undefined}
@@ -498,7 +653,20 @@ export default function FlashSaleItemManagement({ onBack }) {
               <input
                 type="number"
                 value={safe(form.quantity)}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setForm({ ...form, quantity: value });
+                  
+                  // Validation real-time
+                  if (value) {
+                    const numValue = parseInt(value);
+                    if (numValue <= 0) {
+                      e.target.setCustomValidity("Số lượng phải lớn hơn 0");
+                    } else {
+                      e.target.setCustomValidity("");
+                    }
+                  }
+                }}
                 required
                 min="1"
                 className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -782,7 +950,29 @@ export default function FlashSaleItemManagement({ onBack }) {
                 <input
                   type="number"
                   value={safe(editForm.discountValue)}
-                  onChange={(e) => setEditForm({ ...editForm, discountValue: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditForm({ ...editForm, discountValue: value });
+                    
+                    // Validation real-time
+                    if (value && editForm.discountType === "PERCENTAGE") {
+                      const numValue = parseFloat(value);
+                      if (numValue > 100) {
+                        e.target.setCustomValidity("Phần trăm không được vượt quá 100%");
+                      } else if (numValue < 0) {
+                        e.target.setCustomValidity("Phần trăm không được âm");
+                      } else {
+                        e.target.setCustomValidity("");
+                      }
+                    } else if (value && editForm.discountType === "AMOUNT") {
+                      const numValue = parseFloat(value);
+                      if (numValue < 0) {
+                        e.target.setCustomValidity("Số tiền không được âm");
+                      } else {
+                        e.target.setCustomValidity("");
+                      }
+                    }
+                  }}
                   required
                   min={editForm.discountType === "PERCENTAGE" ? "0" : "1000"}
                   max={editForm.discountType === "PERCENTAGE" ? "100" : undefined}
@@ -798,9 +988,52 @@ export default function FlashSaleItemManagement({ onBack }) {
                 <input
                   type="number"
                   value={safe(editForm.quantity)}
-                  onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditForm({ ...editForm, quantity: value });
+                    
+                    // Validation real-time
+                    if (value) {
+                      const numValue = parseInt(value);
+                      if (numValue <= 0) {
+                        e.target.setCustomValidity("Số lượng phải lớn hơn 0");
+                      } else if (numValue < parseInt(editForm.soldQuantity)) {
+                        e.target.setCustomValidity("Số lượng tổng không được nhỏ hơn số lượng đã bán");
+                      } else {
+                        e.target.setCustomValidity("");
+                      }
+                    }
+                  }}
                   required
                   min="1"
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Số lượng đã bán
+                </label>
+                <input
+                  type="number"
+                  value={safe(editForm.soldQuantity)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditForm({ ...editForm, soldQuantity: value });
+                    
+                    // Validation real-time
+                    if (value) {
+                      const numValue = parseInt(value);
+                      if (numValue < 0) {
+                        e.target.setCustomValidity("Số lượng đã bán không được âm");
+                      } else if (numValue > parseInt(editForm.quantity)) {
+                        e.target.setCustomValidity("Số lượng đã bán không được vượt quá số lượng tổng");
+                      } else {
+                        e.target.setCustomValidity("");
+                      }
+                    }
+                  }}
+                  required
+                  min="0"
                   className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

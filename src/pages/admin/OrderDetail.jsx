@@ -25,6 +25,7 @@ import {
   clearCurrentOrder,
   editOrderStatus,
 } from "../../redux/slices/orderSlice";
+import { translatePaymentMethod, getPaymentMethodColor } from "../../utils/paymentUtils";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -49,11 +50,33 @@ export default function OrderDetail() {
     }
   }, [currentOrder]);
 
+  // Kiểm tra xem đơn hàng có thể cập nhật trạng thái hay không
+  const canUpdateStatus = () => {
+    if (!currentOrder?.status) return false;
+    
+    // Không cho phép cập nhật nếu đơn hàng đã hủy hoặc đã trả hàng
+    const blockedStatuses = ['CANCELLED', 'RETURNED', 'REFUNDED'];
+    return !blockedStatuses.includes(currentOrder.status);
+  };
+
   const handleStatusChange = async () => {
     if (!selectedStatus) {
       message.warning("Vui lòng chọn trạng thái");
       return;
     }
+
+    // Kiểm tra xem có thể cập nhật trạng thái không
+    if (!canUpdateStatus()) {
+      message.error("Không thể cập nhật trạng thái đơn hàng đã hủy hoặc đã trả hàng");
+      return;
+    }
+
+    // Kiểm tra xem trạng thái mới có hợp lệ không
+    if (selectedStatus === currentOrder.status) {
+      message.warning("Trạng thái đã được chọn hiện tại");
+      return;
+    }
+
     try {
       await dispatch(
         editOrderStatus({
@@ -117,6 +140,10 @@ export default function OrderDetail() {
         return "success";
       case "CANCELLED":
         return "error";
+      case "RETURNED":
+        return "error";
+      case "REFUNDED":
+        return "error";
       default:
         return "default";
     }
@@ -134,6 +161,10 @@ export default function OrderDetail() {
         return "Đã giao hàng";
       case "CANCELLED":
         return "Đã hủy";
+      case "RETURNED":
+        return "Đã trả hàng";
+      case "REFUNDED":
+        return "Đã hoàn tiền";
       default:
         return "Không rõ";
     }
@@ -194,20 +225,7 @@ export default function OrderDetail() {
     }
   };
 
-  const translatePaymentMethod = (method) => {
-    switch (method) {
-      case "COD":
-        return "Thanh toán khi nhận hàng";
-      case "CARD":
-        return "Thẻ tín dụng/Thẻ ghi nợ";
-      case "BANK_TRANSFER":
-        return "Chuyển khoản ngân hàng";
-      case "MOBILE_PAYMENT":
-        return "Thanh toán qua ứng dụng di động";
-      default:
-        return "Không xác định";
-    }
-  };
+
 
   const subTotal = (currentOrder.items || []).reduce(
     (sum, item) => sum + Number(item.totalPrice),
@@ -334,7 +352,7 @@ export default function OrderDetail() {
           </Col>
           <Col span={4}>
             <Text strong style={{ fontSize: "12px", color: "#666" }}>
-              TRẠNG THÁI GIAO HÀNG
+              PHƯƠNG THỨC THANH TOÁN
             </Text>
           </Col>
           <Col span={5}>
@@ -373,8 +391,8 @@ export default function OrderDetail() {
             </Tag>
           </Col>
           <Col span={4}>
-            <Tag color={getFulfillmentColor(currentOrder.fulfillmentStatus)}>
-              {translateFulfillmentStatus(currentOrder.fulfillmentStatus)}
+            <Tag color={getPaymentMethodColor(currentOrder.paymentMethod)}>
+              {translatePaymentMethod(currentOrder.paymentMethod)}
             </Tag>
           </Col>
           <Col span={5}>
@@ -473,49 +491,46 @@ export default function OrderDetail() {
             <Card style={{ marginBottom: 16 }}>
               <Text strong>Cập nhật trạng thái đơn hàng</Text>
               <div style={{ marginTop: 8 }}>
-                <Text type="secondary">Chọn trạng thái đơn hàng</Text>
-                <br />
-                <Select
-                  style={{ width: "100%", marginTop: 8 }}
-                  placeholder="Chọn trạng thái"
-                  value={selectedStatus}
-                  onChange={(value) => setSelectedStatus(value)}
-                >
-                  <Option value="PENDING">Chờ xử lý</Option>
-                  <Option value="CONFIRMED">Đã xác nhận</Option>
-                  <Option value="SHIPPED">Đã gửi hàng</Option>
-                  <Option value="DELIVERED">Đã giao hàng</Option>
-                  <Option value="CANCELLED">Đã hủy</Option>
-                </Select>
-                <Button
-                  type="primary"
-                  block
-                  style={{ marginTop: 8 }}
-                  onClick={handleStatusChange}
-                >
-                  Cập nhật trạng thái
-                </Button>
-              </div>
-            </Card>
-
-            <Card style={{ marginBottom: 16 }}>
-              <Text strong>Phương thức thanh toán</Text>
-              <div style={{ marginTop: 8 }}>
-                <Text>
-                  {translatePaymentMethod(currentOrder.paymentMethod)}
-                </Text>
-                {currentOrder.paymentMethod === "CARD" && (
+                {!canUpdateStatus() ? (
+                  <Alert
+                    message="Không thể cập nhật trạng thái"
+                    description={`Đơn hàng đã ${translateStatus(currentOrder?.status).toLowerCase()}. Không thể thay đổi trạng thái.`}
+                    type="warning"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                ) : (
                   <>
+                    <Text type="secondary">Chọn trạng thái đơn hàng</Text>
                     <br />
-                    <Text type="secondary">
-                      Ngày thanh toán: {currentOrder.paymentDetails?.paymentDate 
-                        ? new Date(currentOrder.paymentDetails.paymentDate).toLocaleDateString("vi-VN") 
-                        : "Không xác định"}
-                    </Text>
+                    <Select
+                      style={{ width: "100%", marginTop: 8 }}
+                      placeholder="Chọn trạng thái"
+                      value={selectedStatus}
+                      onChange={(value) => setSelectedStatus(value)}
+                      disabled={!canUpdateStatus()}
+                    >
+                      <Option value="PENDING">Chờ xử lý</Option>
+                      <Option value="CONFIRMED">Đã xác nhận</Option>
+                      <Option value="SHIPPED">Đã gửi hàng</Option>
+                      <Option value="DELIVERED">Đã giao hàng</Option>
+                      <Option value="CANCELLED">Đã hủy</Option>
+                    </Select>
+                    <Button
+                      type="primary"
+                      block
+                      style={{ marginTop: 8 }}
+                      onClick={handleStatusChange}
+                      disabled={!canUpdateStatus()}
+                    >
+                      Cập nhật trạng thái
+                    </Button>
                   </>
                 )}
               </div>
             </Card>
+
+
 
             <Card>
               <Text strong>Thông tin người mua</Text>
