@@ -1,0 +1,94 @@
+{
+  "cart": "Cart",
+  "add_to_cart": "Add to cart",
+  "checkout": "Checkout",
+  "products": "Products",
+  "banner": {
+    "saleText": "Summer sale on all swimwear and free express shipping - 50% OFF!",
+    "shopNow": "Shop now"
+  },
+  "navMenu": {
+    "home": "Home",
+    "contact": "Contact",
+    "about": "About",
+    "blog": "Blog",
+    "signup": "Sign up",
+    "logout": "Log out"
+  },
+  "general": {
+    "search": "Search",
+    "welcome": "Welcome",
+    "profile": "Profile",
+    "orders": "Orders",
+    "settings": "Settings",
+    "footerText": "© 2025 Your Company. All rights reserved."
+  },
+  "accountMenu": {
+    "manage": "Manage My Account",
+    "order": "My Orders",
+    "cancellations": "My Cancellations",
+    "logout": "Logout"
+  },
+  "header": {
+    "searchPlaceholder": "What are you looking for?",
+    "openMenu": "Open menu",
+    "wishlist": "Wishlist",
+    "cart": "Cart",
+    "signUp": "Sign Up",
+    "menu": "Menu",
+    "closeMenu": "Close menu"
+  },
+
+  "login": {
+    "title": "Log In",
+    "subtitle": "Enter your information",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "loginButton": "Log In",
+    "loginLoading": "Logging in...",
+    "googleLogin": "Log in with Google",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "signUpLink": "Sign Up",
+    "errors": {
+      "emailRequired": "Please enter your email",
+      "emailInvalid": "Invalid email format",
+      "authFailed": "Account does not exist or incorrect password",
+      "googleError": "An error occurred during Google login",
+      "unknownError": "Unknown login error"
+    },
+    "notifications": {
+      "success": "{{email}} logged in successfully",
+      "forgotPassword": "Redirecting to forgot password page..."
+    }
+  },
+
+   "signup": {
+    "title": "Create an Account",
+    "subtitle": "Please enter your information",
+    "usernamePlaceholder": "Full Name",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "confirmPasswordPlaceholder": "Confirm Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "signUpButton": "Create Account",
+    "haveAccount": "Already have an account?",
+    "loginLink": "Log In",
+    "errors": {
+      "usernameRequired": "Please enter your full name",
+      "usernameInvalid": "Full name cannot contain special characters (@#!$) or be all numbers",
+      "usernameLength": "Full name must be between 2 and 50 characters",
+      "emailRequired": "Please enter your email",
+      "emailInvalid": "Invalid email format",
+      "passwordRequired": "Please enter your password",
+      "passwordLength": "Password must be between 6 and 20 characters",
+      "passwordFormat": "Password must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number",
+      "confirmPasswordRequired": "Please enter your confirm password",
+      "confirmPasswordMismatch": "Confirm password does not match",
+      "serverError": "Registration or auto-login failed. Please try again."
+    }
+  }
+}

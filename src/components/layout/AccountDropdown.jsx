@@ -12,41 +12,37 @@ import {
 import { logoutUser } from "../../redux/slices/authSlice";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const accountMenuItems = [
   {
     key: "manage",
-    label: "Manage My Account",
+    labelKey: "accountMenu.manage",
     icon: faUser,
     path: "/user/profile",
   },
   {
     key: "order",
-    label: "My Orders",
+    labelKey: "accountMenu.order",
     icon: faShoppingBag,
     path: "/user/orders",
   },
   {
     key: "cancellations",
-    label: "My Cancellations",
+    labelKey: "accountMenu.cancellations",
     icon: faCircleXmark,
     path: "/user/orders/cancellations",
   },
-  // {
-  //   key: "reviews",
-  //   label: "My Reviews",
-  //   icon: faStarRegular,
-  //   path: "/user/reviews",
-  // },
   {
     key: "logout",
-    label: "Logout",
+    labelKey: "accountMenu.logout",
     icon: faRightFromBracket,
     path: "/login",
   },
 ];
 
 const AccountDropdown = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const dispatch = useDispatch();
@@ -110,7 +106,7 @@ const AccountDropdown = () => {
               onClick={() => handleClick(item.key)}
             >
               <FontAwesomeIcon icon={item.icon} className="text-white" />
-              {item.label}
+              {t(item.labelKey)}
             </div>
           ))}
         </div>

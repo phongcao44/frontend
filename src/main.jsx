@@ -9,6 +9,7 @@ import { Provider } from "react-redux";
 import { store } from "./redux/store";
 import "antd/dist/reset.css";
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import "./locales/i18n";
 
 
 

@@ -3,8 +3,10 @@ import { useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser, registerUser } from "../../redux/slices/authSlice";
 import Cookies from "js-cookie";
+import { useTranslation } from "react-i18next";
 
 const SignUp = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -47,36 +49,34 @@ const SignUp = () => {
 
     // Username (Full Name) validation
     if (!formData.username.trim()) {
-      errors.username = "Vui lòng nhập họ và tên";
+      errors.username = t("signup.errors.usernameRequired");
     } else if (!/^[\p{L}\s]+$/u.test(formData.username)) {
-      errors.username =
-        "Họ và tên không được chứa ký tự lạ (@#!$) hoặc toàn số";
+      errors.username = t("signup.errors.usernameInvalid");
     } else if (formData.username.length < 2 || formData.username.length > 50) {
-      errors.username = "Họ và tên phải có độ dài từ 2 đến 50 ký tự";
+      errors.username = t("signup.errors.usernameLength");
     }
 
     // Email validation
     if (!formData.email.trim()) {
-      errors.email = "Vui lòng nhập email";
+      errors.email = t("signup.errors.emailRequired");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = "Email không đúng định dạng";
+      errors.email = t("signup.errors.emailInvalid");
     }
 
     // Password validation
     if (!formData.password.trim()) {
-      errors.password = "Vui lòng nhập mật khẩu";
+      errors.password = t("signup.errors.passwordRequired");
     } else if (formData.password.length < 6 || formData.password.length > 20) {
-      errors.password = "Mật khẩu phải có độ dài từ 6 đến 20 ký tự";
+      errors.password = t("signup.errors.passwordLength");
     } else if (!/(?=.*[A-Z])(?=.*[a-z])(?=.*\d)/.test(formData.password)) {
-      errors.password =
-        "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số";
+      errors.password = t("signup.errors.passwordFormat");
     }
 
     // Confirm Password validation
     if (!formData.confirmPassword.trim()) {
-      errors.confirmPassword = "Vui lòng nhập xác nhận mật khẩu";
+      errors.confirmPassword = t("signup.errors.confirmPasswordRequired");
     } else if (formData.confirmPassword !== formData.password) {
-      errors.confirmPassword = "Mật khẩu xác nhận không khớp";
+      errors.confirmPassword = t("signup.errors.confirmPasswordMismatch");
     }
 
     setValidationErrors(errors);
@@ -129,10 +129,7 @@ const SignUp = () => {
       }
     } catch (error) {
       console.error("Register or auto login failed:", error);
-      setError(
-        error?.data?.message ||
-        "Đăng ký hoặc đăng nhập tự động thất bại. Vui lòng thử lại."
-      );
+      setError(error?.data?.message || t("signup.errors.serverError"));
     }
   };
 
@@ -145,15 +142,13 @@ const SignUp = () => {
     }
   };
 
-
-
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
       {/* Left side - Image */}
       <div className="w-full md:w-3/5 flex items-center justify-center p-4 md:p-12">
         <img
           src="assets/images/signUp.png"
-          alt="Sign up illustration"
+          alt={t("signup.title")}
           className="w-full h-full object-cover"
         />
       </div>
@@ -161,10 +156,8 @@ const SignUp = () => {
       {/* Right side - Form */}
       <div className="w-full md:w-2/5 flex items-center justify-center px-4 md:px-6 lg:px-8 pt-10 md:pt-16 pb-12">
         <div className="w-full max-w-md">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Tạo tài khoản
-          </h1>
-          <p className="text-gray-600 mb-4">Vui lòng nhập đầy đủ thông tin</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{t("signup.title")}</h1>
+          <p className="text-gray-600 mb-4">{t("signup.subtitle")}</p>
 
           {/* Server Error Notification */}
           {error && (
@@ -178,18 +171,15 @@ const SignUp = () => {
               <input
                 type="text"
                 name="username"
-                placeholder="Họ và tên"
+                placeholder={t("signup.usernamePlaceholder")}
                 value={formData.username}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.username
-                    ? "border-red-500"
-                    : "border-gray-300"
-                  } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                  validationErrors.username ? "border-red-500" : "border-gray-300"
+                } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               {validationErrors.username && (
-                <p className="text-red-500 text-sm mt-1">
-                  {validationErrors.username}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{validationErrors.username}</p>
               )}
             </div>
 
@@ -197,16 +187,15 @@ const SignUp = () => {
               <input
                 type="email"
                 name="email"
-                placeholder="Email"
+                placeholder={t("signup.emailPlaceholder")}
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.email ? "border-red-500" : "border-gray-300"
-                  } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                  validationErrors.email ? "border-red-500" : "border-gray-300"
+                } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               {validationErrors.email && (
-                <p className="text-red-500 text-sm mt-1">
-                  {validationErrors.email}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
               )}
             </div>
 
@@ -214,19 +203,18 @@ const SignUp = () => {
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
-                placeholder="Mật khẩu"
+                placeholder={t("signup.passwordPlaceholder")}
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.password
-                    ? "border-red-500"
-                    : "border-gray-300"
-                  } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                  validationErrors.password ? "border-red-500" : "border-gray-300"
+                } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-2 top-3 text-gray-500 hover:text-gray-700"
-                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-label={showPassword ? t("signup.hidePassword") : t("signup.showPassword")}
               >
                 {showPassword ? (
                   <svg
@@ -261,9 +249,7 @@ const SignUp = () => {
                 )}
               </button>
               {validationErrors.password && (
-                <p className="text-red-500 text-sm mt-1">
-                  {validationErrors.password}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{validationErrors.password}</p>
               )}
             </div>
 
@@ -271,21 +257,18 @@ const SignUp = () => {
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
-                placeholder="Xác nhận mật khẩu"
+                placeholder={t("signup.confirmPasswordPlaceholder")}
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${validationErrors.confirmPassword
-                    ? "border-red-500"
-                    : "border-gray-300"
-                  } focus:border-red-500 focus:outline-none bg-transparent`}
+                className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
+                  validationErrors.confirmPassword ? "border-red-500" : "border-gray-300"
+                } focus:border-red-500 focus:outline-none bg-transparent`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-2 top-3 text-gray-500 hover:text-gray-700"
-                aria-label={
-                  showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
-                }
+                aria-label={showConfirmPassword ? t("signup.hidePassword") : t("signup.showPassword")}
               >
                 {showConfirmPassword ? (
                   <svg
@@ -320,9 +303,7 @@ const SignUp = () => {
                 )}
               </button>
               {validationErrors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">
-                  {validationErrors.confirmPassword}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{validationErrors.confirmPassword}</p>
               )}
             </div>
 
@@ -330,18 +311,17 @@ const SignUp = () => {
               onClick={handleSubmit}
               className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-4 px-6 rounded-lg transition-colors duration-200"
             >
-              Tạo tài khoản
+              {t("signup.signUpButton")}
             </button>
-
           </div>
 
           <div className="mt-8 text-center">
-            <span className="text-gray-600">Đã có tài khoản? </span>
+            <span className="text-gray-600">{t("signup.haveAccount")} </span>
             <Link
               to="/login"
               className="text-gray-900 hover:text-gray-700 font-medium underline"
             >
-              Đăng nhập
+              {t("signup.loginLink")}
             </Link>
           </div>
         </div>
