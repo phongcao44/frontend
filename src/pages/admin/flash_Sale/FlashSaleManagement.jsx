@@ -17,6 +17,7 @@ import Swal from "sweetalert2";
 import {
   fetchFlashSales,
   removeFlashSale,
+  fetchFlashSaleVariantDetails,
 } from "../../../redux/slices/flashSaleSlice";
 import FlashSaleForm from "./FlashSaleForm";
 import FlashSaleItemManagement from "./FlashSaleItemManagement";
@@ -34,7 +35,7 @@ const debounce = (func, wait) => {
 export default function FlashSaleManagement() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { flashSales, loading, error } = useSelector((state) => state.flashSale);
+  const { flashSales, flashSaleVariantDetails, loading, error } = useSelector((state) => state.flashSale);
   const [currentView, setCurrentView] = useState("list");
   const [selectedFlashSale, setSelectedFlashSale] = useState(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -43,6 +44,7 @@ export default function FlashSaleManagement() {
   const [statusFilter, setStatusFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [productCounts, setProductCounts] = useState({});
 
   const debouncedSearch = useCallback(
     debounce((value) => {
@@ -59,14 +61,48 @@ export default function FlashSaleManagement() {
   };
 
   useEffect(() => {
-    dispatch(fetchFlashSales());
+    const loadFlashSalesWithCounts = async () => {
+      try {
+        const result = await dispatch(fetchFlashSales()).unwrap();
+        if (result && Array.isArray(result)) {
+          // Load product counts for each flash sale
+          const counts = {};
+          await Promise.all(
+            result.map(async (flashSale) => {
+              try {
+                const itemResult = await dispatch(fetchFlashSaleVariantDetails(flashSale.id)).unwrap();
+                counts[flashSale.id] = Array.isArray(itemResult) ? itemResult.length : 0;
+              } catch (error) {
+                console.error(`Error loading product count for flash sale ${flashSale.id}:`, error);
+                counts[flashSale.id] = 0;
+              }
+            })
+          );
+          setProductCounts(counts);
+        }
+      } catch (error) {
+        console.error("Error loading flash sales:", error);
+      }
+    };
+
+    loadFlashSalesWithCounts();
   }, [dispatch]);
+
+  // Auto-refresh status every minute to check for expired flash sales
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force re-render to update status based on current time
+      setCurrentPage(currentPage);
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [currentPage]);
 
   const filteredFlashSales = flashSales.filter(
     (sale) =>
       (sale.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         sale.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
-      (statusFilter === "" || sale.status === statusFilter)
+      (statusFilter === "" || getActualStatus(sale) === statusFilter)
   );
 
   const paginatedFlashSales = filteredFlashSales.slice(
@@ -110,7 +146,32 @@ export default function FlashSaleManagement() {
   };
 
   const handleRefresh = () => {
-    dispatch(fetchFlashSales());
+    setProductCounts({});
+    const loadFlashSalesWithCounts = async () => {
+      try {
+        const result = await dispatch(fetchFlashSales()).unwrap();
+        if (result && Array.isArray(result)) {
+          // Load product counts for each flash sale
+          const counts = {};
+          await Promise.all(
+            result.map(async (flashSale) => {
+              try {
+                const itemResult = await dispatch(fetchFlashSaleVariantDetails(flashSale.id)).unwrap();
+                counts[flashSale.id] = Array.isArray(itemResult) ? itemResult.length : 0;
+              } catch (error) {
+                console.error(`Error loading product count for flash sale ${flashSale.id}:`, error);
+                counts[flashSale.id] = 0;
+              }
+            })
+          );
+          setProductCounts(counts);
+        }
+      } catch (error) {
+        console.error("Error loading flash sales:", error);
+      }
+    };
+
+    loadFlashSalesWithCounts();
   };
 
   const handlePageChange = (page, newItemsPerPage) => {
@@ -139,12 +200,82 @@ export default function FlashSaleManagement() {
       : `${base} bg-red-100 text-red-800`;
   };
 
+  // Function to check if flash sale is expired
+  const isFlashSaleExpired = (endTime) => {
+    if (!endTime) return false;
+    const now = new Date();
+    const endDate = new Date(endTime);
+    return now > endDate;
+  };
+
+  // Function to get actual status based on time
+  const getActualStatus = (flashSale) => {
+    if (flashSale.status === "INACTIVE") return "INACTIVE";
+    
+    // If status is ACTIVE but end time has passed, it should be considered expired
+    if (isFlashSaleExpired(flashSale.endTime)) {
+      return "EXPIRED";
+    }
+    
+    return flashSale.status;
+  };
+
+  // Function to get status display text
+  const getStatusDisplayText = (flashSale) => {
+    const actualStatus = getActualStatus(flashSale);
+    switch (actualStatus) {
+      case "ACTIVE":
+        return "Kích hoạt";
+      case "INACTIVE":
+        return "Tạm dừng";
+      case "EXPIRED":
+        return "Đã hết hạn";
+      default:
+        return "Không rõ";
+    }
+  };
+
+  // Function to get status badge with dynamic status
+  const getDynamicStatusBadge = (flashSale) => {
+    const base = "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium shadow-sm";
+    const actualStatus = getActualStatus(flashSale);
+    
+    switch (actualStatus) {
+      case "ACTIVE":
+        return `${base} bg-green-100 text-green-800`;
+      case "INACTIVE":
+        return `${base} bg-red-100 text-red-800`;
+      case "EXPIRED":
+        return `${base} bg-gray-100 text-gray-800`;
+      default:
+        return `${base} bg-gray-100 text-gray-800`;
+    }
+  };
+
+  // Function to get status dot color
+  const getStatusDotColor = (flashSale) => {
+    const actualStatus = getActualStatus(flashSale);
+    switch (actualStatus) {
+      case "ACTIVE":
+        return "bg-green-500";
+      case "INACTIVE":
+        return "bg-red-500";
+      case "EXPIRED":
+        return "bg-gray-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
   const totalFlashSales = filteredFlashSales.length;
   const activeFlashSales = filteredFlashSales.filter(
-    (sale) => sale.status === "ACTIVE"
+    (sale) => getActualStatus(sale) === "ACTIVE"
   ).length;
   const inactiveFlashSales = filteredFlashSales.filter(
-    (sale) => sale.status !== "ACTIVE"
+    (sale) => getActualStatus(sale) === "INACTIVE"
+  ).length;
+  const expiredFlashSales = filteredFlashSales.filter(
+    (sale) => getActualStatus(sale) === "EXPIRED"
   ).length;
   const todayFlashSales = filteredFlashSales.filter((sale) => {
     if (!sale.startTime) return false;
@@ -152,6 +283,9 @@ export default function FlashSaleManagement() {
     const today = new Date();
     return saleDate.toDateString() === today.toDateString();
   }).length;
+  
+  // Calculate total products across all flash sales
+  const totalProducts = Object.values(productCounts).reduce((sum, count) => sum + (count || 0), 0);
 
   if (currentView === "items") {
     return (
@@ -205,7 +339,7 @@ export default function FlashSaleManagement() {
       </div>
 
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -251,8 +385,34 @@ export default function FlashSaleManagement() {
           </div>
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
+              <div className="p-3 bg-gray-100 rounded-lg">
+                <Tag className="h-6 w-6 text-gray-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Đã hết hạn</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {expiredFlashSales}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
               <div className="p-3 bg-purple-100 rounded-lg">
-                <Calendar className="h-6 w-6 text-purple-600" />
+                <Package className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Tổng sản phẩm</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {totalProducts}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-3 bg-orange-100 rounded-lg">
+                <Calendar className="h-6 w-6 text-orange-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Hôm nay</p>
@@ -267,19 +427,20 @@ export default function FlashSaleManagement() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setCurrentPage(0);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={loading}
-              >
-                <option value="">Tất cả trạng thái</option>
-                <option value="ACTIVE">Kích hoạt</option>
-                <option value="INACTIVE">Tạm dừng</option>
-              </select>
+                             <select
+                 value={statusFilter}
+                 onChange={(e) => {
+                   setStatusFilter(e.target.value);
+                   setCurrentPage(0);
+                 }}
+                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                 disabled={loading}
+               >
+                 <option value="">Tất cả trạng thái</option>
+                 <option value="ACTIVE">Kích hoạt</option>
+                 <option value="INACTIVE">Tạm dừng</option>
+                 <option value="EXPIRED">Đã hết hạn</option>
+               </select>
             </div>
             <div className="relative flex items-center">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -316,6 +477,23 @@ export default function FlashSaleManagement() {
               />
             </svg>
             {error}
+          </div>
+        )}
+
+        {expiredFlashSales > 0 && (
+          <div className="bg-yellow-50 p-4 rounded-xl mb-6 text-sm text-yellow-800 flex items-center">
+            <svg
+              className="h-5 w-5 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Có {expiredFlashSales} Flash Sale đã hết hạn. Vui lòng kiểm tra và cập nhật trạng thái.
           </div>
         )}
 
@@ -430,19 +608,13 @@ export default function FlashSaleManagement() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={getStatusBadge(sale.status)}
-                            title={`Trạng thái: ${
-                              sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"
-                            }`}
+                            className={getDynamicStatusBadge(sale)}
+                            title={`Trạng thái: ${getStatusDisplayText(sale)}`}
                           >
                             <span
-                              className={`w-2 h-2 rounded-full mr-1 ${
-                                sale.status === "ACTIVE"
-                                  ? "bg-green-500"
-                                  : "bg-red-500"
-                              }`}
+                              className={`w-2 h-2 rounded-full mr-1 ${getStatusDotColor(sale)}`}
                             ></span>
-                            {sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"}
+                            {getStatusDisplayText(sale)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -455,7 +627,7 @@ export default function FlashSaleManagement() {
                               className="mr-1 text-purple-500"
                             />
                             <span className="text-sm text-gray-900 font-medium">
-                              {(sale.items?.length || 0)} sản phẩm
+                              {productCounts[sale.id] !== undefined ? productCounts[sale.id] : "..."} sản phẩm
                             </span>
                           </div>
                         </td>
@@ -546,17 +718,13 @@ export default function FlashSaleManagement() {
                       </div>
                     </div>
                     <span
-                      className={getStatusBadge(sale.status)}
-                      title={`Trạng thái: ${
-                        sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"
-                      }`}
+                      className={getDynamicStatusBadge(sale)}
+                      title={`Trạng thái: ${getStatusDisplayText(sale)}`}
                     >
                       <span
-                        className={`w-2 h-2 rounded-full mr-1 ${
-                          sale.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"
-                        }`}
+                        className={`w-2 h-2 rounded-full mr-1 ${getStatusDotColor(sale)}`}
                       ></span>
-                      {sale.status === "ACTIVE" ? "Kích hoạt" : "Tạm dừng"}
+                      {getStatusDisplayText(sale)}
                     </span>
                   </div>
                   <div className="space-y-3 mb-4">
@@ -584,7 +752,7 @@ export default function FlashSaleManagement() {
                     >
                       <Package size={16} className="mr-2 text-purple-500" />
                       <span className="font-medium">
-                        {(sale.items?.length || 0)} sản phẩm
+                        {productCounts[sale.id] !== undefined ? productCounts[sale.id] : "..."} sản phẩm
                       </span>
                     </div>
                     <div

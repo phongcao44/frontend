@@ -85,9 +85,9 @@ const GeminiChatButton = () => {
   }, [chatHistory]);
 
   const formatTime = (timestamp) => {
-    return new Date().toLocaleTimeString('vi-VN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return new Date().toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -134,18 +134,23 @@ const GeminiChatButton = () => {
             {chatHistory.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex ${msg.role === "user" ? 'justify-end' : 'justify-start'}`}
+                className={`flex items-end ${msg.role === "user" ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[85%] ${msg.role === "user" ? 'order-2' : 'order-1'}`}>
+                {msg.role === "ai" && (
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm mr-3 bg-gradient-to-r from-gray-400 to-gray-600">
+                    <Bot size={16} />
+                  </div>
+                )}
+
+                <div className="max-w-[85%]">
                   <div
-                    className={`p-3 rounded-2xl shadow-sm ${
-                      msg.role === "user"
+                    className={`p-3 rounded-2xl shadow-sm ${msg.role === "user"
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md'
                         : 'bg-white text-gray-800 rounded-bl-md border border-gray-200'
-                    }`}
+                      }`}
                   >
                     <div className="prose prose-sm max-w-none">
-                      <ReactMarkdown 
+                      <ReactMarkdown
                         components={{
                           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                           ul: ({ children }) => <ul className="ml-4 mb-2">{children}</ul>,
@@ -161,24 +166,23 @@ const GeminiChatButton = () => {
                     {formatTime()}
                   </div>
                 </div>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 ${
-                  msg.role === "user" 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 order-1 ml-3' 
-                    : 'bg-gradient-to-r from-gray-400 to-gray-600 order-2 mr-3'
-                }`}>
-                  {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
-                </div>
+
+                {msg.role === "user" && (
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm ml-3 bg-gradient-to-r from-blue-500 to-purple-600">
+                    <User size={16} />
+                  </div>
+                )}
               </div>
             ))}
-            
+
             {loading && (
               <div className="flex justify-start">
                 <div className="bg-white p-4 rounded-2xl rounded-bl-md shadow-sm border border-gray-200 max-w-[85%]">
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     </div>
                     <span className="text-sm text-gray-500">Đang suy nghĩ...</span>
                   </div>
@@ -215,7 +219,7 @@ const GeminiChatButton = () => {
                 onKeyDown={handleKeyDown}
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 border border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-24 min-h-[48px]"
-                style={{ 
+                style={{
                   scrollbarWidth: 'thin',
                   scrollbarColor: '#cbd5e0 transparent'
                 }}
