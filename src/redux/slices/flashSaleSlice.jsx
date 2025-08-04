@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   getFlashSales,
   getFlashSaleDetails,
-  getActiveFlashSale, // Added import
+  getActiveFlashSale,
   addFlashSale,
   editFlashSale,
   deleteFlashSale,
@@ -11,8 +11,8 @@ import {
   addFlashSaleItem,
   editFlashSaleItem,
   deleteFlashSaleItem,
-    getTop1FlashSale,
-
+  getTop1FlashSale,
+  getFlashSaleItemsPaginated, // Added import
 } from "../../services/flashSaleService";
 
 // FLASH SALE
@@ -30,9 +30,9 @@ export const fetchFlashSales = createAsyncThunk(
 
 export const fetchFlashSaleDetails = createAsyncThunk(
   "flashSale/fetchFlashSaleDetails",
-  async (flashSaleId, { rejectWithValue }) => { // Fixed: Accept flashSaleId
+  async (flashSaleId, { rejectWithValue }) => {
     try {
-      const response = await getFlashSaleDetails(flashSaleId); // Fixed: Pass flashSaleId
+      const response = await getFlashSaleDetails(flashSaleId);
       return response;
     } catch (err) {
       return rejectWithValue(err.message || "Failed to fetch flash sale details");
@@ -101,6 +101,18 @@ export const fetchFlashSaleItems = createAsyncThunk(
   }
 );
 
+export const fetchFlashSaleItemsPaginated = createAsyncThunk(
+  "flashSale/fetchFlashSaleItemsPaginated",
+  async ({ flashSaleId, params }, { rejectWithValue }) => {
+    try {
+      const response = await getFlashSaleItemsPaginated(flashSaleId, params);
+      return response;
+    } catch (err) {
+      return rejectWithValue(err.message || "Failed to fetch paginated flash sale items");
+    }
+  }
+);
+
 export const fetchFlashSaleVariantDetails = createAsyncThunk(
   "flashSale/fetchFlashSaleVariantDetails",
   async (flashSaleId, { rejectWithValue }) => {
@@ -148,6 +160,7 @@ export const removeFlashSaleItem = createAsyncThunk(
     }
   }
 );
+
 export const fetchTop1FlashSale = createAsyncThunk(
   "flashSale/fetchTop1FlashSale",
   async (_, { rejectWithValue }) => {
@@ -165,13 +178,13 @@ const flashSaleSlice = createSlice({
   name: "flashSale",
   initialState: {
     flashSales: [],
-    flashSaleDetails: [], // Kept as array to preserve original logic
+    flashSaleDetails: [],
     flashSaleItems: [],
-    flashSaleVariantDetails: [], // Kept as array to preserve original logic
-    activeFlashSale: null, // Added for active flash sale
-    loading: false,
+    flashSaleItemsPaginated: [], // Added for paginated items
+    flashSaleVariantDetails: [],
+    activeFlashSale: null,
     top1FlashSale: null,
-
+    loading: false,
     error: null,
   },
   reducers: {
@@ -230,7 +243,7 @@ const flashSaleSlice = createSlice({
       })
       .addCase(createFlashSale.fulfilled, (state, action) => {
         state.loading = false;
-        state.flashSales.push(action.payload); // Preserved original push
+        state.flashSales.push(action.payload);
       })
       .addCase(createFlashSale.rejected, (state, action) => {
         state.loading = false;
@@ -248,7 +261,7 @@ const flashSaleSlice = createSlice({
           (fs) => fs.id === action.payload.id
         );
         if (idx !== -1) {
-          state.flashSales[idx] = action.payload; // Preserved original mutation
+          state.flashSales[idx] = action.payload;
         }
       })
       .addCase(updateFlashSale.rejected, (state, action) => {
@@ -286,6 +299,20 @@ const flashSaleSlice = createSlice({
         state.error = action.payload;
       })
 
+      // Fetch Flash Sale Items Paginated
+      .addCase(fetchFlashSaleItemsPaginated.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchFlashSaleItemsPaginated.fulfilled, (state, action) => {
+        state.loading = false;
+        state.flashSaleItemsPaginated = action.payload;
+      })
+      .addCase(fetchFlashSaleItemsPaginated.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
       // Fetch Flash Sale Variant Details
       .addCase(fetchFlashSaleVariantDetails.pending, (state) => {
         state.loading = true;
@@ -307,7 +334,7 @@ const flashSaleSlice = createSlice({
       })
       .addCase(createFlashSaleItem.fulfilled, (state, action) => {
         state.loading = false;
-        state.flashSaleItems.push(action.payload); // Preserved original push
+        state.flashSaleItems.push(action.payload);
       })
       .addCase(createFlashSaleItem.rejected, (state, action) => {
         state.loading = false;
@@ -325,7 +352,7 @@ const flashSaleSlice = createSlice({
           (item) => item.id === action.payload.id
         );
         if (idx !== -1) {
-          state.flashSaleItems[idx] = action.payload; // Preserved original mutation
+          state.flashSaleItems[idx] = action.payload;
         }
       })
       .addCase(updateFlashSaleItem.rejected, (state, action) => {
@@ -348,18 +375,21 @@ const flashSaleSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-        .addCase(fetchTop1FlashSale.pending, (state) => {
-      state.loading = true;
-    })
-    .addCase(fetchTop1FlashSale.fulfilled, (state, action) => {
-      state.loading = false;
-      state.top1FlashSale = action.payload;  // 👈 Phải có dòng này!
-    })
-    .addCase(fetchTop1FlashSale.rejected, (state) => {
-      state.loading = false;
-      state.top1FlashSale = null;
-    });
-      
+
+      // Fetch Top 1 Flash Sale
+      .addCase(fetchTop1FlashSale.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchTop1FlashSale.fulfilled, (state, action) => {
+        state.loading = false;
+        state.top1FlashSale = action.payload;
+      })
+      .addCase(fetchTop1FlashSale.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.top1FlashSale = null;
+      });
   },
 });
 

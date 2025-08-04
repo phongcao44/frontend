@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   fetchLeastViewedProducts,
+  fetchProductBySlug,
   fetchProductsByCategory,
   fetchTopBestSellingProducts,
   fetchTopLeastSellingProducts,
@@ -26,6 +27,11 @@ export const loadProducts = createAsyncThunk(
 export const loadProductsPaginate = createAsyncThunk(
   "products/loadPaginate",
   async (params) => await fetchProductsPaginate(params)
+);
+
+export const loadProductBySlug = createAsyncThunk(
+  "products/loadBySlug",
+  async (slug) => await fetchProductBySlug(slug)
 );
 
 export const loadNewArrivals = createAsyncThunk(
@@ -151,6 +157,19 @@ const productSlice = createSlice({
       .addCase(loadNewArrivals.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      .addCase(loadProductBySlug.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadProductBySlug.fulfilled, (state, action) => {
+        state.productDetail = action.payload;
+        state.loading = false;
+      })
+      .addCase(loadProductBySlug.rejected, (state, action) => {
+        state.error = action.error.message;
+        state.loading = false;
       })
 
       // Paginate

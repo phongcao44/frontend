@@ -1,17 +1,28 @@
 import { Typography, Dropdown, Button, Grid } from "antd";
 import { DownOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
-const languageMenuItems = [
-  { key: "en", label: "English" },
-  { key: "vi", label: "Tiếng Việt" },
-];
-
 const TopBanner = () => {
   const screens = useBreakpoint();
+  const { t, i18n } = useTranslation();
+
   if (!screens.md) return null;
+
+  const languageMenuItems = [
+    {
+      key: "en",
+      label: "English",
+      onClick: () => i18n.changeLanguage("en"),
+    },
+    {
+      key: "vi",
+      label: "Tiếng Việt",
+      onClick: () => i18n.changeLanguage("vi"),
+    },
+  ];
 
   return (
     <div
@@ -35,9 +46,9 @@ const TopBanner = () => {
         }}
       >
         <span style={{ opacity: 0.8 }}>
-          Summer Sale For All Swim Suits And Free Express Delivery - OFF 50%!{" "}
+          {t("banner.saleText")}{" "}
           <Text underline strong style={{ color: "#fff", opacity: 1 }}>
-            ShopNow
+            {t("banner.shopNow")}
           </Text>
         </span>
 
@@ -55,7 +66,7 @@ const TopBanner = () => {
             placement="bottomRight"
           >
             <Button type="link" style={{ color: "#fff", padding: 0 }}>
-              English <DownOutlined />
+              {i18n.language === "vi" ? "Tiếng Việt" : "English"} <DownOutlined />
             </Button>
           </Dropdown>
         </div>

@@ -1,0 +1,96 @@
+{
+  "cart": "Giỏ hàng",
+  "add_to_cart": "Thêm vào giỏ",
+  "checkout": "Thanh toán",
+  "products": "Sản phẩm",
+  "banner": {
+    "saleText": "Giảm giá mùa hè cho tất cả đồ bơi và miễn phí giao hàng nhanh - GIẢM 50%!",
+    "shopNow": "Mua ngay"
+  },
+
+  "navMenu": {
+    "home": "Trang chủ",
+    "contact": "Liên hệ",
+    "about": "Giới thiệu",
+    "blog": "Blog",
+    "signup": "Đăng ký",
+    "logout": "Đăng xuất"
+  },
+  "general": {
+    "search": "Tìm kiếm",
+    "welcome": "Chào mừng bạn",
+    "profile": "Hồ sơ",
+    "orders": "Đơn hàng",
+    "settings": "Cài đặt",
+    "footerText": "© 2025 Công ty của bạn. Mọi quyền được bảo lưu."
+  },
+  "accountMenu": {
+    "manage": "Quản lý tài khoản của tôi",
+    "order": "Đơn hàng của tôi",
+    "cancellations": "Đơn hàng bị hủy",
+    "logout": "Đăng xuất"
+  },
+
+  "header": {
+    "searchPlaceholder": "Bạn đang tìm gì?",
+    "openMenu": "Mở menu",
+    "wishlist": "Danh sách yêu thích",
+    "cart": "Giỏ hàng",
+    "signUp": "Đăng ký",
+    "menu": "Menu",
+    "closeMenu": "Đóng menu"
+  },
+
+  "login": {
+    "title": "Đăng nhập",
+    "subtitle": "Nhập thông tin của bạn",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Mật khẩu",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "loginButton": "Đăng nhập",
+    "loginLoading": "Đang đăng nhập...",
+    "googleLogin": "Đăng nhập với Google",
+    "forgotPassword": "Quên mật khẩu?",
+    "noAccount": "Chưa có tài khoản?",
+    "signUpLink": "Đăng ký",
+    "errors": {
+      "emailRequired": "Vui lòng nhập email",
+      "emailInvalid": "Email không đúng định dạng",
+      "authFailed": "Tài khoản không tồn tại hoặc sai mật khẩu",
+      "googleError": "Có lỗi xảy ra khi đăng nhập Google",
+      "unknownError": "Lỗi đăng nhập không xác định"
+    },
+    "notifications": {
+      "success": "{{email}} đã đăng nhập thành công",
+      "forgotPassword": "Đang chuyển hướng đến trang quên mật khẩu..."
+    }
+  },
+
+  "signup": {
+    "title": "Tạo tài khoản",
+    "subtitle": "Vui lòng nhập đầy đủ thông tin",
+    "usernamePlaceholder": "Họ và tên",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Mật khẩu",
+    "confirmPasswordPlaceholder": "Xác nhận mật khẩu",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "signUpButton": "Tạo tài khoản",
+    "haveAccount": "Đã có tài khoản?",
+    "loginLink": "Đăng nhập",
+    "errors": {
+      "usernameRequired": "Vui lòng nhập họ và tên",
+      "usernameInvalid": "Họ và tên không được chứa ký tự lạ (@#!$) hoặc toàn số",
+      "usernameLength": "Họ và tên phải có độ dài từ 2 đến 50 ký tự",
+      "emailRequired": "Vui lòng nhập email",
+      "emailInvalid": "Email không đúng định dạng",
+      "passwordRequired": "Vui lòng nhập mật khẩu",
+      "passwordLength": "Mật khẩu phải có độ dài từ 6 đến 20 ký tự",
+      "passwordFormat": "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số",
+      "confirmPasswordRequired": "Vui lòng nhập xác nhận mật khẩu",
+      "confirmPasswordMismatch": "Mật khẩu xác nhận không khớp",
+      "serverError": "Đăng ký hoặc đăng nhập tự động thất bại. Vui lòng thử lại."
+    }
+  }
+}
