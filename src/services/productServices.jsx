@@ -10,6 +10,11 @@ export const fetchProductById = async (id) => {
   return res.data;
 };
 
+export const fetchProductBySlug = async (slug) => {
+  const res = await axiosInstance.get(`/slug/${slug}`);
+  return res.data;
+};
+
 export const fetchProductsPaginate = async ({
   page = 0,
   limit = 10,

@@ -183,27 +183,30 @@ const AddressSection = ({ formData, setFormData, setError }) => {
   };
 
   const handleSelectAddress = (address) => {
-    try {
-      setSelectedAddressId(address.addressId.toString());
-      setUseSavedAddress(true);
-      setFormData({
-        addressId: address.addressId.toString(),
-        recipientName: address.recipientName || "",
-        phone: address.phone || "",
-        fullAddress: address.fullAddress || "",
-        province: address.provinceName || "",
-        district: address.districtName || "",
-        ward: address.wardName || "",
-        useSavedAddress: true,
-      });
-      setShowAddressModal(false);
-      setIsAddingNewAddress(false);
-      setIsEditingAddress(false);
-    } catch (err) {
-      console.error("Error selecting address:", err);
-      setError("An error occurred while selecting the address.");
+  try {
+    setSelectedAddressId(address.addressId.toString());
+    setUseSavedAddress(true);
+    setFormData({
+      addressId: address.addressId.toString(),
+      recipientName: address.recipientName || "",
+      phone: address.phone || "",
+      fullAddress: address.fullAddress || "",
+      province: address.provinceName || "",
+      district: address.districtName || "",
+      ward: address.wardName || "",
+      useSavedAddress: true,
+    });
+    if (onAddressSelect) {
+      onAddressSelect(address.addressId.toString());
     }
-  };
+    setShowAddressModal(false);
+    setIsAddingNewAddress(false);
+    setIsEditingAddress(false);
+  } catch (err) {
+    console.error("Error selecting address:", err);
+    setError("An error occurred while selecting the address.");
+  }
+};
 
   const handleClearSelection = () => {
     try {

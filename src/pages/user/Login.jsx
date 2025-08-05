@@ -3,8 +3,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { loginUser, initiateGoogleLogin } from "../../redux/slices/authSlice";
 import { setNotification } from "../../redux/slices/notificationSlice";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const Login = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading } = useSelector((state) => state.auth);
@@ -38,9 +40,9 @@ const Login = () => {
     };
 
     if (!formData.email.trim()) {
-      errors.email = "Vui lòng nhập email";
+      errors.email = t("login.errors.emailRequired");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = "Email không đúng định dạng";
+      errors.email = t("login.errors.emailInvalid");
     }
 
     setValidationErrors(errors);
@@ -60,15 +62,15 @@ const Login = () => {
       const res = await dispatch(loginUser(formData)).unwrap();
       console.log("Login response:", res);
 
-      // Dispatch thông báo thành công
+      // Dispatch success notification
       dispatch(
         setNotification({
-          message: `${formData.email} đã đăng nhập thành công`,
+          message: t("login.notifications.success", { email: formData.email }),
           type: "success",
         })
       );
 
-      // Chuyển hướng ngay lập tức
+      // Redirect immediately
       if (res?.data?.roles?.includes("ROLE_ADMIN")) {
         navigate("/admin/dashboard");
       } else if (res?.data?.roles?.includes("ROLE_MODERATOR")) {
@@ -77,23 +79,23 @@ const Login = () => {
         navigate("/");
       }
     } catch (err) {
-      console.error("Đăng nhập lỗi:", err);
+      console.error("Login error:", err);
       const errorMessage =
         err?.data?.toLowerCase() ||
         err?.message?.toLowerCase() ||
-        "Lỗi đăng nhập không xác định";
+        t("login.errors.unknownError");
       console.log("Error message:", errorMessage);
       setValidationErrors((prev) => ({
         ...prev,
         email: errorMessage.includes("username or password is incorrect")
-          ? "Tài khoản không tồn tại hoặc sai mật khẩu"
+          ? t("login.errors.authFailed")
           : "",
         password: errorMessage.includes("username or password is incorrect")
-          ? "Tài khoản không tồn tại hoặc sai mật khẩu"
+          ? t("login.errors.authFailed")
           : "",
       }));
 
-      // Dispatch thông báo lỗi
+      // Dispatch error notification
       dispatch(
         setNotification({
           message: errorMessage,
@@ -106,7 +108,7 @@ const Login = () => {
   const handleForgotPassword = () => {
     dispatch(
       setNotification({
-        message: "Đang chuyển hướng đến trang quên mật khẩu...",
+        message: t("login.notifications.forgotPassword"),
         type: "info",
       })
     );
@@ -118,14 +120,14 @@ const Login = () => {
       console.log("Google login clicked");
       await dispatch(initiateGoogleLogin()).unwrap();
     } catch (error) {
-      console.error("Lỗi khi đăng nhập Google:", error);
+      console.error("Google login error:", error);
       setValidationErrors((prev) => ({
         ...prev,
-        email: "Có lỗi xảy ra khi đăng nhập Google",
+        email: t("login.errors.googleError"),
       }));
       dispatch(
         setNotification({
-          message: "Có lỗi xảy ra khi đăng nhập Google",
+          message: t("login.errors.googleError"),
           type: "error",
         })
       );
@@ -138,7 +140,7 @@ const Login = () => {
       <div className="w-full md:w-3/5 flex items-center justify-center p-4 md:p-12">
         <img
           src="/assets/images/signUp.png"
-          alt="Login illustration"
+          alt={t("login.title")}
           className="w-full h-full object-cover"
         />
       </div>
@@ -146,15 +148,15 @@ const Login = () => {
       {/* Right */}
       <div className="w-full md:w-2/5 flex items-center justify-center px-4 md:px-6 lg:px-8 pt-10 md:pt-16 pb-12">
         <div className="w-full max-w-md">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Đăng nhập</h1>
-          <p className="text-gray-600 mb-8">Nhập thông tin của bạn</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{t("login.title")}</h1>
+          <p className="text-gray-600 mb-8">{t("login.subtitle")}</p>
 
           <div className="space-y-6">
             <div>
               <input
                 type="email"
                 name="email"
-                placeholder="Email"
+                placeholder={t("login.emailPlaceholder")}
                 value={formData.email}
                 onChange={handleInputChange}
                 className={`w-full px-0 py-3 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
@@ -172,7 +174,7 @@ const Login = () => {
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
-                placeholder="Mật khẩu"
+                placeholder={t("login.passwordPlaceholder")}
                 value={formData.password}
                 onChange={handleInputChange}
                 className={`w-full px-0 py-3 pr-10 text-gray-900 placeholder-gray-500 border-0 border-b-2 ${
@@ -185,7 +187,7 @@ const Login = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-2 top-3 text-gray-500 hover:text-gray-700"
-                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
               >
                 {showPassword ? (
                   <svg
@@ -232,7 +234,7 @@ const Login = () => {
                 disabled={loading}
                 className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-medium py-4 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50"
               >
-                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                {loading ? t("login.loginLoading") : t("login.loginButton")}
               </button>
               <button
                 onClick={handleGoogleLogin}
@@ -256,25 +258,25 @@ const Login = () => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Đăng nhập với Google
+                {t("login.googleLogin")}
               </button>
 
               <button
                 onClick={handleForgotPassword}
                 className="w-full sm:w-auto text-red-500 hover:underline font-medium py-4 px-6 transition-colors duration-200"
               >
-                Quên mật khẩu?
+                {t("login.forgotPassword")}
               </button>
             </div>
           </div>
 
           <div className="mt-8 text-center">
-            <span className="text-gray-600">Chưa có tài khoản? </span>
+            <span className="text-gray-600">{t("login.noAccount")} </span>
             <Link
               to="/signup"
               className="text-gray-900 hover:text-gray-700 font-medium underline"
             >
-              Đăng ký
+              {t("login.signUpLink")}
             </Link>
           </div>
         </div>

@@ -10,6 +10,9 @@ import {
   checkoutByCartItem,
   checkoutSelectedItems,
 } from "../../services/cartService";
+import axios from "axios";
+import Cookies from "js-cookie";
+
 
 export const getCart = createAsyncThunk("cart/getCart", async (_, thunkAPI) => {
   try {
@@ -88,14 +91,35 @@ export const checkoutSingleCartItem = createAsyncThunk(
 
 export const checkoutSelectedItemsThunk = createAsyncThunk(
   "cart/checkoutSelectedItems",
-  async (payload, thunkAPI) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      return await checkoutSelectedItems(payload);
+      const token = Cookies.get("access_token");  // Lấy token từ cookie
+
+      const res = await axios.post(
+        "http://localhost:8080/api/v1/user/carts/checkout/selected",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,  // Gán token vào header
+          },
+          withCredentials: true,
+        }
+      );
+      return res.data;
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      console.error("🔥 Checkout API error:", err);
+
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Lỗi không xác định";
+
+      return rejectWithValue({ message });
     }
   }
 );
+
+
 
 const cartSlice = createSlice({
   name: "cart",
@@ -131,6 +155,7 @@ const cartSlice = createSlice({
         if (!state.cart) {
           state.cart = { items: [] };
         }
+        console.log(state.cart)
         state.cart.items.push(cartItem); // Thêm cartItem vào mảng items
         state.loading = false;
       })

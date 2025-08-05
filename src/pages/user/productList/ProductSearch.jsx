@@ -4,6 +4,7 @@ import { loadProductsPaginate } from "../../../redux/slices/productSlice";
 import { useSearchParams } from "react-router-dom";
 import { loadParentCategories } from "../../../redux/slices/categorySlice";
 import ProductCardList from "./ProductCardList";
+import ProductCard from "../home/ProductCard";
 
 function ProductSearch() {
   const dispatch = useDispatch();
@@ -312,96 +313,7 @@ function ProductSearch() {
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
           {paginatedProducts?.data?.content?.map((productData) => (
-            // <div
-            //   key={product.id}
-            //   className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer"
-            // >
-            //   <div className="relative overflow-hidden">
-            //     <img
-            //       src={product.imageUrl}
-            //       alt={product.name}
-            //       className="w-full h-64 object-cover object-top group-hover:scale-105 transition-transform duration-300"
-            //     />
-            //     <div className="absolute top-3 right-3">
-            //       <button className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-red-50 transition-colors cursor-pointer">
-            //         <i className="far fa-heart text-gray-400 hover:text-red-500 text-sm"></i>
-            //       </button>
-            //     </div>
-            //     {product.originalPrice > product.price && (
-            //       <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-            //         -
-            //         {Math.round(
-            //           (1 - product.price / product.originalPrice) * 100
-            //         )}
-            //         %
-            //       </div>
-            //     )}
-            //   </div>
-            //   <div className="p-4">
-            //     <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-            //       {product.name}
-            //     </h3>
-            //     <div className="flex items-center space-x-1 mb-2">
-            //       <div className="flex items-center">
-            //         {[...Array(5)].map((_, i) => {
-            //           const whole = Math.floor(product.averageRating);
-            //           const decimal = product.averageRating - whole;
-
-            //           if (i < whole) {
-            //             return (
-            //               <i
-            //                 key={i}
-            //                 className="fas fa-star text-yellow-400"
-            //               ></i>
-            //             );
-            //           } else if (i === whole) {
-            //             if (decimal >= 0.75) {
-            //               return (
-            //                 <i
-            //                   key={i}
-            //                   className="fas fa-star text-yellow-400"
-            //                 ></i>
-            //               );
-            //             } else if (decimal >= 0.25) {
-            //               return (
-            //                 <i
-            //                   key={i}
-            //                   className="fas fa-star-half-alt text-yellow-400"
-            //                 ></i>
-            //               );
-            //             }
-            //           }
-            //           return (
-            //             <i key={i} className="fas fa-star text-gray-200"></i>
-            //           );
-            //         })}
-            //       </div>
-            //       <span className="text-xs text-gray-500">
-            //         ({product.averageRating})
-            //       </span>
-            //       <span className="text-xs text-gray-400">
-            //         {" "}
-            //         {product.totalReviews}
-            //       </span>
-            //     </div>
-            //     <div className="flex items-center justify-between">
-            //       <div className="flex items-center space-x-2">
-            //         <span className="text-lg font-bold text-gray-900">
-            //           {product.price.toLocaleString("vi-VN")}đ
-            //         </span>
-            //         {product.originalPrice > product.price && (
-            //           <span className="text-sm text-gray-400 line-through">
-            //             {product.originalPrice.toLocaleString("vi-VN")}đ
-            //           </span>
-            //         )}
-            //       </div>
-            //     </div>
-            //     <button className="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer whitespace-nowrap !rounded-button">
-            //       Thêm vào giỏ
-            //     </button>
-            //   </div>
-            // </div>
-              <ProductCardList key={productData.id} product={productData} />
+            <ProductCard key={productData.id} product={productData} />
           ))}
         </div>
 

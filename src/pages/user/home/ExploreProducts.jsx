@@ -1,5 +1,4 @@
-import { Typography, Button, Space } from "antd";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { Typography, Button } from "antd";
 import ProductCard from "./ProductCard";
 import { useEffect, useState, useRef } from "react";
 import { loadProductsPaginate } from "../../../redux/slices/productSlice";
@@ -16,20 +15,22 @@ const ExploreProducts = () => {
   const [displayedProducts, setDisplayedProducts] = useState([]);
 
   useEffect(() => {
-    const params = {
-      page,
-      limit: 8,
-    };
+    const params = { page, limit: 12};
     dispatch(loadProductsPaginate(params));
   }, [dispatch, page]);
 
   useEffect(() => {
     if (paginatedProducts?.data?.content) {
-      if (page === 0) {
-        setDisplayedProducts(paginatedProducts.data.content);
-      } else {
-        setDisplayedProducts((prev) => [...prev, ...paginatedProducts.data.content]);
-      }
+      const newProducts = paginatedProducts.data.content;
+
+      setDisplayedProducts((prev) => {
+        if (page === 0) return newProducts;
+
+        const existingIds = new Set(prev.map((p) => p.id));
+        const uniqueNew = newProducts.filter((p) => !existingIds.has(p.id));
+        return [...prev, ...uniqueNew];
+      });
+
       if (paginatedProducts.data.last) {
         setAllProductsLoaded(true);
       }
@@ -41,7 +42,6 @@ const ExploreProducts = () => {
       setPage((prevPage) => prevPage + 1);
     }
   };
-
 
   return (
     <div>

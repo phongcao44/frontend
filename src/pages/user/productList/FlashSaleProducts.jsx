@@ -1,31 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { loadProductsPaginate } from "../../../redux/slices/productSlice";
-import { loadFlatCategoryList } from "../../../redux/slices/categorySlice";
-import ProductCardList from "./ProductCardList";
+import {
+  fetchActiveFlashSale,
+  fetchFlashSaleItemsPaginated,
+} from "../../../redux/slices/flashSaleSlice";
+import { loadParentCategories } from "../../../redux/slices/categorySlice";
+import ProductCard from "../home/ProductCard";
 
 function FlashSaleTimer({ endTime }) {
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
     minutes: 0,
-    seconds: 0
+    seconds: 0,
   });
 
   useEffect(() => {
+    console.log("endTime received:", endTime, typeof endTime);
+
+    const parsedEndTime = new Date(endTime);
+    if (isNaN(parsedEndTime.getTime())) {
+      console.error("Invalid endTime, using fallback:", endTime);
+      setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+      return;
+    }
+
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const end = new Date(endTime).getTime();
+      const end = parsedEndTime.getTime();
       const difference = end - now;
+
+      console.log("Timer tick - now:", now, "end:", end, "difference:", difference);
 
       if (difference > 0) {
         setTimeLeft({
           hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
           minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((difference % (1000 * 60)) / 1000)
+          seconds: Math.floor((difference % (1000 * 60)) / 1000),
         });
       } else {
         setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        clearInterval(timer);
       }
     }, 1000);
 
@@ -39,59 +54,25 @@ function FlashSaleTimer({ endTime }) {
         <span className="font-bold text-lg">FLASH SALE KẾT THÚC TRONG:</span>
       </div>
       <div className="flex space-x-2">
-        <div className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
-          <div className="font-bold text-xl">{String(timeLeft.hours).padStart(2, '0')}</div>
+        <div className="bg-gray-200 bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
+          <div className="font-bold text-xl">
+            {isNaN(timeLeft.hours) ? "00" : String(timeLeft.hours).padStart(2, "0")}
+          </div>
           <div className="text-xs">Giờ</div>
         </div>
         <div className="text-2xl font-bold">:</div>
-        <div className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
-          <div className="font-bold text-xl">{String(timeLeft.minutes).padStart(2, '0')}</div>
+        <div className="bg-gray-200 bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
+          <div className="font-bold text-xl">
+            {isNaN(timeLeft.minutes) ? "00" : String(timeLeft.minutes).padStart(2, "0")}
+          </div>
           <div className="text-xs">Phút</div>
         </div>
         <div className="text-2xl font-bold">:</div>
-        <div className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
-          <div className="font-bold text-xl">{String(timeLeft.seconds).padStart(2, '0')}</div>
+        <div className="bg-gray-200 bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
+          <div className="font-bold text-xl">
+            {isNaN(timeLeft.seconds) ? "00" : String(timeLeft.seconds).padStart(2, "0")}
+          </div>
           <div className="text-xs">Giây</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CategoryFilter({ categories, selectedCategory, onCategoryChange }) {
-  const validCategories = Array.isArray(categories) ? categories : [];
-
-  return (
-    <div className="mb-6">
-      <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500">
-        <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-          <i className="fas fa-list text-red-500"></i>
-          Danh mục Flash Sale
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-          <button
-            onClick={() => onCategoryChange(null)}
-            className={`px-3 py-2 text-sm rounded-lg transition-all ${
-              selectedCategory === null
-                ? "bg-red-500 text-white shadow-md"
-                : "bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600"
-            }`}
-          >
-            Tất cả
-          </button>
-          {validCategories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => onCategoryChange(category.id)}
-              className={`px-3 py-2 text-sm rounded-lg transition-all text-left ${
-                selectedCategory === category.id
-                  ? "bg-red-500 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600"
-              }`}
-            >
-              {category.name}
-            </button>
-          ))}
         </div>
       </div>
     </div>
@@ -101,27 +82,122 @@ function CategoryFilter({ categories, selectedCategory, onCategoryChange }) {
 function FlashSaleProducts() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
-  // Redux selectors
-  const paginatedProducts = useSelector((state) => state.products.paginated);
-  const productsLoading = useSelector((state) => state.products.loading);
-  const productsError = useSelector((state) => state.products.error);
-  const flatCategoryList = useSelector(
-    (state) => state.category.flatCategoryList || []
-  );
-  const categoryLoading = useSelector((state) => state.category.loading);
 
-  // State management
+  // Redux selectors
+  const { activeFlashSale, flashSaleItemsPaginated, loading, error } = useSelector(
+    (state) => state.flashSale
+  );
+  const { parentList } = useSelector((state) => state.category);
+
+  // State management for filters and pagination
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
   const [selectedDiscount, setSelectedDiscount] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedRating, setSelectedRating] = useState("all");
+  const [activeFilter, setActiveFilter] = useState(null);
   const [sortBy, setSortBy] = useState("discount-high");
   const [page, setPage] = useState(0);
+  const [limit] = useState(10);
+  const [isProductListLoading, setIsProductListLoading] = useState(false);
 
-  // Flash sale end time (example: 24 hours from now)
-  const flashSaleEndTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  // Temporary filter states
+  const [tempPriceRange, setTempPriceRange] = useState("all");
+  const [tempDiscount, setTempDiscount] = useState("all");
+  const [tempBrand, setTempBrand] = useState("all");
+  const [tempRating, setTempRating] = useState("all");
+
+  // Fetch parent categories
+  useEffect(() => {
+    dispatch(
+      loadParentCategories({
+        page: 0,
+        limit: 8,
+        sortBy: "name",
+        orderBy: "asc",
+      })
+    );
+  }, [dispatch]);
+
+  // Flash sale end time
+  const flashSaleEndTime = activeFlashSale?.endTime
+    ? new Date(activeFlashSale.endTime)
+    : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  // Map sortBy to API parameters
+  const getSortParams = (sortValue) => {
+    switch (sortValue) {
+      case "price-low":
+        return { sortBy: "price", orderBy: "asc" };
+      case "price-high":
+        return { sortBy: "price", orderBy: "desc" };
+      case "newest":
+        return { sortBy: "createdAt", orderBy: "desc" };
+      default:
+        return { sortBy: "createdAt", orderBy: "asc" };
+    }
+  };
+
+  // Load flash sale data with pagination
+  useEffect(() => {
+    const loadActiveFlashSale = async () => {
+      try {
+        setIsProductListLoading(true);
+        const res = await dispatch(fetchActiveFlashSale()).unwrap();
+        if (res?.id) {
+          const { sortBy: apiSortBy, orderBy } = getSortParams(sortBy);
+          const selectedPrice = priceRanges.find((range) => range.id === selectedPriceRange);
+          const selectedDiscountRange = discountRanges.find((range) => range.id === selectedDiscount);
+          const selectedRatingOption = ratingOptions.find((option) => option.id === selectedRating);
+
+          const params = {
+            categoryId: activeFilter,
+            brand: selectedBrand !== "all" ? selectedBrand : null,
+            minPrice: selectedPrice?.min || null,
+            maxPrice: selectedPrice?.max || null,
+            discountRange: selectedDiscountRange?.id !== "all" ? selectedDiscountRange.id : null,
+            minRating: selectedRatingOption?.value === 0 ? null : selectedRatingOption?.value,
+            page,
+            limit,
+            sortBy: apiSortBy,
+            orderBy,
+          };
+
+          await dispatch(fetchFlashSaleItemsPaginated({ flashSaleId: res.id, params })).unwrap();
+        }
+      } catch (err) {
+        console.error("Failed to load flash sale:", err);
+      } finally {
+        setIsProductListLoading(false);
+      }
+    };
+
+    loadActiveFlashSale();
+  }, [dispatch, activeFilter, selectedBrand, selectedPriceRange, selectedDiscount, selectedRating, sortBy, page, limit]);
+
+  // Apply filters
+  const handleApplyFilters = () => {
+    setSelectedPriceRange(tempPriceRange);
+    setSelectedDiscount(tempDiscount);
+    setSelectedBrand(tempBrand);
+    setSelectedRating(tempRating);
+    setPage(0);
+  };
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setTempPriceRange("all");
+    setTempDiscount("all");
+    setTempBrand("all");
+    setTempRating("all");
+    setSelectedPriceRange("all");
+    setSelectedDiscount("all");
+    setSelectedBrand("all");
+    setSelectedRating("all");
+    setActiveFilter(null);
+    setSortBy("discount-high");
+    setPage(0);
+  };
 
   // Filter options
   const brands = [
@@ -144,114 +220,43 @@ function FlashSaleProducts() {
 
   const discountRanges = [
     { id: "all", label: "Tất cả giảm giá", min: null, max: null },
-    { id: "10-30", label: "10% - 30%", min: 10, max: 30 },
-    { id: "30-50", label: "30% - 50%", min: 30, max: 50 },
-    { id: "50-70", label: "50% - 70%", min: 50, max: 70 },
-    { id: "above-70", label: "Trên 70%", min: 70, max: null },
+    { id: "0-10", label: "0% - 10%", min: 0, max: 10 },
+    { id: "10-25", label: "10% - 25%", min: 10, max: 25 },
+    { id: "25-40", label: "25% - 40%", min: 25, max: 40 },
+    { id: "40-60", label: "40% - 60%", min: 40, max: 60 },
+    { id: "60+", label: "Trên 60%", min: 60, max: null },
   ];
 
-  // Load categories on component mount
-  useEffect(() => {
-    dispatch(loadFlatCategoryList());
-  }, [dispatch]);
+  const ratingOptions = [
+    { id: "all", label: "Tất cả đánh giá", value: 0 },
+    { id: "4plus", label: "4 sao trở lên", value: 4 },
+    { id: "3plus", label: "3 sao trở lên", value: 3 },
+    { id: "2plus", label: "2 sao trở lên", value: 2 },
+  ];
 
-  // Helper functions
-  const mapSortBy = (sortBy) => {
-    switch (sortBy) {
-      case "discount-high":
-        return { sortBy: "discountValue", orderBy: "desc" };
-      case "discount-low":
-        return { sortBy: "discountValue", orderBy: "asc" };
-      case "price-low":
-        return { sortBy: "price", orderBy: "asc" };
-      case "price-high":
-        return { sortBy: "price", orderBy: "desc" };
-      case "newest":
-        return { sortBy: "createdAt", orderBy: "desc" };
-      case "popular":
-        return { sortBy: "soldCount", orderBy: "desc" };
-      default:
-        return { sortBy: "discountValue", orderBy: "desc" };
+  // Pagination controls
+  const handlePreviousPage = () => {
+    if (page > 0) {
+      setPage(page - 1);
     }
   };
 
-  const getPriceRange = () => {
-    const range =
-      priceRanges.find((r) => r.id === selectedPriceRange) || priceRanges[0];
-    return { priceMin: range.min, priceMax: range.max };
-  };
-
-  // Load flash sale products effect
-  useEffect(() => {
-    const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
-    const { priceMin, priceMax } = getPriceRange();
-
-    const params = {
-      page,
-      limit: 12,
-      sortBy: apiSortBy,
-      orderBy,
-      categoryId: selectedCategory,
-      status: "ACTIVE",
-      brandName: selectedBrand === "all" ? null : selectedBrand,
-      priceMin: priceMin || null,
-      priceMax: priceMax || null,
-      isFlashSale: true, // Only get flash sale products
-      hasDiscount: true, // Only products with discount
-    };
-
-    dispatch(loadProductsPaginate(params));
-  }, [
-    dispatch,
-    page,
-    selectedCategory,
-    selectedPriceRange,
-    selectedDiscount,
-    selectedBrand,
-    sortBy,
-  ]);
-
-  // Event handlers
-  const handleLoadMore = () => {
-    if (page < paginatedProducts?.totalPages - 1) {
-      setPage((prev) => prev + 1);
+  const handleNextPage = () => {
+    if (flashSaleItemsPaginated?.hasNext) {
+      setPage(page + 1);
     }
   };
 
-  const handleResetFilters = () => {
-    setSelectedPriceRange("all");
-    setSelectedDiscount("all");
-    setSelectedBrand("all");
-    setSelectedCategory(null);
-    setSortBy("discount-high");
-    setPage(0);
-  };
-
-  const handleCategoryChange = (categoryId) => {
-    setSelectedCategory(categoryId);
-    setPage(0);
-  };
-
-  // Get main categories (level 1) for filter
-  const mainCategories = flatCategoryList.filter((cat) => cat.level === 1);
-  const productsContent = paginatedProducts?.data?.content || [];
-  const totalProducts = paginatedProducts?.data?.totalElements || 0;
-
-  if (productsLoading && page === 0)
-    return <div className="text-center py-10">Đang tải Flash Sale...</div>;
-  
-  if (productsError)
-    return (
-      <div className="text-center py-10 text-red-500">
-        Lỗi: {productsError}
-      </div>
-    );
+  // Prepare products for display
+  const productsContent = Array.isArray(flashSaleItemsPaginated?.content)
+    ? flashSaleItemsPaginated.content
+    : [];
+  const totalProducts = flashSaleItemsPaginated?.totalElements || 0;
+  const totalPages = flashSaleItemsPaginated?.totalPages || 1;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-
         {/* Flash Sale Timer */}
         <FlashSaleTimer endTime={flashSaleEndTime} />
 
@@ -286,12 +291,38 @@ function FlashSaleProducts() {
           </div>
         </div>
 
-        {/* Category Filter */}
-        <CategoryFilter
-          categories={mainCategories}
-          selectedCategory={selectedCategory}
-          onCategoryChange={handleCategoryChange}
-        />
+        {/* Category Pills */}
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
+          <button
+            onClick={() => {
+              setActiveFilter(null);
+              setPage(0);
+            }}
+            className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
+              activeFilter === null
+                ? "bg-red-600 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:text-red-600"
+            }`}
+          >
+            Tất cả
+          </button>
+          {parentList?.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => {
+                setActiveFilter(category.id);
+                setPage(0);
+              }}
+              className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
+                activeFilter === category.id
+                  ? "bg-red-600 text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:text-red-600"
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
 
         {/* Filters and Sort */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500 gap-4">
@@ -303,26 +334,30 @@ function FlashSaleProducts() {
               <i className="fas fa-filter text-sm"></i>
               <span>Bộ lọc</span>
             </button>
-            
             <div className="text-sm text-gray-600 flex items-center space-x-2">
               <i className="fas fa-fire text-red-500"></i>
-              <span><span className="font-bold text-red-600">{totalProducts}</span> sản phẩm Flash Sale</span>
+              <span>
+                <span className="font-bold text-red-600">{totalProducts}</span>{" "}
+                sản phẩm Flash Sale
+              </span>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 whitespace-nowrap">Sắp xếp:</span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">
+              Sắp xếp:
+            </span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
               className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
             >
-              <option value="discount-high">Giảm giá cao nhất</option>
-              <option value="discount-low">Giảm giá thấp nhất</option>
               <option value="price-low">Giá thấp đến cao</option>
               <option value="price-high">Giá cao đến thấp</option>
               <option value="newest">Mới nhất</option>
-              <option value="popular">Bán chạy nhất</option>
             </select>
           </div>
         </div>
@@ -331,7 +366,19 @@ function FlashSaleProducts() {
         {showFilters && (
           <div className="mb-8">
             <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-red-500">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <i className="fas fa-filter text-red-500"></i>
+                  Bộ lọc sản phẩm
+                </h2>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="text-gray-600 hover:text-red-600 transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Brand Filter */}
                 <div className="space-y-3">
                   <h3 className="font-medium text-gray-900 flex items-center gap-2">
@@ -342,9 +389,11 @@ function FlashSaleProducts() {
                     {brands.map((brand) => (
                       <button
                         key={brand.id}
-                        onClick={() => setSelectedBrand(brand.id)}
+                        onClick={() => {
+                          setTempBrand(brand.id);
+                        }}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
-                          selectedBrand === brand.id
+                          tempBrand === brand.id
                             ? "bg-red-50 text-red-600 font-medium border border-red-200"
                             : "text-gray-600 hover:bg-red-50 hover:text-red-600"
                         }`}
@@ -365,9 +414,11 @@ function FlashSaleProducts() {
                     {priceRanges.map((range) => (
                       <button
                         key={range.id}
-                        onClick={() => setSelectedPriceRange(range.id)}
+                        onClick={() => {
+                          setTempPriceRange(range.id);
+                        }}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
-                          selectedPriceRange === range.id
+                          tempPriceRange === range.id
                             ? "bg-red-50 text-red-600 font-medium border border-red-200"
                             : "text-gray-600 hover:bg-red-50 hover:text-red-600"
                         }`}
@@ -388,14 +439,41 @@ function FlashSaleProducts() {
                     {discountRanges.map((discount) => (
                       <button
                         key={discount.id}
-                        onClick={() => setSelectedDiscount(discount.id)}
+                        onClick={() => {
+                          setTempDiscount(discount.id);
+                        }}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
-                          selectedDiscount === discount.id
+                          tempDiscount === discount.id
                             ? "bg-red-50 text-red-600 font-medium border border-red-200"
                             : "text-gray-600 hover:bg-red-50 hover:text-red-600"
                         }`}
                       >
                         {discount.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rating Filter */}
+                <div className="space-y-3">
+                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                    <i className="fas fa-star text-red-500"></i>
+                    Đánh giá
+                  </h3>
+                  <div className="space-y-2">
+                    {ratingOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setTempRating(option.id);
+                        }}
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                          tempRating === option.id
+                            ? "bg-red-50 text-red-600 font-medium border border-red-200"
+                            : "text-gray-600 hover:bg-red-50 hover:text-red-600"
+                        }`}
+                      >
+                        {option.label}
                       </button>
                     ))}
                   </div>
@@ -411,7 +489,7 @@ function FlashSaleProducts() {
                   Xóa bộ lọc
                 </button>
                 <button
-                  onClick={() => setShowFilters(false)}
+                  onClick={handleApplyFilters}
                   className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
                 >
                   Áp dụng
@@ -423,25 +501,52 @@ function FlashSaleProducts() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
-          {productsContent.length > 0 ? (
-            productsContent.map((productData) => (
-              <div key={productData.id} className="relative">
-                {/* Flash Sale Badge */}
-                <div className="absolute top-2 left-2 z-10">
-                  <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
-                    <i className="fas fa-bolt text-yellow-300"></i>
-                    <span>FLASH SALE</span>
-                  </div>
-                </div>
-                <ProductCardList
-                  product={{
-                    ...productData,
-                    discountType:
-                      productData.discountType === "AMOUNT"
-                        ? "FIXED_AMOUNT"
-                        : productData.discountType,
-                  }}
-                />
+          {isProductListLoading ? (
+            <div className="col-span-full text-center py-12">
+              <div className="flex justify-center items-center">
+                <svg
+                  className="animate-spin h-8 w-8 text-red-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </div>
+              <p className="text-gray-600 mt-4">Đang tải sản phẩm...</p>
+            </div>
+          ) : error ? (
+            <div className="col-span-full text-center py-12">
+              <div className="text-red-400 mb-4">
+                <i className="fas fa-exclamation-circle text-4xl"></i>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Lỗi khi tải sản phẩm
+              </h3>
+              <p className="text-gray-500 mb-4">Lỗi: {error}</p>
+              <button
+                onClick={handleResetFilters}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+              >
+                Làm mới
+              </button>
+            </div>
+          ) : productsContent.length > 0 ? (
+            productsContent.map((item) => (
+              <div key={item.id} className="relative">
+                <ProductCard product={item} />
               </div>
             ))
           ) : (
@@ -452,51 +557,54 @@ function FlashSaleProducts() {
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Không tìm thấy sản phẩm Flash Sale
               </h3>
-              <p className="text-gray-500 mb-4">
-                Hãy thử thay đổi bộ lọc hoặc quay lại sau
-              </p>
+              <p className="text-gray-500 mb-4">Hãy thử quay lại sau</p>
               <button
                 onClick={handleResetFilters}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
               >
-                Xóa tất cả bộ lọc
+                Làm mới
               </button>
             </div>
           )}
         </div>
 
-        {/* Load More Button */}
-        {productsContent.length > 0 &&
-          page < paginatedProducts?.totalPages - 1 && (
-            <div className="text-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={productsLoading}
-                className="px-8 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-full hover:from-red-600 hover:to-pink-600 transition-all duration-200 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-              >
-                {productsLoading ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Đang tải...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-fire mr-2"></i>
-                    Xem thêm Flash Sale
-                  </>
-                )}
-              </button>
-              
-              <div className="mt-4 text-sm text-gray-500">
-                Hiển thị {productsContent.length} / {totalProducts} sản phẩm Flash Sale
-              </div>
-            </div>
-          )}
+        {/* Pagination Controls */}
+        {totalPages > 1 && !isProductListLoading && (
+          <div className="flex justify-center items-center space-x-4 mb-12">
+            <button
+              onClick={handlePreviousPage}
+              disabled={page === 0}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                page === 0
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-red-500 text-white hover:bg-red-600"
+              }`}
+            >
+              Trang trước
+            </button>
+            <span className="text-sm text-gray-600">
+              Trang {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={handleNextPage}
+              disabled={!flashSaleItemsPaginated?.hasNext}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                !flashSaleItemsPaginated?.hasNext
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-red-500 text-white hover:bg-red-600"
+              }`}
+            >
+              Trang sau
+            </button>
+          </div>
+        )}
 
         {/* Flash Sale Benefits */}
         <div className="mt-12 bg-gradient-to-r from-red-500 to-pink-500 text-white p-6 rounded-2xl shadow-lg">
           <div className="text-center mb-6">
-            <h3 className="text-xl font-bold mb-2">Ưu đãi đặc biệt Flash Sale</h3>
+            <h3 className="text-xl font-bold mb-2">
+              Ưu đãi đặc biệt Flash Sale
+            </h3>
             <p className="text-red-100">Chỉ có trong thời gian giới hạn!</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -13,10 +13,12 @@ export const getFlashSales = async () => {
     throw new Error(error.response?.data?.message || "Failed to fetch flash sales");
   }
 };
+
 export const getTop1FlashSale = async () => {
   const response = await axiosInstance.get("/flash_sale/flash_sale_items/top1");
   return response.data;
 };
+
 export const getFlashSaleDetails = async (flashSaleId) => {
   try {
     const response = await axiosInstance.get(`/flash_sale/detail/${flashSaleId}`);
@@ -78,6 +80,42 @@ export const getFlashSaleItems = async (flashSaleId) => {
   } catch (error) {
     console.error(`Error fetching flash sale items for flash sale ID ${flashSaleId}:`, error);
     throw new Error(error.response?.data?.message || "Failed to fetch flash sale items");
+  }
+};
+
+export const getFlashSaleItemsPaginated = async (flashSaleId, params = {}) => {
+  try {
+    const {
+      categoryId,
+      brand,
+      minPrice,
+      maxPrice,
+      discountRange,
+      minRating,
+      page = 0,
+      limit = 10,
+      sortBy = "createdAt",
+      orderBy = "asc"
+    } = params;
+    
+    const response = await axiosInstance.get(`/flash_sale/${flashSaleId}/items`, {
+      params: {
+        categoryId,
+        brand,
+        minPrice,
+        maxPrice,
+        discountRange,
+        minRating,
+        page,
+        limit,
+        sortBy,
+        orderBy
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching paginated flash sale items for flash sale ID ${flashSaleId}:`, error);
+    throw new Error(error.response?.data?.message || "Failed to fetch paginated flash sale items");
   }
 };
 

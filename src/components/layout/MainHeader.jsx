@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import NavMenu from "./NavMenu";
 import TopBanner from "./TopBanner";
 import AccountDropdown from "./AccountDropdown";
@@ -8,6 +9,7 @@ import { useSelector } from "react-redux";
 import { checkAuthFromStorage } from "../../utils/authUtils";
 
 const MainHeader = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [drawerVisible, setDrawerVisible] = useState(false);
   const location = useLocation();
@@ -42,7 +44,7 @@ const MainHeader = () => {
             <button
               className="md:hidden text-2xl mr-3 cursor-pointer"
               onClick={showDrawer}
-              aria-label="Open menu"
+              aria-label={t("header.openMenu")}
             >
               <svg
                 className="w-6 h-6"
@@ -70,7 +72,7 @@ const MainHeader = () => {
             <div className="hidden sm:flex items-center">
               <input
                 type="text"
-                placeholder="What are you looking for?"
+                placeholder={t("header.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
@@ -79,7 +81,7 @@ const MainHeader = () => {
                 className="w-36 sm:w-44 md:w-64 bg-gray-100 rounded-md border-none py-1.5 px-3 sm:py-2 sm:px-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <Link to="/wishlist" aria-label="Wishlist">
+            <Link to="/wishlist" aria-label={t("header.wishlist")}>
               <svg
                 className="w-5 h-5 sm:w-5 sm:h-5 text-black"
                 fill="none"
@@ -95,7 +97,7 @@ const MainHeader = () => {
                 />
               </svg>
             </Link>
-            <Link to="/cart" className="relative" aria-label="Cart">
+            <Link to="/cart" className="relative" aria-label={t("header.cart")}>
               <svg
                 className="w-5 h-5 sm:w-5 sm:h-5 text-black"
                 fill="none"
@@ -117,7 +119,7 @@ const MainHeader = () => {
             {finalIsLoggedIn ? (
               <AccountDropdown />
             ) : (
-              <Link to="/signup" aria-label="Sign Up">
+              <Link to="/signup" aria-label={t("header.signUp")}>
                 <svg
                   className="w-5 h-5 sm:w-5 sm:h-5 text-black"
                   fill="none"
@@ -143,8 +145,8 @@ const MainHeader = () => {
           } transition-transform duration-300 ease-in-out z-50`}
       >
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <span className="text-lg font-semibold">Menu</span>
-          <button onClick={closeDrawer} aria-label="Close menu">
+          <span className="text-lg font-semibold">{t("header.menu")}</span>
+          <button onClick={closeDrawer} aria-label={t("header.closeMenu")}>
             <svg
               className="w-6 h-6"
               fill="none"

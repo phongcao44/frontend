@@ -34,6 +34,7 @@ export const removeProductFromWishlist = createAsyncThunk(
   'wishlist/removeFromWishlist',
   async (wishlistId, { rejectWithValue, dispatch }) => {
     try {
+      console.log(wishlistId)
       await removeFromWishlist(wishlistId);
       // Refresh wishlist after removing
       const response = await fetchUserWishlist();
