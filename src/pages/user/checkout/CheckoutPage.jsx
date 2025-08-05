@@ -256,13 +256,15 @@ const CheckoutPage = () => {
       const response = await createCodPayment(orderId);
       console.log("createCodPayment response:", response);
 
-      if (!response || !response.id) {
+      if (!response) {
         throw new Error("Invalid response from server");
       }
 
       Swal.fire({
         title: "Đặt hàng thành công!",
-        text: "Đơn hàng đã được xác nhận. Thanh toán khi nhận hàng.",
+        text: typeof response === "string"
+          ? response
+          : "Đơn hàng đã được xác nhận. Thanh toán khi nhận hàng.",
         icon: "success",
         confirmButtonText: "Xem đơn hàng",
       }).then(() => {
