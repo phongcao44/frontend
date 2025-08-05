@@ -38,7 +38,7 @@ const CheckoutPage = () => {
   const [usedPoints, setUsedPoints] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingFee, setShippingFee] = useState(0);
-
+  const [filteredVouchers, setFilteredVouchers] = useState([]);
   const [availableVouchers, setAvailableVouchers] = useState([]);
   const [userPoints, setUserPoints] = useState(0);
 
@@ -68,24 +68,48 @@ const CheckoutPage = () => {
   /** ------------------------
    *  Fetch Voucher & Điểm thưởng
    ------------------------ */
+  //voucher chx dùng
   useEffect(() => {
-    if (userVouchers && userVouchers.length > 0 && totalCartPrice > 0) {
-      const validVouchers = userVouchers.filter((voucher) =>
+    const fetchUnusedVouchers = async () => {
+      setIsLoadingVouchers(true);
+      try {
+        const token = Cookies.get("access_token");
+        const res = await api.get("user/voucher/viewVoucherFalse", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        // Giả sử res.data là mảng voucher chưa dùng
+        // Gán vào userVouchers hoặc availableVouchers
+        setAvailableVouchers(res.data || []);
+      } catch (error) {
+        console.error("Lấy voucher chưa dùng thất bại:", error);
+        setAvailableVouchers([]);
+      } finally {
+        setIsLoadingVouchers(false);
+      }
+    };
+
+    if (user) {
+      fetchUnusedVouchers();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (availableVouchers && availableVouchers.length > 0 && totalCartPrice > 0) {
+      const validVouchers = availableVouchers.filter((voucher) =>
         voucher.active &&
         new Date(voucher.endDate) > new Date() &&
         totalCartPrice >= (voucher.minOrderAmount || 0)
       );
 
-      // Xoá trùng ID voucher nếu có
       const uniqueVouchers = validVouchers.filter(
         (v, i, self) => i === self.findIndex((x) => x.id === v.id)
       );
 
-      setAvailableVouchers(uniqueVouchers);
+      setFilteredVouchers(uniqueVouchers);
     } else {
-      setAvailableVouchers([]);
+      setFilteredVouchers([]);
     }
-  }, [userVouchers, totalCartPrice]);
+  }, [availableVouchers, totalCartPrice]);
 
 
 
