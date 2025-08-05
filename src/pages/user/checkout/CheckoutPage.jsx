@@ -10,7 +10,8 @@ import { checkoutSelectedItemsThunk } from "../../../redux/slices/cartSlice";
 import { createCodPayment, createVnpayPayment } from "../../../services/paymentService";
 import api from "../../../services/api"; // Axios instance
 import { setUser } from "../../../redux/slices/authSlice";
-import { useMemo } from "react";
+import { fetchUserVouchers } from "../../../redux/slices/voucherSlice";
+
 
 const CheckoutPage = () => {
   const dispatch = useDispatch();
@@ -19,7 +20,7 @@ const CheckoutPage = () => {
   const { selectedCartItems = [] } = location.state || {};
 
   const { user } = useSelector((state) => state.auth);
-
+  const { userVouchers } = useSelector((state) => state.voucher);
   const [formData, setFormData] = useState({
     addressId: "",
     recipientName: "",
@@ -68,64 +69,23 @@ const CheckoutPage = () => {
    *  Fetch Voucher & Điểm thưởng
    ------------------------ */
   useEffect(() => {
-    const fetchUserAndVouchers = async () => {
-      const token = Cookies.get("access_token");
-      const userRaw = Cookies.get("user");
+    if (userVouchers && userVouchers.length > 0 && totalCartPrice > 0) {
+      const validVouchers = userVouchers.filter((voucher) =>
+        voucher.active &&
+        new Date(voucher.endDate) > new Date() &&
+        totalCartPrice >= (voucher.minOrderAmount || 0)
+      );
 
-      if (!token || !userRaw) {
-        console.log("Thiếu token hoặc user, không thể fetch voucher");
-        return;
-      }
+      // Xoá trùng ID voucher nếu có
+      const uniqueVouchers = validVouchers.filter(
+        (v, i, self) => i === self.findIndex((x) => x.id === v.id)
+      );
 
-      let userFromCookie;
-      try {
-        userFromCookie = JSON.parse(userRaw);
-        console.log("User từ Cookie:", userFromCookie);
-      } catch (err) {
-        console.error("Lỗi parse user từ cookie:", err);
-        return;
-      }
-
-      // Nếu Redux chưa có user, set vào
-      if (!user) {
-        dispatch(setUser(userFromCookie));
-      }
-
-      if (totalCartPrice <= 0) {
-        console.log("Giỏ hàng rỗng, không cần fetch voucher");
-        return;
-      }
-
-      try {
-        setIsLoadingVouchers(true);
-
-        const res = await api.get("/user/voucher/viewVoucher", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        console.log("Raw vouchers from API:", res.data);
-        console.log("User từ Redux:", user);
-        const validVouchers = res.data.filter((voucher) =>
-          voucher.active &&
-          new Date(voucher.endDate) > new Date() &&
-          totalCartPrice >= (voucher.minOrderAmount || 0)
-        );
-
-        // Xoá trùng ID voucher nếu có
-        const uniqueVouchers = validVouchers.filter(
-          (v, i, self) => i === self.findIndex((x) => x.id === v.id)
-        );
-
-        setAvailableVouchers(uniqueVouchers);
-      } catch (err) {
-        console.error("Lỗi khi lấy voucher:", err);
-      } finally {
-        setIsLoadingVouchers(false);
-      }
-    };
-
-    fetchUserAndVouchers();
-  }, [dispatch, user, totalCartPrice]);
+      setAvailableVouchers(uniqueVouchers);
+    } else {
+      setAvailableVouchers([]);
+    }
+  }, [userVouchers, totalCartPrice]);
 
 
 
@@ -176,20 +136,21 @@ const CheckoutPage = () => {
 
     let discount = 0;
 
-    // Nếu có discountPercent và lớn hơn 0, xử lý theo phần trăm
     if (voucher.discountPercent && voucher.discountPercent > 0) {
-      const percent = parseFloat(voucher.discountPercent) || 0;
-      const maxDiscount = parseFloat(voucher.maxDiscount) || totalCartPrice;
+      const percent = parseFloat(voucher.discountPercent);
+      const maxDiscount = parseFloat(voucher.maxDiscount || totalCartPrice);
       discount = Math.min((totalCartPrice * percent) / 100, maxDiscount);
-    }
-    // Nếu có discountAmount (giảm tiền cố định)
-    else if (voucher.discountAmount && voucher.discountAmount > 0) {
+    } else if (voucher.discountAmount && voucher.discountAmount > 0) {
       discount = Math.min(parseFloat(voucher.discountAmount), totalCartPrice);
     }
 
     setVoucherDiscount(discount);
     setShowVoucherModal(false);
+
+    Swal.fire("Voucher đã chọn", "Sẽ áp dụng khi thanh toán", "info");
   };
+
+
 
 
   const handleRemoveVoucher = () => {
@@ -202,6 +163,7 @@ const CheckoutPage = () => {
    ------------------------ */
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!formData.useSavedAddress || !formData.addressId) {
       setError("Vui lòng chọn hoặc lưu địa chỉ trước khi thanh toán.");
       return;
@@ -211,11 +173,34 @@ const CheckoutPage = () => {
     setError(null);
 
     try {
+      const token = Cookies.get("access_token");
+
+      // 🟨 1. APPLY VOUCHER nếu có
+      if (selectedVoucher?.code) {
+        try {
+          const res = await api.post(
+            `/user/voucher/apply`,
+            null,
+            {
+              params: { code: selectedVoucher.code },
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          console.log("Voucher applied:", res.data);
+        } catch (err) {
+          console.error("Apply voucher failed:", err);
+          throw new Error(
+            err?.response?.data?.message || "Không áp dụng được voucher. Vui lòng kiểm tra lại."
+          );
+        }
+      }
+
+      // 🟨 2. TIẾN HÀNH ĐẶT HÀNG
       const payload = {
         addressId: formData.addressId,
         paymentMethod,
         cartItemIds: selectedCartItems.map((item) => item.cartItemId),
-        voucherId: selectedVoucher ? selectedVoucher.id : 0,
+        voucherId: 0, // optional nếu backend không dùng nữa
         usedPoints,
       };
 
@@ -234,6 +219,9 @@ const CheckoutPage = () => {
       setIsSubmitting(false);
     }
   };
+
+
+
 
   const handleVnpayPayment = async (orderId) => {
     try {
