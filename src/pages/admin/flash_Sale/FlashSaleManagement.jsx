@@ -97,13 +97,14 @@ export default function FlashSaleManagement() {
 
     return () => clearInterval(interval);
   }, [currentPage]);
+  flashSales.forEach((fs) => console.log("🧩 FlashSale:", fs));
 
   const filteredFlashSales = flashSales.filter(
-    (sale) =>
-      (sale.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        sale.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
-      (statusFilter === "" || getActualStatus(sale) === statusFilter)
-  );
+  (sale) =>
+    ((sale.name || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+     (sale.description || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
+    (statusFilter === "" || getActualStatus(sale) === statusFilter)
+);
 
   const paginatedFlashSales = filteredFlashSales.slice(
     currentPage * itemsPerPage,

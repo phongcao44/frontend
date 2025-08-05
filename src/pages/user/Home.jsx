@@ -8,6 +8,7 @@ import NewArrival from "./home/NewArrival";
 import CategoryBanner from "./home/CategoryBanner";
 import FlashSale from "./home/FlashSale";
 import CategorySection from "./home/CategorySection";
+import FlashSaleListener from "../../components/FlashSaleListener";
 
 const Home = () => {
   const divider = (
@@ -15,6 +16,7 @@ const Home = () => {
   );
   return (
     <>
+     <FlashSaleListener />  
     <section style={{ maxWidth: 1200, margin: "auto", padding: 0, paddingBottom: 100, }}>
       <CategoryBanner />
       <FlashSale />

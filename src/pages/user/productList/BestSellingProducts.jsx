@@ -70,7 +70,7 @@ function BestSellersPage() {
       sortBy: mapSortBy(sortBy).sortBy,
       orderBy: mapSortBy(sortBy).orderBy,
       brandName: selectedBrand === "all" ? null : selectedBrand,
-      categoryId: null,
+categoryId: selectedCategory === "all" ? null : selectedCategory,
       priceMin: getPriceRange().priceMin,
       priceMax: getPriceRange().priceMax,
       minRating: getRatingValue(),
