@@ -155,6 +155,7 @@ const cartSlice = createSlice({
         if (!state.cart) {
           state.cart = { items: [] };
         }
+        console.log(state.cart)
         state.cart.items.push(cartItem); // Thêm cartItem vào mảng items
         state.loading = false;
       })

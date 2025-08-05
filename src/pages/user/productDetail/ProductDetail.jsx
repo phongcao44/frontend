@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Row, Col, Breadcrumb } from "antd";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { trackView } from "../../../redux/slices/productSlice";
+import { loadProductBySlug, trackView } from "../../../redux/slices/productSlice";
 import ProductImageGallery from "./ProductImageGallery";
 import VariantSelector from "./VariantSelector";
 import AddToCart from "./AddToCart";
@@ -13,7 +13,7 @@ import WishlistButton from '../../../components/WishlistButton';
 
 const ProductDetail = () => {
   const dispatch = useDispatch();
-  const { id: productId } = useParams();
+  const { slug } = useParams(); // Changed from id to slug
   const product = useSelector((state) => state.products.productDetail);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [variantData, setVariantData] = useState({
@@ -24,13 +24,20 @@ const ProductDetail = () => {
   });
 
   useEffect(() => {
-    if (!productId) return;
-    const timer = setTimeout(() => {
-      dispatch(trackView(productId));
-    }, 3000);
+    if (!slug) return;
 
-    return () => clearTimeout(timer);
-  }, [productId, dispatch]);
+    // Load product by slug
+    dispatch(loadProductBySlug(slug));
+
+    // Track view using product ID (after product is loaded)
+    if (product?.id) {
+      const timer = setTimeout(() => {
+        dispatch(trackView(product.id));
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [slug, dispatch, product?.id]);
 
   return (
     <div className="min-h-screen py-5">
@@ -46,28 +53,29 @@ const ProductDetail = () => {
 
         <Row gutter={[32, 32]} className="bg-white p-10 rounded-lg">
           <Col lg={15} md={12} sm={24}>
-            <ProductImageGallery productId={productId} />
+            <ProductImageGallery productId={product?.id} /> {/* Use product.id */}
           </Col>
 
           <Col lg={9} md={12} sm={24}>
             <div>
               <VariantSelector
-                productId={productId}
+                productId={product?.id} // Use product.id
                 onVariantChange={setVariantData}
               />
               <AddToCart
-                productId={productId}
+                productId={product?.id} // Use product.id
                 matchedVariant={variantData.matchedVariant}
                 maxQuantity={variantData.maxQuantity}
                 selectedColorId={variantData.selectedColorId}
                 selectedSizeId={variantData.selectedSizeId}
               />
               <DeliveryInfo />
+              <WishlistButton productId={product?.id} /> 
             </div>
           </Col>
         </Row>
 
-        <ProductReviews productId={productId} />
+        <ProductReviews productId={product?.id} /> 
 
         <RelatedProductsSection relatedProducts={relatedProducts} />
       </div>

@@ -2,10 +2,11 @@ import PropTypes from "prop-types";
 import { useState } from "react";
 import ReactDOM from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Heart, Eye, Star, Trash2, X } from "lucide-react";
 import { addItemToCart } from "../../../redux/slices/cartSlice";
 import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice";
+import { addProductToWishlist, removeProductFromWishlist } from "../../../redux/slices/wishlistSlice";
 
 const StarRating = ({ value, className }) => {
   return (
@@ -29,7 +30,6 @@ StarRating.propTypes = {
   className: PropTypes.string,
 };
 
-// Modal Component để chọn biến thể
 const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
@@ -157,12 +157,19 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
           <div className="mb-4 p-3 bg-gray-50 rounded-md">
             <div className="flex justify-between items-center mb-2">
               <span className="font-medium text-gray-800">
-                Giá: {selectedVariant.priceOverride?.toLocaleString("vi-VN")} VNĐ
+                Giá: {selectedVariant.finalPriceAfterDiscount?.toLocaleString("vi-VN")} VNĐ
               </span>
               <span className="text-sm text-gray-600">
                 Còn lại: {selectedVariant.stockQuantity}
               </span>
             </div>
+            {selectedVariant.discountType && selectedVariant.discountOverrideByFlashSale && (
+              <span className="text-sm text-red-600">
+                {selectedVariant.discountType === "PERCENTAGE"
+                  ? `Giảm ${selectedVariant.discountOverrideByFlashSale}%`
+                  : `Giảm ${(selectedVariant.priceOverride - selectedVariant.finalPriceAfterDiscount).toLocaleString("vi-VN")}đ`}
+              </span>
+            )}
           </div>
         )}
 
@@ -246,35 +253,49 @@ const ProductCard = ({ product, onRemove }) => {
   const [hovered, setHovered] = useState(false);
   const [notification, setNotification] = useState(null);
   const [showVariantModal, setShowVariantModal] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(product.isFavorite || false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { items: wishlistItems, loading: wishlistLoading } = useSelector((state) => state.wishlist);
 
   if (!product) return null;
+
+  console.log(product)
 
   // Destructure and map fields from the product object
   const {
     id,
+    slug,
     name = "Unnamed Product",
     imageUrl,
     price,
+    lowestPrice,
     discountedPrice,
+    originalPrice,
     discountOverrideByFlashSale,
     discountType,
     variants,
     averageRating,
     totalReviews,
     flashSale,
+    soldQuantity = 0, // Added soldQuantity with default value
   } = product;
 
   // Map fields
   const productId = id;
   const variantId = variants?.[0]?.id;
-  const finalPrice = discountedPrice || price;
-  const originalPrice = variants?.[0]?.priceOverride || price;
-  const discountPercentage = discountType === "PERCENTAGE" ? discountOverrideByFlashSale : null;
-  const discountAmount = discountType === "AMOUNT" ? discountOverrideByFlashSale : null;
-  const image = imageUrl || "/placeholder.png"; // Fallback image
-  const showDiscountLabel = flashSale || false; // Use flashSale to determine discount label visibility
+  const finalPrice = flashSale
+    ? (discountOverrideByFlashSale || variants?.[0]?.finalPriceAfterDiscount || price)
+    : (lowestPrice || price);
+  const displayOriginalPrice = originalPrice || variants?.[0]?.priceOverride || price;
+  const discountPercentage = flashSale && discountType === "PERCENTAGE" && discountedPrice
+    ? discountedPrice
+    : null;
+  const discountAmount = flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
+    ? (displayOriginalPrice - discountOverrideByFlashSale)
+    : null;
+  const image = imageUrl || "/placeholder.png";
+  const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
 
   const discountLabel = discountPercentage
     ? `-${discountPercentage}%`
@@ -283,7 +304,7 @@ const ProductCard = ({ product, onRemove }) => {
     : null;
 
   const handleNavigate = () => {
-    navigate(`/product/${productId}`);
+    navigate(`/product/${slug}`);
   };
 
   const handleAddToCart = async (e) => {
@@ -291,7 +312,6 @@ const ProductCard = ({ product, onRemove }) => {
 
     // Kiểm tra xem sản phẩm có nhiều biến thể không
     if (variants && variants.length > 1) {
-      // Nếu có nhiều biến thể, hiển thị modal
       setShowVariantModal(true);
       return;
     }
@@ -302,7 +322,7 @@ const ProductCard = ({ product, onRemove }) => {
       const variantIdFromResponse = res?.[0]?.id || variantId;
 
       if (!variantIdFromResponse) {
-        setNotification({ type: "error", message: "Không tìm thấy variant!" });
+        setNotification({ type: "error", message: "Không tìm thấy biến thể!" });
         setTimeout(() => setNotification(null), 3000);
         return;
       }
@@ -335,14 +355,39 @@ const ProductCard = ({ product, onRemove }) => {
     }
   };
 
-  const handleHeartClick = (e) => {
+  const handleHeartClick = async (e) => {
     e.stopPropagation();
-    // Placeholder for your logic
+    if (wishlistLoading) return; // Prevent multiple clicks during loading
+
+    const optimisticIsFavorite = !isFavorite;
+    setIsFavorite(optimisticIsFavorite); // Optimistic update
+
+    try {
+      if (!isFavorite) {
+        // Add to wishlist
+        await dispatch(addProductToWishlist(productId)).unwrap();
+        setNotification({ type: "success", message: "Đã thêm vào danh sách yêu thích!" });
+      } else {
+        // Remove from wishlist
+        const wishlistItem = wishlistItems.find(item => item.productId === productId);
+        if (wishlistItem && wishlistItem.id) {
+          await dispatch(removeProductFromWishlist(wishlistItem.id)).unwrap();
+          setNotification({ type: "success", message: "Đã xóa khỏi danh sách yêu thích!" });
+        } else {
+          throw new Error("Không tìm thấy sản phẩm trong danh sách yêu thích");
+        }
+      }
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      setIsFavorite(!optimisticIsFavorite); // Revert on error
+      setNotification({ type: "error", message: error.message || "Thao tác thất bại!" });
+      setTimeout(() => setNotification(null), 3000);
+    }
   };
 
   const handleEyeClick = (e) => {
     e.stopPropagation();
-    // Placeholder for your logic
+    // Placeholder for quick view logic
   };
 
   return (
@@ -383,8 +428,9 @@ const ProductCard = ({ product, onRemove }) => {
                   <button
                     className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-gray-100"
                     onClick={handleHeartClick}
+                    disabled={wishlistLoading}
                   >
-                    <Heart className="w-4 h-4 text-gray-600" />
+                    <Heart className={`w-4 h-4 ${isFavorite ? "text-red-500 fill-current" : "text-gray-600"}`} />
                   </button>
                   <button
                     className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-gray-100"
@@ -400,7 +446,7 @@ const ProductCard = ({ product, onRemove }) => {
                 className="absolute bottom-2 left-2 right-2 bg-black text-white font-semibold py-2 rounded-md hover:bg-gray-800"
                 onClick={handleAddToCart}
               >
-                Add To Cart
+                Thêm vào giỏ hàng
               </button>
             )}
           </div>
@@ -409,14 +455,14 @@ const ProductCard = ({ product, onRemove }) => {
               {name || "Unnamed Product"}
             </h3>
             <div className="flex items-center gap-2 mb-2">
-              {discountLabel ? (
+              {showDiscountLabel && discountLabel ? (
                 <>
                   <span className="text-sm font-bold text-red-600">
                     {(finalPrice != null ? finalPrice : 0).toLocaleString("vi-VN")} VNĐ
                   </span>
-                  {originalPrice != null && (
+                  {displayOriginalPrice != null && (
                     <span className="text-xs text-gray-500 line-through">
-                      {originalPrice.toLocaleString("vi-VN")} VNĐ
+                      {displayOriginalPrice.toLocaleString("vi-VN")} VNĐ
                     </span>
                   )}
                 </>
@@ -426,9 +472,16 @@ const ProductCard = ({ product, onRemove }) => {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <StarRating value={averageRating || 0} className="text-xs" />
-              <span className="text-xs text-gray-600">({totalReviews || 0})</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <StarRating value={averageRating || 0} className="text-xs" />
+                <span className="text-xs text-gray-600">({totalReviews || 0})</span>
+              </div>
+              {soldQuantity > 0 && (
+                <span className="text-xs text-gray-500">
+                  Đã bán: {soldQuantity.toLocaleString("vi-VN")}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -456,10 +509,13 @@ const ProductCard = ({ product, onRemove }) => {
 ProductCard.propTypes = {
   product: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    slug: PropTypes.string.isRequired,
     name: PropTypes.string,
     imageUrl: PropTypes.string,
     price: PropTypes.number,
+    lowestPrice: PropTypes.number,
     discountedPrice: PropTypes.number,
+    originalPrice: PropTypes.number,
     discountOverrideByFlashSale: PropTypes.number,
     discountType: PropTypes.string,
     variants: PropTypes.arrayOf(
@@ -470,11 +526,15 @@ ProductCard.propTypes = {
         colorName: PropTypes.string,
         sizeName: PropTypes.string,
         stockQuantity: PropTypes.number,
+        discountOverrideByFlashSale: PropTypes.number,
+        discountType: PropTypes.string,
       })
     ),
     averageRating: PropTypes.number,
     totalReviews: PropTypes.number,
     flashSale: PropTypes.bool,
+    isFavorite: PropTypes.bool,
+    soldQuantity: PropTypes.number, 
   }).isRequired,
   onRemove: PropTypes.func,
 };

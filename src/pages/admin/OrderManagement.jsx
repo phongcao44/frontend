@@ -25,6 +25,7 @@ import {
   getPaymentColor,
   translatePaymentStatus,
   translatePaymentMethod,
+  getPaymentMethodColor,
 } from "../../utils/paymentUtils";
 import OrderStatusIcon from "../../components/OrderStatusIcon";
 
@@ -530,8 +531,12 @@ export default function OrderManagement() {
                             {translatePaymentStatus(order.payment?.status)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {translatePaymentMethod(order.paymentMethod)}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${getPaymentMethodColor(order.paymentMethod)}-100 text-${getPaymentMethodColor(order.paymentMethod)}-800`}
+                          >
+                            {translatePaymentMethod(order.paymentMethod)}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                           {formatCurrency(order.totalAmount)}
@@ -629,7 +634,9 @@ export default function OrderManagement() {
                         <CreditCard className="h-4 w-4 mr-2" />
                         <span>Phương thức:</span>
                       </div>
-                      <span className="text-sm">
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${getPaymentMethodColor(order.paymentMethod)}-100 text-${getPaymentMethodColor(order.paymentMethod)}-800`}
+                      >
                         {translatePaymentMethod(order.paymentMethod)}
                       </span>
                     </div>

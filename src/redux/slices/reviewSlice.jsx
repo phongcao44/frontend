@@ -7,7 +7,8 @@ import {
   getAdminReviews,
   deleteReview,
   editReview,
-  getRatingSummaryByProduct
+  getRatingSummaryByProduct,
+  toggleReviewVisibilityService
 } from "../../services/reviewService";
 
 // CREATE review
@@ -108,6 +109,19 @@ export const fetchReviewSummaryByProduct = createAsyncThunk(
     try {
       const response = await   getRatingSummaryByProduct();
       return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// HIDE/SHOW review
+export const toggleReviewVisibility = createAsyncThunk(
+  "review/toggleVisibility",
+  async ({ reviewId, isHidden }, { rejectWithValue }) => {
+    try {
+      const response = await toggleReviewVisibilityService(reviewId, isHidden);
+      return { id: reviewId, isHidden, data: response };
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -225,6 +239,23 @@ const reviewSlice = createSlice({
         state.reviewSummary = action.payload;
       })
       .addCase(fetchReviewSummaryByProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      
+      .addCase(toggleReviewVisibility.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(toggleReviewVisibility.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.reviews.findIndex(
+          (r) => r.id === action.payload.id
+        );
+        if (index !== -1) {
+          state.reviews[index].isHidden = action.payload.isHidden;
+        }
+      })
+      .addCase(toggleReviewVisibility.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

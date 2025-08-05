@@ -131,3 +131,22 @@ export const getRatingSummaryByProduct = async () => {
   const response = await axiosInstance.get(`/admin/review/list`);
   return response.data;
 }
+
+/**
+ * Toggle review visibility (hide/show)
+ * @param {number|string} reviewId
+ * @param {boolean} isHidden
+ * @returns {Promise<any>}
+ */
+export const toggleReviewVisibilityService = async (reviewId, isHidden) => {
+  try {
+    const response = await axiosInstance.patch(
+      `/admin/review/${reviewId}/visibility`,
+      { isHidden }
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`toggleReviewVisibility error (ReviewID: ${reviewId}):`, error);
+    throw extractApiError(error);
+  }
+};

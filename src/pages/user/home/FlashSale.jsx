@@ -51,7 +51,7 @@ const FlashSale = () => {
     loadActiveFlashSale();
   }, [dispatch]);
 
-  console.log(activeFlashSale)
+  console.log(flashSaleItems)
 
 
   return (
@@ -132,7 +132,7 @@ const FlashSale = () => {
               <button
                 className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-12 rounded transition-colors duration-200"
                 onClick={() => {
-                  window.location.href = "/products";
+                  window.location.href = "/flashsale";
                 }}
               >
                 View All Products
