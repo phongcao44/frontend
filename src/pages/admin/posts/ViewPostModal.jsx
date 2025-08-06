@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import {
   createAdminPost,
@@ -9,6 +9,7 @@ import { UploadIcon, X } from "lucide-react";
 import { POST_CATEGORIES } from "../../../constants/postCategories";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import DOMPurify from "dompurify"; // Thêm DOMPurify để làm sạch HTML
 
 export default function ViewPostModal({
   show,
@@ -19,7 +20,7 @@ export default function ViewPostModal({
   setMode,
 }) {
   const dispatch = useDispatch();
-
+  const quillRef = useRef(null); // Ref cho ReactQuill để tránh findDOMNode
   const isAdd = mode === "add";
   const isEdit = mode === "edit";
 
@@ -31,6 +32,17 @@ export default function ViewPostModal({
     image: null,
     imageUrl: "",
   });
+
+  // Tùy chỉnh toolbar cho React Quill
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image"],
+      ["clean"], // Xóa định dạng
+    ],
+  };
 
   useEffect(() => {
     if (post && !isAdd) {
@@ -82,8 +94,13 @@ export default function ViewPostModal({
   };
 
   const handleSave = () => {
-    const formData = new FormData();
+    // Kiểm tra dữ liệu đầu vào
+    if (!editData.title.trim() || !editData.content.trim()) {
+      alert("Vui lòng điền tiêu đề và nội dung!");
+      return;
+    }
 
+    const formData = new FormData();
     formData.append("title", editData.title);
     if (editData.image) {
       formData.append("image", editData.image);
@@ -92,14 +109,10 @@ export default function ViewPostModal({
     formData.append("description", editData.description);
     formData.append("location", editData.location);
 
-    console.log([...formData.entries()]);
-
     if (isAdd) {
       dispatch(createAdminPost(formData)).then(() => onClose());
     } else if (isEdit && post?.id) {
-      dispatch(updateAdminPost({ id: post.id, formData })).then(() =>
-        onClose()
-      );
+      dispatch(updateAdminPost({ id: post.id, formData })).then(() => onClose());
     }
   };
 
@@ -109,6 +122,9 @@ export default function ViewPostModal({
 
   if (!show) return null;
 
+  // Làm sạch nội dung HTML trước khi render
+  const sanitizedContent = DOMPurify.sanitize(editData.content);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
@@ -117,14 +133,14 @@ export default function ViewPostModal({
             {isAdd
               ? "Thêm bài viết mới"
               : isEdit
-                ? "Chỉnh sửa bài viết"
-                : "Chi tiết bài viết"}
+              ? "Chỉnh sửa bài viết"
+              : "Chi tiết bài viết"}
           </h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
           >
-            <i className="fas fa-times"></i>
+            <X size={20} />
           </button>
         </div>
 
@@ -249,17 +265,19 @@ export default function ViewPostModal({
           <p className="text-sm font-medium text-gray-500">Nội dung</p>
           {isAdd || isEdit ? (
             <ReactQuill
+              ref={quillRef}
               value={editData.content}
               onChange={(value) =>
                 setEditData((prev) => ({ ...prev, content: value }))
               }
+              modules={quillModules}
+              placeholder="Nhập nội dung bài viết..."
             />
           ) : (
             <div
               className="prose max-w-none bg-gray-50 border p-4 rounded"
-              dangerouslySetInnerHTML={{ __html: editData.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
-
           )}
         </div>
 
@@ -269,6 +287,7 @@ export default function ViewPostModal({
               <button
                 onClick={handleSave}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={!editData.title.trim() || !editData.content.trim()}
               >
                 Lưu
               </button>

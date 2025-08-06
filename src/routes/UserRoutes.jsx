@@ -47,7 +47,7 @@ const UserRoutes = () => {
         {/* Product Listing & Detail */}
         <Route path="products" element={<ProductListing />} />
         <Route path="products/search" element={<ProductSearch />} />
-        <Route path="products/category/:id" element={<ProductListing />} />
+        <Route path="products/category/:slug" element={<ProductListing />} />
         {/* <Route path="product/:id" element={<ProductDetail />} /> */}
         <Route path="product/:slug" element={<ProductDetail />} />
 
