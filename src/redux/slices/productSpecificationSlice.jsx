@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
     fetchProductSpecifications,
     fetchProductSpecificationById,
+    fetchProductSpecificationByIdForUser, // Added import
     createProductSpecification,
     updateProductSpecification,
     deleteProductSpecification,
@@ -20,7 +21,7 @@ export const getAllProductSpecifications = createAsyncThunk(
     }
 );
 
-// Get By ID
+// Get By ID (for admin)
 export const getProductSpecificationById = createAsyncThunk(
     "productSpecification/getById",
     async (id, { rejectWithValue }) => {
@@ -33,19 +34,31 @@ export const getProductSpecificationById = createAsyncThunk(
     }
 );
 
-// Create
-export const addProductSpecification = createAsyncThunk(
-  "productSpecification/add",
-  async (payload, { rejectWithValue }) => {
-    try {
-      const data = await createProductSpecification(payload);
-      return data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+// Get By ID (for user)
+export const getProductSpecificationByIdForUser = createAsyncThunk(
+    "productSpecification/getByIdForUser",
+    async (id, { rejectWithValue }) => {
+        try {
+            const data = await fetchProductSpecificationByIdForUser(id);
+            return data;
+        } catch (error) {
+            return rejectWithValue(error);
+        }
     }
-  }
 );
 
+// Create
+export const addProductSpecification = createAsyncThunk(
+    "productSpecification/add",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const data = await createProductSpecification(payload);
+            return data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || error.message);
+        }
+    }
+);
 
 // Update
 export const editProductSpecification = createAsyncThunk(
@@ -105,7 +118,7 @@ const productSpecificationSlice = createSlice({
                 state.error = action.payload || action.error.message;
             })
 
-            // GET BY ID
+            // GET BY ID (for admin)
             .addCase(getProductSpecificationById.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -115,6 +128,20 @@ const productSpecificationSlice = createSlice({
                 state.current = action.payload;
             })
             .addCase(getProductSpecificationById.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload || action.error.message;
+            })
+
+            // GET BY ID (for user)
+            .addCase(getProductSpecificationByIdForUser.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(getProductSpecificationByIdForUser.fulfilled, (state, action) => {
+                state.loading = false;
+                state.current = action.payload;
+            })
+            .addCase(getProductSpecificationByIdForUser.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload || action.error.message;
             })

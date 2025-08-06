@@ -7,6 +7,7 @@ import {
   fetchTopLeastSellingProducts,
   fetchTopViewedProducts,
   trackProductView,
+  fetchRelatedProducts, // Added new import
 } from "../../services/productServices";
 import {
   fetchAllProducts,
@@ -19,6 +20,7 @@ import {
   searchProducts,
 } from "../../services/productServices";
 
+// Existing thunks remain unchanged
 export const loadProducts = createAsyncThunk(
   "products/loadAll",
   fetchAllProducts
@@ -110,6 +112,12 @@ export const trackView = createAsyncThunk(
   async (id) => await trackProductView(id)
 );
 
+// New thunk for related products
+export const loadRelatedProducts = createAsyncThunk(
+  "products/loadRelated",
+  async (id) => await fetchRelatedProducts(id)
+);
+
 const productSlice = createSlice({
   name: "products",
   initialState: {
@@ -122,6 +130,7 @@ const productSlice = createSlice({
     topViewed: [],
     leastViewed: [],
     productsByCategory: [],
+    relatedProducts: [], // Added new state property
     loading: false,
     error: null,
   },
@@ -132,7 +141,6 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-
       // Load All
       .addCase(loadProducts.pending, (state) => {
         state.loading = true;
@@ -146,7 +154,7 @@ const productSlice = createSlice({
         state.loading = false;
       })
 
-       .addCase(loadNewArrivals.pending, (state) => {
+      .addCase(loadNewArrivals.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
@@ -236,7 +244,21 @@ const productSlice = createSlice({
 
       // Track View
       // eslint-disable-next-line no-unused-vars
-      .addCase(trackView.fulfilled, (state) => {});
+      .addCase(trackView.fulfilled, (state) => {})
+
+      // Related Products
+      .addCase(loadRelatedProducts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadRelatedProducts.fulfilled, (state, action) => {
+        state.relatedProducts = action.payload;
+        state.loading = false;
+      })
+      .addCase(loadRelatedProducts.rejected, (state, action) => {
+        state.error = action.error.message;
+        state.loading = false;
+      });
   },
 });
 

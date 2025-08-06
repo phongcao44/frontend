@@ -6,7 +6,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { Heart, Eye, Star, Trash2, X } from "lucide-react";
 import { addItemToCart } from "../../../redux/slices/cartSlice";
 import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice";
-import { addProductToWishlist, removeProductFromWishlist } from "../../../redux/slices/wishlistSlice";
+import {
+  addProductToWishlist,
+  removeProductFromWishlist,
+} from "../../../redux/slices/wishlistSlice";
 
 const StarRating = ({ value, className }) => {
   return (
@@ -39,12 +42,18 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
   if (!isOpen || !product) return null;
 
   // Lấy danh sách màu sắc và kích thước unique
-  const colors = [...new Set(product.variants?.map(v => v.colorName).filter(Boolean))];
-  const sizes = [...new Set(product.variants?.map(v => v.sizeName).filter(Boolean))];
+  const colors = [
+    ...new Set(product.variants?.map((v) => v.colorName).filter(Boolean)),
+  ];
+  const sizes = [
+    ...new Set(product.variants?.map((v) => v.sizeName).filter(Boolean)),
+  ];
 
   // Tìm biến thể dựa trên màu và size đã chọn
   const findVariant = (color, size) => {
-    return product.variants?.find(v => v.colorName === color && v.sizeName === size);
+    return product.variants?.find(
+      (v) => v.colorName === color && v.sizeName === size
+    );
   };
 
   // Handle khi chọn màu
@@ -78,19 +87,29 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
   };
 
   // Kiểm tra xem có thể thêm vào giỏ hàng không
-  const canAddToCart = selectedColor && selectedSize && selectedVariant && selectedVariant.stockQuantity > 0;
+  const canAddToCart =
+    selectedColor &&
+    selectedSize &&
+    selectedVariant &&
+    selectedVariant.stockQuantity > 0;
 
   // Sử dụng portal để render modal outside của component tree
   const modalContent = (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" 
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
       onClick={onClose}
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+      style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}
     >
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">Chọn biến thể</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -157,19 +176,27 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
           <div className="mb-4 p-3 bg-gray-50 rounded-md">
             <div className="flex justify-between items-center mb-2">
               <span className="font-medium text-gray-800">
-                Giá: {selectedVariant.finalPriceAfterDiscount?.toLocaleString("vi-VN")} VNĐ
+                Giá:{" "}
+                {selectedVariant.finalPriceAfterDiscount?.toLocaleString(
+                  "vi-VN"
+                )}{" "}
+                VNĐ
               </span>
               <span className="text-sm text-gray-600">
                 Còn lại: {selectedVariant.stockQuantity}
               </span>
             </div>
-            {selectedVariant.discountType && selectedVariant.discountOverrideByFlashSale && (
-              <span className="text-sm text-red-600">
-                {selectedVariant.discountType === "PERCENTAGE"
-                  ? `Giảm ${selectedVariant.discountOverrideByFlashSale}%`
-                  : `Giảm ${(selectedVariant.priceOverride - selectedVariant.finalPriceAfterDiscount).toLocaleString("vi-VN")}đ`}
-              </span>
-            )}
+            {selectedVariant.discountType &&
+              selectedVariant.discountOverrideByFlashSale && (
+                <span className="text-sm text-red-600">
+                  {selectedVariant.discountType === "PERCENTAGE"
+                    ? `Giảm ${selectedVariant.discountOverrideByFlashSale}%`
+                    : `Giảm ${(
+                        selectedVariant.priceOverride -
+                        selectedVariant.finalPriceAfterDiscount
+                      ).toLocaleString("vi-VN")}đ`}
+                </span>
+              )}
           </div>
         )}
 
@@ -192,7 +219,9 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
             <button
               onClick={() => setQuantity(quantity + 1)}
               className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
-              disabled={selectedVariant && quantity >= selectedVariant.stockQuantity}
+              disabled={
+                selectedVariant && quantity >= selectedVariant.stockQuantity
+              }
             >
               +
             </button>
@@ -223,10 +252,10 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
         {/* Thông báo lỗi */}
         {!canAddToCart && selectedColor && selectedSize && (
           <p className="text-red-500 text-sm mt-2 text-center">
-            {!selectedVariant 
-              ? "Biến thể này không có sẵn" 
-              : selectedVariant.stockQuantity === 0 
-              ? "Sản phẩm đã hết hàng" 
+            {!selectedVariant
+              ? "Biến thể này không có sẵn"
+              : selectedVariant.stockQuantity === 0
+              ? "Sản phẩm đã hết hàng"
               : "Vui lòng chọn đầy đủ thông tin"}
           </p>
         )}
@@ -235,10 +264,10 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
   );
 
   // Render modal vào document.body để tránh bị giới hạn bởi parent containers
-  if (typeof document !== 'undefined') {
+  if (typeof document !== "undefined") {
     return ReactDOM.createPortal(modalContent, document.body);
   }
-  
+
   return modalContent;
 };
 
@@ -256,13 +285,12 @@ const ProductCard = ({ product, onRemove }) => {
   const [isFavorite, setIsFavorite] = useState(product.isFavorite || false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { items: wishlistItems, loading: wishlistLoading } = useSelector((state) => state.wishlist);
+  const { items: wishlistItems, loading: wishlistLoading } = useSelector(
+    (state) => state.wishlist
+  );
 
   if (!product) return null;
 
-  console.log(product)
-
-  // Destructure and map fields from the product object
   const {
     id,
     slug,
@@ -278,23 +306,30 @@ const ProductCard = ({ product, onRemove }) => {
     averageRating,
     totalReviews,
     flashSale,
-    soldQuantity = 0, // Added soldQuantity with default value
-  } = product;
+    soldQuantity = 0,
+  } = product || {};
 
   // Map fields
   const productId = id;
   const variantId = variants?.[0]?.id;
   const finalPrice = flashSale
-    ? (discountOverrideByFlashSale || variants?.[0]?.finalPriceAfterDiscount || price)
-    : (lowestPrice || price);
-  const displayOriginalPrice = originalPrice || variants?.[0]?.priceOverride || price;
-  const discountPercentage = flashSale && discountType === "PERCENTAGE" && discountedPrice
-    ? discountedPrice
-    : null;
-  const discountAmount = flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
-    ? (displayOriginalPrice - discountOverrideByFlashSale)
-    : null;
-  const image = imageUrl || "/placeholder.png";
+    ? discountOverrideByFlashSale ||
+      variants?.[0]?.finalPriceAfterDiscount ||
+      price
+    : lowestPrice || price;
+  const displayOriginalPrice =
+    originalPrice || variants?.[0]?.priceOverride || price;
+  const discountPercentage =
+    flashSale && discountType === "PERCENTAGE" && discountedPrice
+      ? discountedPrice
+      : null;
+  const discountAmount =
+    flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
+      ? displayOriginalPrice - discountOverrideByFlashSale
+      : null;
+  const image =
+    imageUrl ||
+    "https://i.pinimg.com/736x/f0/b6/ce/f0b6ce5a334490ba1ec286bd8bc348e9.jpg";
   const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
 
   const discountLabel = discountPercentage
@@ -327,7 +362,9 @@ const ProductCard = ({ product, onRemove }) => {
         return;
       }
 
-      await dispatch(addItemToCart({ variantId: variantIdFromResponse, quantity: 1 })).unwrap();
+      await dispatch(
+        addItemToCart({ variantId: variantIdFromResponse, quantity: 1 })
+      ).unwrap();
       setNotification({ type: "success", message: "Đã thêm vào giỏ hàng!" });
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
@@ -355,6 +392,8 @@ const ProductCard = ({ product, onRemove }) => {
     }
   };
 
+  console.log(wishlistItems);
+
   const handleHeartClick = async (e) => {
     e.stopPropagation();
     if (wishlistLoading) return; // Prevent multiple clicks during loading
@@ -366,13 +405,23 @@ const ProductCard = ({ product, onRemove }) => {
       if (!isFavorite) {
         // Add to wishlist
         await dispatch(addProductToWishlist(productId)).unwrap();
-        setNotification({ type: "success", message: "Đã thêm vào danh sách yêu thích!" });
+        setNotification({
+          type: "success",
+          message: "Đã thêm vào danh sách yêu thích!",
+        });
       } else {
         // Remove from wishlist
-        const wishlistItem = wishlistItems.find(item => item.productId === productId);
-        if (wishlistItem && wishlistItem.id) {
-          await dispatch(removeProductFromWishlist(wishlistItem.id)).unwrap();
-          setNotification({ type: "success", message: "Đã xóa khỏi danh sách yêu thích!" });
+        const wishlistItem = wishlistItems.find(
+          (item) => item.product?.id === productId
+        );
+        if (wishlistItem && wishlistItem.wishlistId) {
+          await dispatch(
+            removeProductFromWishlist(wishlistItem.wishlistId)
+          ).unwrap();
+          setNotification({
+            type: "success",
+            message: "Đã xóa khỏi danh sách yêu thích!",
+          });
         } else {
           throw new Error("Không tìm thấy sản phẩm trong danh sách yêu thích");
         }
@@ -380,11 +429,13 @@ const ProductCard = ({ product, onRemove }) => {
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       setIsFavorite(!optimisticIsFavorite); // Revert on error
-      setNotification({ type: "error", message: error.message || "Thao tác thất bại!" });
+      setNotification({
+        type: "error",
+        message: error.message || "Thao tác thất bại!",
+      });
       setTimeout(() => setNotification(null), 3000);
     }
   };
-
   const handleEyeClick = (e) => {
     e.stopPropagation();
     // Placeholder for quick view logic
@@ -430,7 +481,13 @@ const ProductCard = ({ product, onRemove }) => {
                     onClick={handleHeartClick}
                     disabled={wishlistLoading}
                   >
-                    <Heart className={`w-4 h-4 ${isFavorite ? "text-red-500 fill-current" : "text-gray-600"}`} />
+                    <Heart
+                      className={`w-4 h-4 ${
+                        isFavorite
+                          ? "text-red-500 fill-current"
+                          : "text-gray-600"
+                      }`}
+                    />
                   </button>
                   <button
                     className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:bg-gray-100"
@@ -458,7 +515,10 @@ const ProductCard = ({ product, onRemove }) => {
               {showDiscountLabel && discountLabel ? (
                 <>
                   <span className="text-sm font-bold text-red-600">
-                    {(finalPrice != null ? finalPrice : 0).toLocaleString("vi-VN")} VNĐ
+                    {(finalPrice != null ? finalPrice : 0).toLocaleString(
+                      "vi-VN"
+                    )}{" "}
+                    VNĐ
                   </span>
                   {displayOriginalPrice != null && (
                     <span className="text-xs text-gray-500 line-through">
@@ -468,14 +528,19 @@ const ProductCard = ({ product, onRemove }) => {
                 </>
               ) : (
                 <span className="text-sm font-bold text-gray-800">
-                  {(finalPrice != null ? finalPrice : 0).toLocaleString("vi-VN")} VNĐ
+                  {(finalPrice != null ? finalPrice : 0).toLocaleString(
+                    "vi-VN"
+                  )}{" "}
+                  VNĐ
                 </span>
               )}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
                 <StarRating value={averageRating || 0} className="text-xs" />
-                <span className="text-xs text-gray-600">({totalReviews || 0})</span>
+                <span className="text-xs text-gray-600">
+                  ({totalReviews || 0})
+                </span>
               </div>
               {soldQuantity > 0 && (
                 <span className="text-xs text-gray-500">
@@ -488,7 +553,9 @@ const ProductCard = ({ product, onRemove }) => {
         {notification && (
           <div
             className={`absolute top-0 left-0 right-0 mx-2 mt-2 p-2 rounded-md text-white text-center text-sm font-medium z-50
-              ${notification.type === "success" ? "bg-green-500" : "bg-red-500"}`}
+              ${
+                notification.type === "success" ? "bg-green-500" : "bg-red-500"
+              }`}
           >
             {notification.message}
           </div>
@@ -534,7 +601,7 @@ ProductCard.propTypes = {
     totalReviews: PropTypes.number,
     flashSale: PropTypes.bool,
     isFavorite: PropTypes.bool,
-    soldQuantity: PropTypes.number, 
+    soldQuantity: PropTypes.number,
   }).isRequired,
   onRemove: PropTypes.func,
 };

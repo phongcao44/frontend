@@ -11,13 +11,24 @@ export const fetchProductSpecifications = async () => {
   }
 };
 
-// Lấy thông số theo productId
+// Lấy thông số theo productId (cho admin)
 export const fetchProductSpecificationById = async (productId) => {
   try {
     const response = await axiosInstance.get(`/admin/product-specifications/product/${productId}`);
     return response.data;
   } catch (error) {
     console.error("fetchProductSpecificationById error:", error);
+    throw error.response?.data || error.message;
+  }
+};
+
+// Lấy thông số theo productId (cho user)
+export const fetchProductSpecificationByIdForUser = async (productId) => {
+  try {
+    const response = await axiosInstance.get(`/product-specifications/product/${productId}`);
+    return response.data;
+  } catch (error) {
+    console.error("fetchProductSpecificationByIdForUser error:", error);
     throw error.response?.data || error.message;
   }
 };
