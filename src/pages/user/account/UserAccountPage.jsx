@@ -9,7 +9,7 @@ import OrderSection from './OrderSection';
 import EditProfileForm from './EditProfileForm';
 import AddressForm from './AddressForm';
 import WishList from '../WishList';
-import { fetchUserVouchers, fetchCollectibleVouchers, userCollectVoucher } from '../../../redux/slices/voucherSlice';
+import { fetchUserVouchers, fetchCollectibleVouchers, userCollectVoucher, fetchUnusedVouchers, fetchUsedVouchers } from '../../../redux/slices/voucherSlice';
 import Swal from 'sweetalert2';
 import { ProductFilled } from '@ant-design/icons';
 import DeliveredProductSection from "../../../components/user/DeliveredProductSection";
@@ -23,7 +23,7 @@ export default function UserAccountPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userDetail, loading } = useSelector((state) => state.users);
-  const { userVouchers, collectibleVouchers } = useSelector((state) => state.voucher || {});
+  const { unusedVouchers, usedVouchers, collectibleVouchers } = useSelector((state) => state.voucher || {});
   const [isEditing, setIsEditing] = useState(false);
   const [isAddressFormOpen, setIsAddressFormOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -34,7 +34,8 @@ export default function UserAccountPage() {
         setError(null);
         await dispatch(fetchUserView()).unwrap();
         if (activeTab === 'myVouchers') {
-          await dispatch(fetchUserVouchers()).unwrap();
+          await dispatch(fetchUnusedVouchers()).unwrap();
+          await dispatch(fetchUsedVouchers()).unwrap();
         }
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -68,20 +69,6 @@ export default function UserAccountPage() {
     setIsAddressFormOpen(false);
     setSelectedAddress(null);
   };
-  const renderReturnRequests = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg flex items-center justify-center">
-          <RotateCcw className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Yêu cầu trả hàng</h2>
-          <p className="text-sm text-gray-500">Xem lại các đơn hàng bạn đã yêu cầu đổi/trả</p>
-        </div>
-      </div>
-      <MyReturnRequests />
-    </div>
-  );
   const handleDeleteAddress = async (addressId) => {
     const result = await Swal.fire({
       title: 'Xác nhận xóa',
@@ -158,7 +145,8 @@ export default function UserAccountPage() {
       });
 
       // Refresh both lists after collecting
-      await dispatch(fetchUserVouchers());
+      await dispatch(fetchUnusedVouchers());
+      await dispatch(fetchUsedVouchers());
       await dispatch(fetchCollectibleVouchers());
       setIsCollectModalOpen(false); // Close modal after collecting
     } catch (err) {
@@ -174,17 +162,6 @@ export default function UserAccountPage() {
     } catch (error) {
       setError('Có lỗi xảy ra khi tải danh sách voucher có thể thu thập');
     }
-  };
-
-  // Helper to render discount info safely
-  const renderDiscount = (voucher) => {
-    if (voucher.discountPercent != null) {
-      return `Giảm ${voucher.discountPercent}%`;
-    }
-    if (voucher.discountAmount != null) {
-      return `Giảm ${voucher.discountAmount.toLocaleString('vi-VN')}₫`;
-    }
-    return 'Không xác định';
   };
 
   const menuItems = [
@@ -266,7 +243,9 @@ export default function UserAccountPage() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-all duration-300">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                  <span className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+             <CheckCircle className="w-4 h-4 text-white" />
+           </span>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">Trạng thái tài khoản</h3>
               </div>
@@ -414,8 +393,8 @@ export default function UserAccountPage() {
               <div key={addr.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-all duration-300 group">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-green-600" />
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-gray-900">{addr.recipientName}</h3>
@@ -458,7 +437,7 @@ export default function UserAccountPage() {
                 {/* Default Address Badge */}
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-blue-700 rounded-full text-xs font-medium">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       Địa chỉ giao hàng
                     </span>
@@ -472,7 +451,7 @@ export default function UserAccountPage() {
           ) : (
             <div className="col-span-full">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-                <div className="w-24 h-24 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <MapPin className="w-12 h-12 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Bạn chưa có địa chỉ nào</h3>
@@ -513,66 +492,139 @@ export default function UserAccountPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {userVouchers && userVouchers.length > 0 ? (
-          userVouchers.map((voucher) => (
-            <div key={voucher.id} className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 group">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Tag className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-blue-700">{voucher.code}</h3>
-                    <p className="text-sm text-gray-600">{voucher.description || voucher.name}</p>
-                  </div>
-                </div>
-                <div className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
-                  Đã có
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
-                </div>
-
-                <div className="bg-white rounded-lg p-3 border border-blue-100">
+      {/* Unused Vouchers Section */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-blue-600" />
+          Voucher có thể sử dụng ({unusedVouchers?.length || 0})
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {unusedVouchers && unusedVouchers.length > 0 ? (
+            unusedVouchers.map((voucher) => (
+              <div key={voucher.id} className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 group">
+                <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-2">
-                    {voucher.discountPercent > 0 ? (
-                      <>
-                        <Percent className="w-4 h-4 text-green-600" />
-                        <span className="font-bold text-lg text-green-600">Giảm Giá: {voucher.discountPercent}%</span>
-                      </>
-                    ) : voucher.discountAmount > 0 ? (
-                      <>
-                        <DollarSign className="w-4 h-4 text-green-600" />
-                        <span className="font-bold text-lg text-green-600">Giảm Giá: {voucher.discountAmount.toLocaleString('vi-VN')}₫</span>
-                      </>
-                    ) : (
-                      <span className="text-gray-500">Không xác định</span>
-                    )}
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <Tag className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg text-blue-700">{voucher.code}</h3>
+                      <p className="text-sm text-gray-600">{voucher.description || voucher.name}</p>
+                    </div>
+                  </div>
+                  <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Có thể sử dụng
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-3 border border-blue-100">
+                    <div className="flex items-center gap-2">
+                      {voucher.discountPercent > 0 ? (
+                        <>
+                          <Percent className="w-4 h-4 text-blue-600" />
+                          <span className="font-bold text-lg text-blue-600">Giảm Giá: {voucher.discountPercent}%</span>
+                        </>
+                      ) : voucher.discountAmount > 0 ? (
+                        <>
+                          <DollarSign className="w-4 h-4 text-blue-600" />
+                          <span className="font-bold text-lg text-blue-600">Giảm Giá: {voucher.discountAmount.toLocaleString('vi-VN')}₫</span>
+                        </>
+                      ) : (
+                        <span className="text-gray-500">Không xác định</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Gift className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Không có voucher nào có thể sử dụng</h3>
+              <p className="text-gray-500">Hãy thu thập voucher để nhận ưu đãi hấp dẫn!</p>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-12">
-            <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Gift className="w-8 h-8 text-gray-400" />
+          )}
+        </div>
+      </div>
+
+      {/* Used Vouchers Section */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <RotateCcw className="w-5 h-5 text-gray-600" />
+          Voucher đã sử dụng ({usedVouchers?.length || 0})
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {usedVouchers && usedVouchers.length > 0 ? (
+            usedVouchers.map((voucher) => {
+              const isExpired = voucher.expiryDate ? new Date(voucher.expiryDate) < new Date() : 
+                               voucher.endDate ? new Date(voucher.endDate) < new Date() : false;
+              
+              return (
+                <div key={voucher.id} className="border rounded-xl p-6 hover:shadow-lg transition-all duration-200 group bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-r from-gray-500 to-slate-600">
+                        <Tag className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-700">{voucher.code}</h3>
+                        <p className="text-sm text-gray-600">{voucher.description || voucher.name}</p>
+                      </div>
+                    </div>
+                    <div className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-300">
+{isExpired ? 'Đã hết hạn' : 'Đã sử dụng'}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Calendar className="w-4 h-4" />
+                      {isExpired ? (
+                        <span>Hết hạn vào ngày: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
+                      ) : (
+                        <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg p-3 border bg-white border-gray-100">
+                      <div className="flex items-center gap-2">
+                        {voucher.discountPercent > 0 ? (
+                          <>
+                            <Percent className="w-4 h-4 text-gray-600" />
+                            <span className="font-bold text-lg text-gray-600">Giảm Giá: {voucher.discountPercent}%</span>
+                          </>
+                        ) : voucher.discountAmount > 0 ? (
+                          <>
+                            <DollarSign className="w-4 h-4 text-gray-600" />
+                            <span className="font-bold text-lg text-gray-600">Giảm Giá: {voucher.discountAmount.toLocaleString('vi-VN')}₫</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-500">Không xác định</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-full text-center py-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Gift className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Không có voucher nào đã sử dụng</h3>
+              <p className="text-gray-500">Bạn chưa sử dụng voucher nào!</p>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Bạn chưa có voucher nào</h3>
-            <p className="text-gray-500 mb-4">Hãy thu thập voucher để nhận ưu đãi hấp dẫn!</p>
-            <button
-              onClick={handleOpenCollectModal}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
-            >
-              Thu thập voucher ngay
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -609,7 +661,7 @@ export default function UserAccountPage() {
                         <Tag className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg text-green-700">{voucher.code}</h3>
+                        <h3 className="font-bold text-lg text-blue-700">{voucher.code}</h3>
                         <p className="text-sm text-gray-600">{voucher.description || voucher.name}</p>
                       </div>
                     </div>
@@ -624,17 +676,17 @@ export default function UserAccountPage() {
                       <span>HSD: {voucher.expiryDate ? new Date(voucher.expiryDate).toLocaleDateString('vi-VN') : (voucher.endDate ? new Date(voucher.endDate).toLocaleDateString('vi-VN') : 'Không xác định')}</span>
                     </div>
 
-                    <div className="bg-white rounded-lg p-3 border border-green-100">
+                    <div className="bg-white rounded-lg p-3 border border-blue-100">
                       <div className="flex items-center gap-2">
                         {voucher.discountPercent > 0 ? (
                           <>
-                            <Percent className="w-4 h-4 text-green-600" />
-                            <span className="font-bold text-lg text-green-600">Giảm {voucher.discountPercent}%</span>
+                            <Percent className="w-4 h-4 text-blue-600" />
+                            <span className="font-bold text-lg text-blue-600">Giảm {voucher.discountPercent}%</span>
                           </>
                         ) : voucher.discountAmount > 0 ? (
                           <>
-                            <DollarSign className="w-4 h-4 text-green-600" />
-                            <span className="font-bold text-lg text-green-600">Giảm {voucher.discountAmount.toLocaleString('vi-VN')}₫</span>
+                            <DollarSign className="w-4 h-4 text-blue-600" />
+                            <span className="font-bold text-lg text-blue-600">Giảm {voucher.discountAmount.toLocaleString('vi-VN')}₫</span>
                           </>
                         ) : (
                           <span className="text-gray-500">Không xác định</span>
@@ -685,10 +737,8 @@ export default function UserAccountPage() {
         return renderMyVouchers();
       case 'deliveredProduct':
         return <DeliveredProductSection />;
-    case 'returns':
-  return <MyReturnRequests />;
-
-
+      case 'returns':
+        return <MyReturnRequests />;
       default:
         return null;
     }

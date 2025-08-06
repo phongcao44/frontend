@@ -8,6 +8,8 @@ import {
   collectVoucher,
   getCollectibleVouchers,
   getUserVouchers,
+  getUnusedVouchers,
+  getUsedVouchers,
 } from "../../services/voucherService";
 
 
@@ -79,6 +81,28 @@ export const fetchUserVouchers = createAsyncThunk(
   }
 );
 
+export const fetchUnusedVouchers = createAsyncThunk(
+  "voucher/fetchUnused",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getUnusedVouchers();
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
+export const fetchUsedVouchers = createAsyncThunk(
+  "voucher/fetchUsed",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getUsedVouchers();
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
 export const userApplyVoucher = createAsyncThunk(
   "voucher/apply",
   async (code, { rejectWithValue }) => {
@@ -111,6 +135,8 @@ const voucherSlice = createSlice({
     allVouchers: [],
     collectibleVouchers: [],
     userVouchers: [],
+    unusedVouchers: [],
+    usedVouchers: [],
     loading: false,
     error: null,
   },
@@ -159,6 +185,14 @@ const voucherSlice = createSlice({
 
       .addCase(fetchUserVouchers.fulfilled, (state, action) => {
         state.userVouchers = action.payload;
+      })
+
+      .addCase(fetchUnusedVouchers.fulfilled, (state, action) => {
+        state.unusedVouchers = action.payload;
+      })
+
+      .addCase(fetchUsedVouchers.fulfilled, (state, action) => {
+        state.usedVouchers = action.payload;
       })
 
       .addCase(userApplyVoucher.fulfilled, (state, action) => {
