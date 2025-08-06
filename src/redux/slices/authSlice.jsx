@@ -12,6 +12,7 @@ import {
 } from "../../services/authService";
 import Cookies from "js-cookie";
 import { saveAuthToStorage, clearAuthFromStorage, getAuthFromStorage } from "../../utils/authUtils";
+import api from "../../services/api";
 
 export const loginUser = createAsyncThunk(
   "auth/login",
@@ -187,7 +188,20 @@ export const handleGoogleCallback = createAsyncThunk(
     }
   }
 );
-
+export const fetchUserInfo = createAsyncThunk(
+  "auth/fetchUserInfo",
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = Cookies.get("access_token");
+      const response = await api.get("/users/view", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data; // user data mới
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
 const authSlice = createSlice({
   name: "auth",
   initialState: {
@@ -339,8 +353,21 @@ const authSlice = createSlice({
       .addCase(handleGoogleCallback.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
+      })
+
+      .addCase(fetchUserInfo.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+  .addCase(fetchUserInfo.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+      })
+  .addCase(fetchUserInfo.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
       });
-  },
+      },
 });
 
 export const { clearAuthError, setUser, restoreAuthState, clearAuthState } = authSlice.actions;
