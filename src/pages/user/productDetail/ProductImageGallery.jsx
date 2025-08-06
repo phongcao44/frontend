@@ -1,13 +1,11 @@
-import { useEffect, useState } from "react";
-import { Row, Col, Image } from "antd";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { getProductImagesByProduct } from "../../../redux/slices/productImageSlice";
 
-// Default placeholder image URL
-const DEFAULT_IMAGE_URL = "https://phunugioi.com/wp-content/uploads/2020/02/anh-phong-canh-hung-vy-nui-va-song.jpg";
+const DEFAULT_IMAGE_URL = "https://i.pinimg.com/736x/f0/b6/ce/f0b6ce5a334490ba1ec286bd8bc348e9.jpg";
 
-// eslint-disable-next-line react/prop-types
-const ProductGallery = ({ productId }) => {
+const ProductImageGallery = ({ productId }) => {
   const [selectedImage, setSelectedImage] = useState(0);
   const dispatch = useDispatch();
   const {
@@ -22,83 +20,107 @@ const ProductGallery = ({ productId }) => {
     }
   }, [dispatch, productId]);
 
-  // Reset selectedImage when imageList changes
+  // Reset khi productId thay đổi
   useEffect(() => {
-    if (imageList?.length === 0 || imageError) {
-      setSelectedImage(0);
-    }
-  }, [imageList, imageError]);
+    setSelectedImage(0);
+  }, [productId]);
 
-  if (imageLoading) return <div>Loading images...</div>;
+  if (imageLoading) {
+    return (
+      <div className="flex items-center justify-center h-96 bg-gray-50">
+        <div className="animate-spin h-8 w-8 border-4 border-t-blue-500 border-gray-200 rounded-full"></div>
+        <span className="ml-3 text-gray-600">Đang tải...</span>
+      </div>
+    );
+  }
 
-  // Determine the main image to display
-  const mainImage = imageError || !imageList?.length ? {
-    imageUrl: DEFAULT_IMAGE_URL,
-    productName: "Placeholder Image",
-  } : imageList[selectedImage] || imageList[0] || {
-    imageUrl: DEFAULT_IMAGE_URL,
-    productName: "Placeholder Image",
+  if (imageError) {
+    return (
+      <div className="flex items-center justify-center h-96 bg-gray-50">
+        <span className="text-red-600">Lỗi: {imageError}</span>
+      </div>
+    );
+  }
+
+  // Sử dụng ảnh mặc định nếu không có ảnh
+  const displayImages = imageList?.length > 0 
+    ? imageList 
+    : [{ imageUrl: DEFAULT_IMAGE_URL, productName: "Sản phẩm" }];
+
+  const currentImage = displayImages[selectedImage] || displayImages[0];
+
+  const goToPrevious = () => {
+    setSelectedImage(prev => prev === 0 ? displayImages.length - 1 : prev - 1);
+  };
+
+  const goToNext = () => {
+    setSelectedImage(prev => prev === displayImages.length - 1 ? 0 : prev + 1);
   };
 
   return (
-    <Row gutter={[16, 16]}>
-      <Col span={6}>
-        <div
-          className={`flex flex-col gap-3 items-center ${
-            imageList?.length > 4 ? "justify-start" : "justify-center"
-          } min-h-[400px]`}
-        >
-          {imageError || !imageList?.length ? (
-            <div
-              className="cursor-pointer border-2 border-red-500 rounded-lg p-1 bg-gray-100 w-full"
+    <div className="space-y-4">
+      {/* Main Image */}
+      <div className="relative w-full aspect-square bg-gray-50 rounded-lg overflow-hidden">
+        <img
+          src={currentImage.imageUrl}
+          alt={currentImage.productName || `Ảnh ${selectedImage + 1}`}
+          className="w-full h-full object-contain"
+          onError={(e) => {
+            e.target.src = DEFAULT_IMAGE_URL;
+          }}
+        />
+        
+        {/* Navigation arrows - chỉ hiện khi có nhiều hơn 1 ảnh */}
+        {displayImages.length > 1 && (
+          <>
+            <button
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full p-2 transition-all"
+              onClick={goToPrevious}
             >
-              <Image
-                src={DEFAULT_IMAGE_URL}
-                alt="Placeholder Image"
-                width="100%"
-                height={80}
-                className="object-cover rounded"
-                preview={false}
+              <LeftOutlined />
+            </button>
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full p-2 transition-all"
+              onClick={goToNext}
+            >
+              <RightOutlined />
+            </button>
+            
+            {/* Counter */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+              {selectedImage + 1}/{displayImages.length}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Thumbnails - chỉ hiện khi có nhiều hơn 1 ảnh */}
+      {displayImages.length > 1 && (
+        <div className="flex gap-3 justify-center overflow-x-auto pb-2">
+          {displayImages.map((image, index) => (
+            <div
+              key={index}
+              className={`flex-shrink-0 w-16 h-16 rounded-lg cursor-pointer transition-all overflow-hidden ${
+                selectedImage === index
+                  ? "opacity-100 ring-2 ring-gray-400"
+                  : "opacity-60 hover:opacity-80"
+              }`}
+              onClick={() => setSelectedImage(index)}
+            >
+              <img
+                src={image.imageUrl}
+                alt={`Thumbnail ${index + 1}`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = DEFAULT_IMAGE_URL;
+                }}
               />
             </div>
-          ) : (
-            imageList?.map((image, index) => (
-              <div
-                key={image.id}
-                onClick={() => setSelectedImage(index)}
-                className={`cursor-pointer border-2 ${
-                  selectedImage === index ? "border-red-500" : "border-gray-200"
-                } rounded-lg p-1 bg-gray-100 w-full`}
-              >
-                <Image
-                  src={image.imageUrl}
-                  alt={`${image.productName} ${index + 1}`}
-                  width="100%"
-                  height={80}
-                  className="object-cover rounded"
-                  preview={false}
-                />
-              </div>
-            ))
-          )}
+          ))}
         </div>
-      </Col>
-
-      <Col span={18}>
-        <div className="bg-gray-100 rounded-xl p-5 flex items-center justify-center min-h-[400px]">
-          <Image
-            src={mainImage.imageUrl}
-            alt={mainImage.productName}
-            width="100%"
-            className="object-contain rounded-lg max-h-[400px]"
-            preview={{
-              src: mainImage.imageUrl,
-            }}
-          />
-        </div>
-      </Col>
-    </Row>
+      )}
+    </div>
   );
 };
 
-export default ProductGallery;
+export default ProductImageGallery;

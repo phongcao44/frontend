@@ -27,6 +27,8 @@ const StarRating = ({ value, disabled, className }) => {
   return <div className="flex">{stars}</div>;
 };
 
+
+
 const ProductReviews = ({ productId }) => {
   const dispatch = useDispatch();
   const {
@@ -131,13 +133,13 @@ const ProductReviews = ({ productId }) => {
   const currentPageReviews = getCurrentPageReviews();
 
   return (
-    <div className="mt-12">
-      <div className="flex items-center mb-7">
+    <div className="">
+      {/* <div className="flex items-center mb-7">
         <div className="w-5 h-10 bg-red-500 rounded mr-4"></div>
         <span className="text-red-500 text-base font-semibold">
           Đánh giá sản phẩm
         </span>
-      </div>
+      </div> */}
 
       {reviews?.length > 0 ? (
         <div className="bg-white p-6 rounded-lg ">
@@ -407,3 +409,4 @@ const ProductReviews = ({ productId }) => {
 };
 
 export default ProductReviews;
+
