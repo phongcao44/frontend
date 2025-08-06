@@ -9,8 +9,9 @@ import { calculateShippingFee } from "../../../services/shippingFeeService";
 import { checkoutSelectedItemsThunk } from "../../../redux/slices/cartSlice";
 import { createCodPayment, createVnpayPayment } from "../../../services/paymentService";
 import api from "../../../services/api"; // Axios instance
-import { setUser } from "../../../redux/slices/authSlice";
+import { setUser, fetchUserInfo } from "../../../redux/slices/authSlice";
 import { fetchUserVouchers } from "../../../redux/slices/voucherSlice";
+
 
 
 const CheckoutPage = () => {
@@ -43,10 +44,13 @@ const CheckoutPage = () => {
   const [userPoints, setUserPoints] = useState(0);
 
   useEffect(() => {
-    if (user?.userPoint?.totalPoints) {
-      setUserPoints(user.userPoint.totalPoints);
-    }
-  }, [user]);
+    dispatch(fetchUserInfo());
+  }, []);
+
+  useEffect(() => {
+  const points = user?.address?.[0]?.user?.userPoint?.totalPoints || 0;
+  setUserPoints(points);
+}, [user]);
 
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [isLoadingVouchers, setIsLoadingVouchers] = useState(false);
@@ -138,20 +142,27 @@ const CheckoutPage = () => {
   /** ------------------------
    *  Xử lý chọn voucher & điểm
    ------------------------ */
-  const pointsDiscount = usedPoints * 1000;
+  const pointsDiscount = usedPoints;
   const totalAfterDiscounts = Math.max(0, totalCartPrice - voucherDiscount - pointsDiscount);
   const totalWithShipping = totalAfterDiscounts + shippingFee;
 
   const getPointOptions = () => {
-    const maxUsablePoints = Math.floor(totalCartPrice / 1000);
+    const maxUsablePoints = Math.floor(totalCartPrice);
     const availablePoints = Math.min(userPoints, maxUsablePoints);
 
+    const step = 1000; // Tăng theo bước 100 điểm
     const options = [];
-    for (let i = 0; i <= availablePoints; i += 10) {
+
+    for (let i = 0; i <= availablePoints; i += step) {
       options.push(i);
     }
-    if (!options.includes(availablePoints)) options.push(availablePoints);
-    return options.sort((a, b) => a - b);
+
+    // Đảm bảo thêm tùy chọn chính xác nếu chưa có
+    if (!options.includes(availablePoints)) {
+      options.push(availablePoints);
+    }
+
+    return options;
   };
 
 
@@ -197,45 +208,56 @@ const CheckoutPage = () => {
     setError(null);
 
     try {
-      const token = Cookies.get("access_token");
-
-      // 🟨 1. APPLY VOUCHER nếu có
+      // Áp dụng voucher nếu có
       if (selectedVoucher?.code) {
-        try {
-          const res = await api.post(
-            `/user/voucher/apply`,
-            null,
-            {
-              params: { code: selectedVoucher.code },
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          console.log("Voucher applied:", res.data);
-        } catch (err) {
-          console.error("Apply voucher failed:", err);
-          throw new Error(
-            err?.response?.data?.message || "Không áp dụng được voucher. Vui lòng kiểm tra lại."
-          );
-        }
+        await api.post(
+          `/user/voucher/apply`,
+          null,
+          {
+            params: { code: selectedVoucher.code },
+          }
+        );
+        Swal.fire("Voucher đã áp dụng", "Voucher của bạn đã được áp dụng", "success");
       }
 
-      // 🟨 2. TIẾN HÀNH ĐẶT HÀNG
+      // Đặt hàng
       const payload = {
         addressId: formData.addressId,
         paymentMethod,
         cartItemIds: selectedCartItems.map((item) => item.cartItemId),
-        voucherId: 0, // optional nếu backend không dùng nữa
+        voucherId: selectedVoucher?.id || 0,
         usedPoints,
       };
 
       const result = await dispatch(checkoutSelectedItemsThunk(payload)).unwrap();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Lấy thông tin user mới (bao gồm điểm hiện có mới)
+      const userInfoAction = await dispatch(fetchUserInfo());
+      console.log("User sau khi fetch lại:", userInfoAction.payload);
+      if (fetchUserInfo.fulfilled.match(userInfoAction)) {
+        const updatedUser = userInfoAction.payload;
+        dispatch(setUser(updatedUser));
+        Cookies.set("user", JSON.stringify(updatedUser), {
+          sameSite: "Strict",
+          secure: true,
+          path: "/",
+        }); // cập nhật cookie user nếu cần
+        const totalPoints = updatedUser?.address?.[0]?.user?.userPoint?.totalPoints || 0;
+        setUserPoints(totalPoints);
+
+      }
+
+      setIsSubmitting(false);
+
       const orderId = result.orderId || result.id;
       if (!orderId) throw new Error("Không thể lấy mã đơn hàng");
 
       if (paymentMethod === "COD") {
         await handleCodPayment(orderId);
-      } else {
+      } else if (paymentMethod === "VNPAY") {
         await handleVnpayPayment(orderId);
+      } else {
+        Swal.fire("Thông báo", "Phương thức thanh toán chưa hỗ trợ.", "info");
       }
     } catch (err) {
       console.error("Checkout error:", err);
@@ -245,22 +267,6 @@ const CheckoutPage = () => {
   };
 
 
-
-
-  const handleVnpayPayment = async (orderId) => {
-    try {
-      const response = await createVnpayPayment(orderId);
-      if (response.code === "00" && response.data) {
-        window.location.href = response.data;
-      } else {
-        throw new Error(response.message || "Tạo link thanh toán thất bại");
-      }
-    } catch (err) {
-      console.error("VNPAY Payment error:", err);
-      setError("Không thể tạo link thanh toán. Vui lòng thử lại.");
-      setIsSubmitting(false);
-    }
-  };
 
   const handleCodPayment = async (orderId) => {
     try {
@@ -474,7 +480,7 @@ const CheckoutPage = () => {
                         <option value={0}>Không sử dụng điểm</option>
                         {getPointOptions().map(points => (
                           <option key={points} value={points}>
-                            {points.toLocaleString("vi-VN")} điểm (-{(points * 1000).toLocaleString("vi-VN")} ₫)
+                            {points.toLocaleString("vi-VN")} điểm (-{(points).toLocaleString("vi-VN")} ₫)
                           </option>
                         ))}
                       </select>
