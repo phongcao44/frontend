@@ -6,15 +6,16 @@ import {
   loadFlatCategoryList,
   loadSubCategories,
 } from "../../../redux/slices/categorySlice";
-import ProductCardList from "./ProductCardList";
+import ProductCard from "../home/ProductCard";
 
 function SubcategoryNav({
   subcategories,
   onSubcategoryClick,
-  selectedSubcategoryId,
+  selectedSubcategorySlug,
 }) {
   const validSubcategories = Array.isArray(subcategories) ? subcategories : [];
 
+  console.log(subcategories)
   return (
     <div className="mb-8 overflow-x-auto scrollbar-hidden">
       <div className="flex space-x-3 whitespace-nowrap">
@@ -22,9 +23,9 @@ function SubcategoryNav({
           validSubcategories.map((subcategory) => (
             <button
               key={subcategory.id}
-              onClick={() => onSubcategoryClick(subcategory.id)}
+              onClick={() => onSubcategoryClick(subcategory.slug)}
               className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 cursor-pointer ${
-                selectedSubcategoryId === subcategory.id
+                selectedSubcategorySlug === subcategory.slug
                   ? "bg-blue-600 text-white shadow-md"
                   : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:text-blue-600"
               }`}
@@ -42,7 +43,7 @@ function SubcategoryNav({
 
 function ProductListing() {
   const dispatch = useDispatch();
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const paginatedProducts = useSelector((state) => state.products.paginated);
   const productsLoading = useSelector((state) => state.products.loading);
@@ -55,7 +56,8 @@ function ProductListing() {
     (state) => state.category.flatCategoryList || []
   );
 
-  const validSubcategories = subCategoryMap[id] || [];
+  const [currentCategory, setCurrentCategory] = useState({ name: "Danh mục", id: null });
+  const validSubcategories = subCategoryMap[currentCategory.id] || [];
 
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
@@ -63,7 +65,7 @@ function ProductListing() {
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [sortBy, setSortBy] = useState("popular");
   const [page, setPage] = useState(0);
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState(null);
+  const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState(null);
 
   const brands = [
     { id: "all", name: "Tất cả thương hiệu" },
@@ -85,25 +87,34 @@ function ProductListing() {
     { id: "3plus", label: "3 sao trở lên", value: 3 },
   ];
 
+  // Load flat category list once on mount
   useEffect(() => {
     dispatch(loadFlatCategoryList());
-    const currentCategory = flatCategoryList.find(
-      (cat) => cat.id === Number(id)
-    );
-    if (currentCategory && currentCategory.level < 3) {
-      dispatch(loadSubCategories(id));
-    }
-  }, [dispatch, id, flatCategoryList]);
+  }, [dispatch]);
 
+  // Update currentCategory when slug or flatCategoryList changes
   useEffect(() => {
-    setSelectedSubcategoryId(null); // Đặt lại khi id từ URL thay đổi
-    setPage(0); // Đặt lại page về 0
-  }, [id]);
+    const category = flatCategoryList.find((cat) => cat.slug === slug) || { name: "Danh mục", id: null };
+    setCurrentCategory(category);
+  }, [slug, flatCategoryList]);
 
-  const handleSubcategoryClick = (subcategoryId) => {
-    setSelectedSubcategoryId(subcategoryId);
+  // Load subcategories when currentCategory.id changes
+  useEffect(() => {
+    if (currentCategory.id && currentCategory.level < 3) {
+      dispatch(loadSubCategories(currentCategory.id));
+    }
+  }, [dispatch, currentCategory.id, currentCategory.level]);
+
+  // Reset filters when slug changes
+  useEffect(() => {
+    setSelectedSubcategorySlug(null);
     setPage(0);
-    navigate(`/products/category/${subcategoryId}`);
+  }, [slug]);
+
+  const handleSubcategoryClick = (subcategorySlug) => {
+    setSelectedSubcategorySlug(subcategorySlug);
+    setPage(0);
+    navigate(`/products/category/${subcategorySlug}`);
   };
 
   const mapSortBy = (sortBy) => {
@@ -125,35 +136,45 @@ function ProductListing() {
     return { priceMin: range.min, priceMax: range.max };
   };
 
+  // Load products when dependencies change
   useEffect(() => {
     const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
     const { priceMin, priceMax } = getPriceRange();
     const minRating =
       ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
 
-    const params = {
-      page,
-      limit: 8,
-      sortBy: apiSortBy,
-      orderBy,
-      categoryId: selectedSubcategoryId || Number(id),
-      status: null,
-      brandName: selectedBrand === "all" ? null : selectedBrand,
-      priceMin: priceMin || null,
-      priceMax: priceMax || null,
-      minRating: minRating === 0 ? null : minRating,
-    };
+    // Find category ID based on selectedSubcategorySlug or current slug
+    const selectedCategory = selectedSubcategorySlug
+      ? flatCategoryList.find((cat) => cat.slug === selectedSubcategorySlug)
+      : flatCategoryList.find((cat) => cat.slug === slug);
 
-    dispatch(loadProductsPaginate(params));
+    const categoryId = selectedCategory ? selectedCategory.id : null;
+
+    if (categoryId) {
+      const params = {
+        page,
+        limit: 8,
+        sortBy: apiSortBy,
+        orderBy,
+        categoryId,
+        status: null,
+        brandName: selectedBrand === "all" ? null : selectedBrand,
+        priceMin: priceMin || null,
+        priceMax: priceMax || null,
+        minRating: minRating === 0 ? null : minRating,
+      };
+
+      dispatch(loadProductsPaginate(params));
+    }
   }, [
     dispatch,
     page,
-    id,
-    selectedSubcategoryId,
+    selectedSubcategorySlug,
     selectedPriceRange,
     selectedRating,
     selectedBrand,
     sortBy,
+    slug,
   ]);
 
   const handleLoadMore = () => {
@@ -167,21 +188,21 @@ function ProductListing() {
     setSelectedRating("all");
     setSelectedBrand("all");
     setSortBy("popular");
-    setSelectedSubcategoryId(null);
+    setSelectedSubcategorySlug(null);
     setPage(0);
   };
 
   // Build breadcrumb by tracing back through parentId
   const buildBreadcrumb = () => {
     const breadcrumbItems = [{ name: "Trang chủ", slug: "/" }];
-    let currentId = selectedSubcategoryId || Number(id);
+    let currentSlug = selectedSubcategorySlug || slug;
     const categoryPath = [];
 
-    while (currentId) {
-      const category = flatCategoryList.find((cat) => cat.id === currentId);
+    while (currentSlug) {
+      const category = flatCategoryList.find((cat) => cat.slug === currentSlug);
       if (category) {
-        categoryPath.unshift({ name: category.name, slug: category.id });
-        currentId = category.parentId;
+        categoryPath.unshift({ name: category.name, slug: category.slug });
+        currentSlug = flatCategoryList.find((cat) => cat.id === category.parentId)?.slug || null;
       } else {
         break;
       }
@@ -191,9 +212,6 @@ function ProductListing() {
   };
 
   const breadcrumbItems = buildBreadcrumb();
-  const currentCategory = flatCategoryList.find(
-    (cat) => cat.id === (selectedSubcategoryId || Number(id))
-  ) || { name: "Danh mục" };
   const productsContent = paginatedProducts?.data?.content || [];
 
   if (productsLoading && page === 0)
@@ -247,7 +265,7 @@ function ProductListing() {
             <SubcategoryNav
               subcategories={validSubcategories}
               onSubcategoryClick={handleSubcategoryClick}
-              selectedSubcategoryId={selectedSubcategoryId}
+              selectedSubcategorySlug={selectedSubcategorySlug}
             />
           )
         )}
@@ -370,7 +388,7 @@ function ProductListing() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
           {productsContent.length > 0 ? (
             productsContent.map((productData) => (
-              <ProductCardList
+              <ProductCard
                 key={productData.id}
                 product={{
                   ...productData,

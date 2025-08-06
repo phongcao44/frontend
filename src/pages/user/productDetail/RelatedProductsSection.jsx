@@ -1,8 +1,48 @@
 import PropTypes from "prop-types";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import ProductCard from "../home/ProductCard";
+import { loadRelatedProducts } from "../../../redux/slices/productSlice"; 
 
-const RelatedProductsSection = ({ relatedProducts }) => {
-  //   if (!relatedProducts?.length) return null;
+const RelatedProductsSection = ({ productId }) => {
+  const dispatch = useDispatch();
+  const { relatedProducts, loading, error } = useSelector((state) => state.products);
+
+  useEffect(() => {
+    if (productId) {
+      dispatch(loadRelatedProducts(productId));
+    }
+  }, [dispatch, productId]);
+
+  if (loading) {
+    return (
+      <div className="mt-12">
+        <div className="flex items-center mb-7">
+          <div className="w-5 h-10 bg-red-500 rounded mr-4" />
+          <p className="text-red-500 text-base font-semibold">
+            Sản phẩm liên quan
+          </p>
+        </div>
+        <div>Loading related products...</div>
+      </div>
+    );
+  }
+
+  if (error || !relatedProducts?.length) {
+    return (
+      <div className="mt-12">
+        <div className="flex items-center mb-7">
+          <div className="w-5 h-10 bg-red-500 rounded mr-4" />
+          <p className="text-red-500 text-base font-semibold">
+            Sản phẩm liên quan
+          </p>
+        </div>
+        <p className="text-gray-500 text-base">
+          Không có sản phẩm liên quan nào được tìm thấy.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-12">
@@ -23,7 +63,7 @@ const RelatedProductsSection = ({ relatedProducts }) => {
 };
 
 RelatedProductsSection.propTypes = {
-  relatedProducts: PropTypes.arrayOf(PropTypes.object).isRequired,
+  productId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
 export default RelatedProductsSection;

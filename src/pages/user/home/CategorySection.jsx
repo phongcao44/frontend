@@ -24,9 +24,11 @@ const CategorySection = () => {
     );
   }, [dispatch]);
 
-  const handleCategoryClick = (id) => {
+  console.log(parentList)
+
+  const handleCategoryClick = (id, slug) => {
     setActiveCategoryId((prevId) => (prevId === id ? null : id));
-    navigate(`/products/category/${id}`);
+    navigate(`/products/category/${slug}`);
   };
 
   if (loading)
@@ -78,7 +80,7 @@ const CategorySection = () => {
           {parentList.map((category) => (
             <SwiperSlide key={category.id}>
               <div
-                onClick={() => handleCategoryClick(category.id)}
+                onClick={() => handleCategoryClick(category.id, category.slug)}
                 className={`flex flex-col items-center justify-center h-32 border-2 rounded-lg transition-all duration-300 hover:shadow-md cursor-pointer ${
                   activeCategoryId === category.id
                     ? "bg-red-500 border-red-500"

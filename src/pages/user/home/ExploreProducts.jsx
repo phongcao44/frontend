@@ -15,7 +15,7 @@ const ExploreProducts = () => {
   const [displayedProducts, setDisplayedProducts] = useState([]);
 
   useEffect(() => {
-    const params = { page, limit: 12};
+    const params = { page, limit: 12 };
     dispatch(loadProductsPaginate(params));
   }, [dispatch, page]);
 
@@ -91,7 +91,7 @@ const ExploreProducts = () => {
           overflowX: "auto",
           scrollBehavior: "smooth",
           scrollbarWidth: "none",
-          "-ms-overflow-style": "none",
+          msOverflowStyle: "none",
         }}
       >
         {displayedProducts.map((product) => (
