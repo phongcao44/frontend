@@ -1,3 +1,4 @@
+
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -296,7 +297,6 @@ const CheckoutPage = () => {
       setIsSubmitting(false);
     }
   };
-
 
 
   // Thêm mảng phương thức thanh toán
