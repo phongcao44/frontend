@@ -37,7 +37,6 @@ const FlashSale = () => {
     (state) => state.flashSale
   );
 
-  console.log("Active Flash Sale:", activeFlashSale);
 
   const prevRef = useRef(null);
   const nextRef = useRef(null);
@@ -52,7 +51,17 @@ const FlashSale = () => {
 
     loadActiveFlashSale();
   }, [dispatch]);
-//   useEffect(() => {
+  useEffect(() => {
+  dispatch(fetchActiveFlashSale());
+}, [dispatch]);
+
+useEffect(() => {
+  if (activeFlashSale?.id) {
+    dispatch(fetchFlashSaleItems(activeFlashSale.id));
+  }
+}, [dispatch, activeFlashSale]);
+
+// useEffect(() => {
 //   dispatch(fetchActiveFlashSale());
 // }, [dispatch]);
 
@@ -62,8 +71,6 @@ const FlashSale = () => {
 //   }
 // }, [dispatch, activeFlashSale]);
 
-
-  console.log(flashSaleItems)
 
 
   return (
