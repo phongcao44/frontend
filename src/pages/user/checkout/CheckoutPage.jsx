@@ -254,7 +254,7 @@ const CheckoutPage = () => {
 
       if (paymentMethod === "COD") {
         await handleCodPayment(orderId);
-      } else if (paymentMethod === "VNPAY") {
+      } else if (paymentMethod === "BANK_TRANSFER") {
         await handleVnpayPayment(orderId);
       } else {
         Swal.fire("Thông báo", "Phương thức thanh toán chưa hỗ trợ.", "info");
@@ -297,12 +297,29 @@ const CheckoutPage = () => {
     }
   };
 
+  const handleVnpayPayment = async (orderId) => {
+  try {
+    const response = await createVnpayPayment(orderId);
+
+    if (response.code === "00" && response.data) {
+      // Chuyển hướng tới trang thanh toán VNPAY
+      window.location.href = response.data;
+    } else {
+      throw new Error(response.message || "Tạo link thanh toán thất bại");
+    }
+  } catch (err) {
+    console.error("VNPAY Payment error:", err);
+    setError("Không thể tạo link thanh toán VNPAY. Vui lòng thử lại.");
+    setIsSubmitting(false);
+  }
+};
+
 
 
   // Thêm mảng phương thức thanh toán
   const paymentMethods = [
     { id: "COD", name: "Thanh toán khi nhận hàng (COD)" },
-    { id: "VNPAY", name: "Thanh toán qua VNPAY" },
+    { id: "BANK_TRANSFER", name: "Thanh toán qua VNPAY" },
     { id: "MOMO", name: "Thanh toán qua Momo" },
   ];
 
