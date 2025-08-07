@@ -53,6 +53,44 @@ export const fetchProductsPaginate = async ({
   }
 };
 
+export const fetchTopSellingProductsPaginate = async ({
+  page = 0,
+  limit = 10,
+  sortBy = "soldQuantity",
+  orderBy = "desc",
+  keyword = "",
+  categoryId = null,
+  categorySlug = "",
+  status = "",
+  brandName = "",
+  priceMin = null,
+  priceMax = null,
+  minRating = null,
+}) => {
+  try {
+    const res = await axiosInstance.get("/products/top-selling/paginate", {
+      params: {
+        page,
+        limit,
+        sortBy,
+        orderBy,
+        keyword,
+        categoryId,
+        categorySlug,
+        status,
+        brandName,
+        priceMin,
+        priceMax,
+        minRating,
+      },
+    });
+    return res.data.data;
+  } catch (error) {
+    console.error("Error fetching top selling paginated products:", error);
+    throw new Error(error.response?.data?.message || "Failed to fetch top selling products");
+  }
+};
+
 export const createProduct = async (productData) => {
   const res = await axiosInstance.post("/admin/product/add", productData);
   return res.data;
