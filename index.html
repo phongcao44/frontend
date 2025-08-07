@@ -8,21 +8,48 @@
   <title>E-commerce</title>
   <link rel="stylesheet" href="https://js.api.here.com/v3/3.1/mapsjs-ui.css" />
   <!-- HERE Maps SDK -->
-<script src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
-<script src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
-<script src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
-<script src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
 
-<!-- Polyline decoding (bắt buộc để vẽ đường) -->
-<script src="https://js.api.here.com/v3/3.1/mapsjs-geometry.js"></script>
+  <!-- Polyline decoding (bắt buộc để vẽ đường) -->
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-geometry.js"></script>
 
-<!-- HERE UI CSS -->
-<link rel="stylesheet" href="https://js.api.here.com/v3/3.1/mapsjs-ui.css" />
+  <!-- HERE UI CSS -->
+  <link rel="stylesheet" href="https://js.api.here.com/v3/3.1/mapsjs-ui.css" />
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
-</body>
+
+  <!-- Facebook SDK for JavaScript -->
+  <script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId: "1784956665094089", // App ID Facebook của bạn
+      xfbml: true,
+      version: "v19.0" // Phiên bản SDK mới hơn
+    });
+  };
+
+  (function(d, s, id){
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) { return; }
+    js = d.createElement(s); js.id = id;
+    js.src = "https://connect.facebook.net/vi_VN/sdk/xfbml.customerchat.js"; // Dùng https đầy đủ
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+</script>
+
+<div class="fb-customerchat" 
+     attribution="biz_inbox" 
+     page_id="697490283449445" 
+     theme_color="#DB4444"
+     logged_in_greeting="Xin chào! Bạn cần hỗ trợ gì không?"
+     logged_out_greeting="Vui lòng đăng nhập Facebook để chat với chúng tôi.">
+</div>
+
 
 </html>
