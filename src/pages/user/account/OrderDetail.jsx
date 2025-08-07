@@ -64,13 +64,21 @@ export default function OrderDetail({ order: orderProp }) {
       setCustomReason('');
       toast.success('Hủy đơn hàng thành công!', { autoClose: 3000 });
     } catch (err) {
-      toast.error('Có lỗi xảy ra khi hủy đơn hàng: ' + (err.message || 'Vui lòng thử lại'), { autoClose: 3000 });
+      toast.error('Có lỗi xảy ra khi hủy đơn hàng: ' + (err || 'Vui lòng thử lại'), { autoClose: 3000 });
     } finally {
       setCancelling(false);
     }
   };
 
-  // Rest of the component remains unchanged
+  // Hàm để lấy giá trị display từ cancellationReason
+  const getCancelReasonDisplay = (reasonValue) => {
+    if (reasonValue === 'OTHER' && order.customCancellationReason) {
+      return order.customCancellationReason;
+    }
+    const reason = cancelReasons.find(r => r.value === reasonValue);
+    return reason ? reason.display : reasonValue;
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
       <div className="text-center">
@@ -125,13 +133,13 @@ export default function OrderDetail({ order: orderProp }) {
                   <Package className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Đơn hàng #{order.orderCode || order.id}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">Đơn hàng #{order.orderCode || order.orderId}</h1>
                   <p className="text-gray-500 text-sm mt-1">
                     Ngày tạo: {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : ''}
                   </p>
                   {order.cancellationReason && order.status === "CANCELLED" && (
                     <p className="text-red-600 text-sm mt-1">
-                      Lý do hủy: {order.cancellationReason}
+                      Lý do hủy: {getCancelReasonDisplay(order.cancellationReason)}
                     </p>
                   )}
                   {order.cancelledAt && order.status === "CANCELLED" && (
@@ -345,7 +353,7 @@ export default function OrderDetail({ order: orderProp }) {
 
                 <div className="mb-6">
                   <p className="text-gray-600 mb-4">
-                    Bạn có chắc chắn muốn hủy đơn hàng <strong>#{order.orderCode || order.id}</strong>?
+                    Bạn có chắc chắn muốn hủy đơn hàng <strong>#{order.orderCode || order.orderId}</strong>?
                   </p>
                   <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
                     Lưu ý: Sau khi hủy đơn hàng, bạn sẽ không thể khôi phục lại được.

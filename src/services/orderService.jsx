@@ -96,10 +96,11 @@ export const getOrderDetail = async (orderId) => {
   }
 };
 
-export const cancelOrder = async (orderId, cancellationReason) => {
+export const cancelOrder = async (orderId, { cancellationReason, customCancellationReason }) => {
   try {
     const response = await axiosInstance.put(`/user/order/cancel/${orderId}`, {
       cancellationReason,
+      customCancellationReason,
     });
     return response.data;
   } catch (error) {
@@ -118,3 +119,5 @@ export const cancelOrder = async (orderId, cancellationReason) => {
     throw error.response?.data || "Có lỗi xảy ra khi hủy đơn hàng";
   }
 };
+
+
