@@ -29,6 +29,21 @@ export default function OrderDetail({ order: orderProp }) {
     { display: 'Khác', value: 'OTHER' },
   ];
 
+  const mapCancelReasonToDisplay = (reason) => {
+  switch (reason) {
+    case 'CHANGE_OF_MIND': return 'Thay đổi ý định';
+    case 'FOUND_BETTER_PRICE': return 'Tìm được giá tốt hơn';
+    case 'ORDERED_BY_MISTAKE': return 'Đặt nhầm sản phẩm';
+    case 'SHIPPING_TOO_SLOW': return 'Thời gian giao hàng quá lâu';
+    case 'ITEM_NOT_AS_EXPECTED': return 'Sản phẩm không như kỳ vọng';
+    case 'CUSTOMER_SERVICE_ISSUE': return 'Vấn đề dịch vụ khách hàng';
+    case 'OTHER': return 'Lý do khác';
+    case 'ADMIN_CANCELED': return 'Hệ thống đã hủy đơn hàng';
+    default: return reason;
+  }
+};
+
+
   useEffect(() => {
     if (orderProp) return;
     if (id) {
@@ -137,9 +152,18 @@ export default function OrderDetail({ order: orderProp }) {
                   <p className="text-gray-500 text-sm mt-1">
                     Ngày tạo: {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : ''}
                   </p>
+                  {/* {order.cancellationReason && order.status === "CANCELLED" && (
+
                   {order.cancellationReason && order.status === "CANCELLED" && (
                     <p className="text-red-600 text-sm mt-1">
                       Lý do hủy: {getCancelReasonDisplay(order.cancellationReason)}
+                    </p>
+                  )} */}
+                   {order.status === "CANCELLED" && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {order.cancellationReason
+                        ? `Lý do hủy: ${mapCancelReasonToDisplay(order.cancellationReason)}`
+                        : 'Lý do hủy: Thanh toán đã bị hủy'}
                     </p>
                   )}
                   {order.cancelledAt && order.status === "CANCELLED" && (
