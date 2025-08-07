@@ -7,7 +7,8 @@ import {
   fetchTopLeastSellingProducts,
   fetchTopViewedProducts,
   trackProductView,
-  fetchRelatedProducts, // Added new import
+  fetchRelatedProducts,
+  fetchTopSellingProductsPaginate, // Added new import
 } from "../../services/productServices";
 import {
   fetchAllProducts,
@@ -112,11 +113,19 @@ export const trackView = createAsyncThunk(
   async (id) => await trackProductView(id)
 );
 
-// New thunk for related products
 export const loadRelatedProducts = createAsyncThunk(
   "products/loadRelated",
   async (id) => await fetchRelatedProducts(id)
 );
+
+export const loadTopSellingProductsPaginate = createAsyncThunk(
+  "products/loadTopSellingPaginate",
+
+  async (params) => {
+    return await fetchTopSellingProductsPaginate(params);
+  }
+);
+
 
 const productSlice = createSlice({
   name: "products",
@@ -130,7 +139,8 @@ const productSlice = createSlice({
     topViewed: [],
     leastViewed: [],
     productsByCategory: [],
-    relatedProducts: [], // Added new state property
+    relatedProducts: [],
+    topSellingPaginated: null, // Added new state property
     loading: false,
     error: null,
   },
@@ -256,6 +266,20 @@ const productSlice = createSlice({
         state.loading = false;
       })
       .addCase(loadRelatedProducts.rejected, (state, action) => {
+        state.error = action.error.message;
+        state.loading = false;
+      })
+
+      // Top Selling Paginated
+      .addCase(loadTopSellingProductsPaginate.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadTopSellingProductsPaginate.fulfilled, (state, action) => {
+        state.topSellingPaginated = action.payload;
+        state.loading = false;
+      })
+      .addCase(loadTopSellingProductsPaginate.rejected, (state, action) => {
         state.error = action.error.message;
         state.loading = false;
       });

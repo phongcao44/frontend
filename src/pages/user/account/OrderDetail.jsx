@@ -145,6 +145,8 @@ export default function OrderDetail({ order: orderProp }) {
                     Ngày tạo: {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : ''}
                   </p>
                   {/* {order.cancellationReason && order.status === "CANCELLED" && (
+
+                  {order.cancellationReason && order.status === "CANCELLED" && (
                     <p className="text-red-600 text-sm mt-1">
                       Lý do hủy: {order.cancellationReason}
                     </p>

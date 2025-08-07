@@ -24,7 +24,6 @@ const CategorySection = () => {
     );
   }, [dispatch]);
 
-  console.log(parentList)
 
   const handleCategoryClick = (id, slug) => {
     setActiveCategoryId((prevId) => (prevId === id ? null : id));

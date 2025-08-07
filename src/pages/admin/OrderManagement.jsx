@@ -488,7 +488,7 @@ export default function OrderManagement() {
                                   navigate(`/admin/orders/${order.orderId}`)
                                 }
                               >
-                                {order.orderId}
+                                {order.orderCode}
                               </div>
                             </div>
                           </div>
@@ -578,7 +578,7 @@ export default function OrderManagement() {
                             navigate(`/admin/orders/${order.orderId}`)
                           }
                         >
-                          {order.orderId}
+                          {order.orderCode}
                         </h3>
                         <p className="text-sm text-gray-500">
                           {formatDate(order.createdAt)}

@@ -8,6 +8,7 @@ export const fetchPaginatedOrders = async ({
   status = "",
   keyword = "",
   userId = "",
+  cancellationReason = ""
 }) => {
   try {
     const response = await axiosInstance.get("/admin/order/paginate", {
@@ -19,6 +20,7 @@ export const fetchPaginatedOrders = async ({
         status,
         keyword,
         userId,
+        cancellationReason
       },
     });
     return response.data;
