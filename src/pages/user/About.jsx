@@ -1,45 +1,62 @@
-import React from 'react';
 
 import AboutImg from '../../assets/images/AboutImg.png';
 import Tom from '../../assets/images/Tom.png';
 import Emma from '../../assets/images/Emma.png';
 import Will from '../../assets/images/will.png';
-import { useEffect } from "react";
 import Services from '../../assets/images/Services.png';
 import Customer from '../../assets/images/customer.png';
 import Money from '../../assets/images/money.png';
+import React, { useState, useEffect } from 'react';
 
 const About = () => {
-  useEffect(() => {
-    if (!document.getElementById("fb-root")) {
-      const fbRoot = document.createElement("div");
-      fbRoot.id = "fb-root";
-      document.body.appendChild(fbRoot);
-    }
-    if (!document.getElementById("facebook-jssdk")) {
-      const script = document.createElement("script");
-      script.id = "facebook-jssdk";
-      script.src = "https://connect.facebook.net/vi_VN/sdk/xfbml.customerchat.js";
-      script.async = true;
-      document.body.appendChild(script);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const membersPerPage = 3;
+  const totalSlides = Math.ceil(team.length / membersPerPage);
+  const startIndex = currentSlide * membersPerPage;
+  const visibleMembers = team.slice(startIndex, startIndex + membersPerPage);
 
-      script.onload = () => {
-        if (window.FB) {
-          window.FB.init({
-            appId: "1784956665094089",
-            xfbml: true,
-            version: "v19.0",
-          });
-          window.FB.XFBML.parse(); // Parse lại để render chat box
-        }
-      };
-    } else {
-      // Nếu SDK đã có rồi thì parse lại luôn
-      if (window.FB) {
-        window.FB.XFBML.parse();
-      }
+  useEffect(() => {
+    // Inject Fchat script
+    const script = document.createElement("script");
+    script.src = "https://cdn.fchat.vn/assets/embed/webchat.js?id=686dc526b7fbfe64fd0f1c82";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script); // Cleanup khi component unmount
+    };
+  }, []);
+
+
+  useEffect(() => {
+    // Định nghĩa window.fbMessengerPlugins nếu chưa có
+    window.fbMessengerPlugins = window.fbMessengerPlugins || {
+      init: function () {
+        FB.init({
+          appId: "1784956665094089",
+          xfbml: true,
+          version: "v3.0",
+        });
+      },
+      callable: [],
+    };
+
+    window.fbAsyncInit = window.fbAsyncInit || function () {
+      window.fbMessengerPlugins.callable.forEach(function (item) {
+        item();
+      });
+      window.fbMessengerPlugins.init();
+    };
+
+    // Thêm script Facebook SDK động
+    if (!document.getElementById("facebook-jssdk")) {
+      const js = document.createElement("script");
+      js.id = "facebook-jssdk";
+      js.src = "//connect.facebook.net/vi_VN/sdk.js";
+      document.body.appendChild(js);
     }
   }, []);
+
 
   return (
     <div style={styles.container}>
@@ -87,7 +104,7 @@ const About = () => {
       <div style={styles.teamSection}>
         <h2 style={styles.sectionTitle}>Meet Our Team</h2>
         <div style={styles.team}>
-          {team.map((member, index) => (
+          {visibleMembers.map((member, index) => (
             <div key={index} style={styles.card}>
               <img src={member.image} alt={member.name} style={styles.avatar} />
               <h4 style={styles.name}>{member.name}</h4>
@@ -101,12 +118,14 @@ const About = () => {
           ))}
         </div>
         <div style={styles.dots}>
-          {[0, 1, 2, 3, 4].map((dot, i) => (
+          {[...Array(totalSlides)].map((_, i) => (
             <span
               key={i}
+              onClick={() => setCurrentSlide(i)}
               style={{
                 ...styles.dot,
-                backgroundColor: i === 2 ? '#DB4444' : '#ccc',
+                backgroundColor: i === currentSlide ? '#DB4444' : '#ccc',
+                cursor: 'pointer',
               }}
             ></span>
           ))}
@@ -136,7 +155,7 @@ const About = () => {
           {/* Bạn có thể thêm các icon khác nếu muốn */}
         </div>
       </div>
-       <div
+      <div
         className="fb-customerchat"
         attribution="biz_inbox"
         page_id="697490283449445"
@@ -144,6 +163,7 @@ const About = () => {
         logged_in_greeting="Xin chào! Bạn cần hỗ trợ gì không?"
         logged_out_greeting="Vui lòng đăng nhập Facebook để chat với chúng tôi."
       ></div>
+      <script type="text/javascript" src="https://cdn.fchat.vn/assets/embed/webchat.js?id=686dc526b7fbfe64fd0f1c82" async="async"></script>
     </div>
   );
 };
@@ -152,14 +172,14 @@ export default About;
 
 const stats = [
   { number: '15K+', label: 'Active Sellers', icon: 'fas fa-store' },
-  { number: '1.2M+', label: 'Monthly Orders', icon: 'fas fa-shopping-cart', highlight: true },
+  { number: '1.2M+', label: 'Monthly Orders', icon: 'fas fa-shopping-cart' },
   { number: '2M+', label: 'Registered Customers', icon: 'fas fa-users' },
   { number: '$120M+', label: 'Annual Gross Merchandise Value', icon: 'fas fa-dollar-sign' },
 ];
 
 const team = [
   {
-    name: 'Tom Cruise',
+    name: 'Nguyễn Minh Dương',
     role: 'Founder & Chairman',
     image: Tom,
     twitter: 'https://twitter.com/tomcruise',
@@ -167,16 +187,56 @@ const team = [
     linkedin: 'https://linkedin.com/in/tomcruise',
   },
   {
-    name: 'Emma Watson',
-    role: 'Managing Director',
+    name: 'Nguyễn Văn Luận',
+    role: 'Manager',
     image: Emma,
     twitter: 'https://twitter.com/emmawatson',
     instagram: 'https://instagram.com/emmawatson',
     linkedin: 'https://linkedin.com/in/emmawatson',
   },
   {
-    name: 'Will Smith',
-    role: 'Product Designer',
+    name: 'Nguyễn Văn Cao',
+    role: 'Manager',
+    image: Will,
+    twitter: 'https://twitter.com/willsmith',
+    instagram: 'https://instagram.com/willsmith',
+    linkedin: 'https://linkedin.com/in/willsmith',
+  },
+  {
+    name: 'Huỳnh Gia Phúc',
+    role: 'developer',
+    image: Will,
+    twitter: 'https://twitter.com/willsmith',
+    instagram: 'https://instagram.com/willsmith',
+    linkedin: 'https://linkedin.com/in/willsmith',
+  },
+  {
+    name: 'Nguyễn Minh Nhật',
+    role: 'developer',
+    image: Will,
+    twitter: 'https://twitter.com/willsmith',
+    instagram: 'https://instagram.com/willsmith',
+    linkedin: 'https://linkedin.com/in/willsmith',
+  },
+  {
+    name: 'Cao Tấn Phong',
+    role: 'developer',
+    image: Will,
+    twitter: 'https://twitter.com/willsmith',
+    instagram: 'https://instagram.com/willsmith',
+    linkedin: 'https://linkedin.com/in/willsmith',
+  },
+  {
+    name: 'Trần Phát Tài',
+    role: 'developer',
+    image: Will,
+    twitter: 'https://twitter.com/willsmith',
+    instagram: 'https://instagram.com/willsmith',
+    linkedin: 'https://linkedin.com/in/willsmith',
+  },
+  {
+    name: 'Nguyễn Quốc Đại',
+    role: 'developer',
     image: Will,
     twitter: 'https://twitter.com/willsmith',
     instagram: 'https://instagram.com/willsmith',
