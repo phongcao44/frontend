@@ -392,8 +392,6 @@ const ProductCard = ({ product, onRemove }) => {
     }
   };
 
-  console.log(wishlistItems);
-
   const handleHeartClick = async (e) => {
     e.stopPropagation();
     if (wishlistLoading) return; // Prevent multiple clicks during loading

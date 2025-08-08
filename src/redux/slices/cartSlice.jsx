@@ -96,7 +96,8 @@ export const checkoutSelectedItemsThunk = createAsyncThunk(
       const token = Cookies.get("access_token");  // Lấy token từ cookie
 
       const res = await axios.post(
-        "http://localhost:8080/api/v1/user/carts/checkout/selected",
+        // "http://localhost:8080/api/v1/user/carts/checkout/selected",
+         `${import.meta.env.VITE_API_URL}/user/carts/checkout/selected`,
         payload,
         {
           headers: {

@@ -101,32 +101,32 @@ export default function OrderSuccessPage() {
                 <span>Tổng tiền</span>
               </div>
               <span className="font-medium">
-                {(currentOrder.totalPrice || 0).toLocaleString("vi-VN")} ₫
+                {(currentOrder.totalAmount || 0).toLocaleString("vi-VN")} ₫
               </span>
             </div>
           </div>
         </Card>
 
         <p className="text-sm text-gray-500 mb-8">
-          Bạn sẽ nhận được email xác nhận chi tiết đơn hàng sớm. Vui lòng kiểm tra hộp thư hoặc mục spam.
+          Bạn vui lòng kiểm tra đơn hàng của mình trong mục "Đơn hàng của tôi" hoặc bấm vào "Xem Đơn Hàng".
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
              to={`/order/${currentOrder.orderId}`}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center whitespace-nowrap"
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center whitespace-nowrap no-underline"
           >
             Xem Đơn Hàng
           </Link>
           <Link
             to="/"
-            className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors text-center whitespace-nowrap"
+            className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors text-center whitespace-nowrap no-underline"
           >
             Tiếp Tục Mua Sắm
           </Link>
           <Link
             to="/support"
-            className="bg-green-100 text-green-700 px-6 py-3 rounded-lg font-medium hover:bg-green-200 transition-colors text-center whitespace-nowrap"
+            className="bg-green-100 text-green-700 px-6 py-3 rounded-lg font-medium hover:bg-green-200 transition-colors text-center whitespace-nowrap no-underline"
           >
             Liên Hệ Hỗ Trợ
           </Link>

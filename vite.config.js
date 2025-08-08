@@ -11,7 +11,7 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: true,
-    allowedHosts: ['dff5f19a4f17.ngrok-free.app'] // 👈 Thêm domain ngrok ở đây
+    allowedHosts: ['fa7a81d9cccc.ngrok-free.app'] // 👈 Thêm domain ngrok ở đây
   }
 
 });

@@ -38,15 +38,34 @@ const debounce = (func, wait) => {
     };
 };
 
+// Function to translate cancellation reason
+const translateCancellationReason = (reason, customReason) => {
+    if (reason === "OTHER" && customReason) {
+        return customReason;
+    }
+    const reasonMap = {
+        CHANGE_OF_MIND: "Thay đổi ý định",
+        FOUND_BETTER_PRICE: "Tìm thấy giá tốt hơn",
+        ORDERED_BY_MISTAKE: "Đặt nhầm",
+        SHIPPING_TOO_SLOW: "Giao hàng quá chậm",
+        ITEM_NOT_AS_EXPECTED: "Sản phẩm không như kỳ vọng",
+        CUSTOMER_SERVICE_ISSUE: "Vấn đề dịch vụ khách hàng",
+        OTHER: "Lý do khác",
+        ADMIN_CANCELED: "Quản trị viên hủy",
+    };
+    return reasonMap[reason] || "Không xác định";
+};
+
 export default function OrderCancelled() {
-    const [activeTab, setActiveTab] = useState("Tất cả đơn hàng");
+    const [activeTab, setActiveTab] = useState("Đơn hàng đã hủy");
     const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
-    const [itemsPerPage, setItemsPerPage] = useState(10); // State for items per page
+    const [itemsPerPage, setItemsPerPage] = useState(10);
     const [sortBy, setSortBy] = useState("createdAt");
     const [orderBy, setOrderBy] = useState("desc");
-    const [statusFilter, setStatusFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("CANCELLED");
+    const [cancellationReasonFilter, setCancellationReasonFilter] = useState("");
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -54,28 +73,24 @@ export default function OrderCancelled() {
     const loading = useSelector((state) => state.order.loading || false);
     const error = useSelector((state) => state.order.error || null);
     const totalPages = useSelector((state) => state.order.list?.totalPages || 1);
-    const totalElements = useSelector((state) => {
-       const order = state.order.list?.totalElements || [];
-        return orders.filter((order) => order.status === "CANCELLED").length;
-});
-
+    const totalElements = useSelector((state) => state.order.list?.totalElements || 0);
 
     // Debounced function to handle search
     const debouncedSearch = useCallback(
         debounce((value) => {
             dispatch(
                 loadPaginatedOrders({
-                    page: 0, // Reset to first page on search
+                    page: 0,
                     limit: itemsPerPage,
                     sortBy,
                     orderBy,
-                    status:
-                        statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+                    status: statusFilter,
                     keyword: value,
+                    cancellationReason: cancellationReasonFilter,
                 })
             ).finally(() => setTimeout(() => setIsLoading(false), 500));
         }, 500),
-        [dispatch, itemsPerPage, sortBy, orderBy, statusFilter, activeTab]
+        [dispatch, itemsPerPage, sortBy, orderBy, statusFilter, cancellationReasonFilter]
     );
 
     // Handle search input change
@@ -96,9 +111,9 @@ export default function OrderCancelled() {
                 limit: itemsPerPage,
                 sortBy,
                 orderBy,
-                status:
-                    statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+                status: statusFilter,
                 keyword: searchTerm,
+                cancellationReason: cancellationReasonFilter,
             })
         ).finally(() => setTimeout(() => setIsLoading(false), 500));
     };
@@ -111,19 +126,19 @@ export default function OrderCancelled() {
                 limit: itemsPerPage,
                 sortBy,
                 orderBy,
-                status:
-                    statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+                status: statusFilter,
                 keyword: searchTerm,
+                cancellationReason: cancellationReasonFilter,
             })
         ).finally(() => setTimeout(() => setIsLoading(false), 500));
     }, [
         dispatch,
         currentPage,
         itemsPerPage,
-        activeTab,
         sortBy,
         orderBy,
         statusFilter,
+        cancellationReasonFilter,
     ]);
 
     useEffect(() => {
@@ -140,20 +155,16 @@ export default function OrderCancelled() {
         }
     };
 
-    const handleStatusFilterChange = (e) => {
+    const handleCancellationReasonFilterChange = (e) => {
         const value = e.target.value;
-        setStatusFilter(value);
+        setCancellationReasonFilter(value);
         setCurrentPage(0);
-        if (value) {
-            setActiveTab("Tất cả đơn hàng");
-        }
     };
 
     const tabs = [
-        { name: "Tất cả đơn hàng", count: totalElements },
+        { name: "Đơn hàng đã hủy", count: totalElements },
+        { name: "Hủy theo trạng thái", count: orders.filter((order) => order.status === "CANCELLED" && (!cancellationReasonFilter || order.cancellationReason === cancellationReasonFilter)).length },
     ];
-
-
 
     const handleRefresh = () => {
         setIsLoading(true);
@@ -163,9 +174,9 @@ export default function OrderCancelled() {
                 limit: itemsPerPage,
                 sortBy,
                 orderBy,
-                status:
-                    statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+                status: statusFilter,
                 keyword: searchTerm,
+                cancellationReason: cancellationReasonFilter,
             })
         ).finally(() => setTimeout(() => setIsLoading(false), 500));
     };
@@ -188,20 +199,18 @@ export default function OrderCancelled() {
 
     // Filter out invalid orders and log issues for debugging
     const validOrders = orders.filter((order) => {
-  if (!order || !order.orderId) {
-    console.warn("Invalid order detected:", order);
-    return false;
-  }
-  return order.status === "CANCELLED";
-});
+        if (!order || !order.orderCode) {
+            console.warn("Invalid order detected:", order);
+            return false;
+        }
+        return order.status === "CANCELLED";
+    });
 
     const totalRevenue = validOrders.reduce(
         (sum, order) => sum + Number(order.totalAmount || 0),
         0
-    );;
-    const cancelledOrders = validOrders.filter(
-        (o) => o.status === "CANCELLED"
-    ).length;
+    );
+    const cancelledOrders = validOrders.length;
     const todayOrders = validOrders.filter((o) => {
         if (!o.createdAt) return false;
         const orderDate = new Date(o.createdAt);
@@ -209,10 +218,16 @@ export default function OrderCancelled() {
         return orderDate.toDateString() === today.toDateString();
     }).length;
 
-    const statusOptions = [
-        { value: "CANCELLED", label: "Tất cả đơn hàng đã hủy" },
-        { value: "", label: "Đơn hàng đã hủy theo trạng thái" },
-
+    const cancellationReasonOptions = [
+        { value: "", label: "Tất cả lý do hủy" },
+        { value: "CHANGE_OF_MIND", label: "Thay đổi ý định" },
+        { value: "FOUND_BETTER_PRICE", label: "Tìm thấy giá tốt hơn" },
+        { value: "ORDERED_BY_MISTAKE", label: "Đặt nhầm" },
+        { value: "SHIPPING_TOO_SLOW", label: "Giao hàng quá chậm" },
+        { value: "ITEM_NOT_AS_EXPECTED", label: "Sản phẩm không như kỳ vọng" },
+        { value: "CUSTOMER_SERVICE_ISSUE", label: "Vấn đề dịch vụ khách hàng" },
+        { value: "OTHER", label: "Lý do khác" },
+        { value: "ADMIN_CANCELED", label: "Quản trị viên hủy" },
     ];
 
     return (
@@ -222,10 +237,10 @@ export default function OrderCancelled() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                         <div className="mb-4 sm:mb-0">
                             <h1 className="text-3xl font-bold text-gray-900">
-                                Quản lý đơn hàng
+                                Quản lý đơn hàng đã hủy
                             </h1>
                             <p className="text-sm text-gray-600 mt-1">
-                                Theo dõi và quản lý tất cả đơn hàng của bạn
+                                Theo dõi và quản lý tất cả đơn hàng đã hủy của bạn
                             </p>
                         </div>
                         <div className="flex items-center space-x-3">
@@ -265,12 +280,12 @@ export default function OrderCancelled() {
                                 onClick={() => {
                                     setActiveTab(tab.name);
                                     setCurrentPage(0);
-                                    if (tab.name === "Tất cả đơn hàng") {
-                                        setStatusFilter("");
-                                    } else if (tab.name === "Tất cả đơn hàng đã hủy") {
+                                    if (tab.name === "Đơn hàng đã hủy") {
+                                        setStatusFilter("CANCELLED");
+                                        setCancellationReasonFilter("");
+                                    } else {
                                         setStatusFilter("CANCELLED");
                                     }
-
                                 }}
                                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${activeTab === tab.name
                                     ? "border-blue-600 text-blue-600"
@@ -355,17 +370,19 @@ export default function OrderCancelled() {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                         <div className="flex items-center space-x-3">
-                            <select
-                                value={statusFilter}
-                                onChange={handleStatusFilterChange}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                                {statusOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
+                            {activeTab === "Hủy theo trạng thái" && (
+                                <select
+                                    value={cancellationReasonFilter}
+                                    onChange={handleCancellationReasonFilterChange}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    {cancellationReasonOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
                             <select
                                 onChange={(e) => {
                                     const [newSortBy, newOrderBy] = e.target.value.split(":");
@@ -440,10 +457,10 @@ export default function OrderCancelled() {
                                                 Ngày tạo
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                                Khách hàng
+                                                Trạng thái
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                                Trạng thái
+                                                Lý do hủy
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                                 Thanh toán
@@ -455,6 +472,9 @@ export default function OrderCancelled() {
                                                 Tổng tiền
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                Khách hàng
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                                 Hành động
                                             </th>
                                         </tr>
@@ -462,7 +482,7 @@ export default function OrderCancelled() {
                                     <tbody className="bg-white divide-y divide-gray-200">
                                         {validOrders.map((order) => (
                                             <tr
-                                                key={order.orderId}
+                                                key={order.orderCode}
                                                 className="hover:bg-gray-50 transition-colors"
                                             >
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -474,28 +494,16 @@ export default function OrderCancelled() {
                                                             <div
                                                                 className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
                                                                 onClick={() =>
-                                                                    navigate(`/admin/orders/${order.orderId}`)
+                                                                    navigate(`/admin/orders/${order.orderCode}`)
                                                                 }
                                                             >
-                                                                {order.orderId}
+                                                                {order.orderCode}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     {formatDate(order.createdAt)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white font-medium text-sm">
-                                                            <User className="h-4 w-4" />
-                                                        </div>
-                                                        <div className="ml-3">
-                                                            <div className="text-sm font-medium text-gray-900">
-                                                                {order.username || "Khách vãng lai"}
-                                                            </div>
-                                                        </div>
-                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span
@@ -509,8 +517,9 @@ export default function OrderCancelled() {
                                                         </span>
                                                     </span>
                                                 </td>
-
-
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {translateCancellationReason(order.cancellationReason, order.customCancellationReason)}
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span
                                                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentColor(
@@ -521,15 +530,27 @@ export default function OrderCancelled() {
                                                         {translatePaymentStatus(order.payment?.status)}
                                                     </span>
                                                 </td>
-                                                                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${getPaymentMethodColor(order.paymentMethod)}-100 text-${getPaymentMethodColor(order.paymentMethod)}-800`}
-                          >
-                            {translatePaymentMethod(order.paymentMethod)}
-                          </span>
-                        </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span
+                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${getPaymentMethodColor(order.paymentMethod)}-100 text-${getPaymentMethodColor(order.paymentMethod)}-800`}
+                                                    >
+                                                        {translatePaymentMethod(order.paymentMethod)}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                                                     {formatCurrency(order.totalAmount)}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white font-medium text-sm">
+                                                            <User className="h-4 w-4" />
+                                                        </div>
+                                                        <div className="ml-3">
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {order.username || "Khách vãng lai"}
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center space-x-2">
@@ -548,7 +569,7 @@ export default function OrderCancelled() {
                         <div className="lg:hidden space-y-4">
                             {validOrders.map((order) => (
                                 <div
-                                    key={order.orderId}
+                                    key={order.orderCode}
                                     className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
                                 >
                                     <div className="flex items-start justify-between mb-4">
@@ -560,10 +581,10 @@ export default function OrderCancelled() {
                                                 <h3
                                                     className="text-lg font-semibold text-blue-600 cursor-pointer hover:text-blue-800"
                                                     onClick={() =>
-                                                        navigate(`/admin/orders/${order.orderId}`)
+                                                        navigate(`/admin/orders/${order.orderCode}`)
                                                     }
                                                 >
-                                                    {order.orderId}
+                                                    {order.orderCode}
                                                 </h3>
                                                 <p className="text-sm text-gray-500">
                                                     {formatDate(order.createdAt)}
@@ -585,11 +606,11 @@ export default function OrderCancelled() {
                                     <div className="space-y-3 mb-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center text-sm text-gray-600">
-                                                <User className="h-4 w-4 mr-2" />
-                                                <span>Khách hàng:</span>
+                                                <Clock className="h-4 w-4 mr-2" />
+                                                <span>Lý do hủy:</span>
                                             </div>
                                             <span className="text-sm font-medium">
-                                                {order.username || "Khách vãng lai"}
+                                                {translateCancellationReason(order.cancellationReason, order.customCancellationReason)}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between">
@@ -607,6 +628,17 @@ export default function OrderCancelled() {
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center text-sm text-gray-600">
+                                                <CreditCard className="h-4 w-4 mr-2" />
+                                                <span>Phương thức:</span>
+                                            </div>
+                                            <span
+                                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${getPaymentMethodColor(order.paymentMethod)}-100 text-${getPaymentMethodColor(order.paymentMethod)}-800`}
+                                            >
+                                                {translatePaymentMethod(order.paymentMethod)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center text-sm text-gray-600">
                                                 <DollarSign className="h-4 w-4 mr-2" />
                                                 <span>Tổng tiền:</span>
                                             </div>
@@ -616,14 +648,12 @@ export default function OrderCancelled() {
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center text-sm text-gray-600">
-                                                <CreditCard className="h-4 w-4 mr-2" />
-                                                <span>Phương thức:</span>
+                                                <User className="h-4 w-4 mr-2" />
+                                                <span>Khách hàng:</span>
                                             </div>
-                                                                  <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-${getPaymentMethodColor(order.paymentMethod)}-100 text-${getPaymentMethodColor(order.paymentMethod)}-800`}
-                      >
-                        {translatePaymentMethod(order.paymentMethod)}
-                      </span>
+                                            <span className="text-sm font-medium">
+                                                {order.username || "Khách vãng lai"}
+                                            </span>
                                         </div>
                                     </div>
 

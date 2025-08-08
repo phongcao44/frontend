@@ -19,8 +19,7 @@ const Promo = () => {
   const navigate = useNavigate();
 
   const handleBuyNow = () => {
-    console.log("Navigating to product:", top1FlashSale.productId);
-    navigate(`/product/${top1FlashSale.productId}`);
+    navigate(`/product/${top1FlashSale.slug}`);
     
   };
 

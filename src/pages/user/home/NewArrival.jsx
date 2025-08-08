@@ -18,10 +18,12 @@ const NewArrival = () => {
     dispatch(loadNewArrivals());
   }, [dispatch]);
 
+
   useEffect(() => {
     if (newArrivals?.data?.content?.length) {
       const formattedProducts = newArrivals.data.content.map((product) => ({
         id: product.id,
+        slug: product.slug,
         title: product.name || "Untitled Product",
         subtitle: product.description || "New Arrival",
         image: product.imageUrl || "default-image-url.jpg",
@@ -32,8 +34,8 @@ const NewArrival = () => {
 
 
 
-  const handleShopNow = (productId) => {
-    navigate(`/product/${productId}`); 
+  const handleShopNow = (productSlug) => {
+    navigate(`/product/${productSlug}`); 
   };
 
   return (
@@ -104,7 +106,7 @@ const NewArrival = () => {
                       fontSize: "16px",
                       fontWeight: 500,
                     }}
-                    onClick={() => handleShopNow(productCards[0].id)} // Add onClick handler
+                    onClick={() => handleShopNow(productCards[0].slug)} // Add onClick handler
                   >
                     Shop Now
                   </Button>
@@ -158,7 +160,7 @@ const NewArrival = () => {
                           fontSize: "14px",
                           fontWeight: 500,
                         }}
-                        onClick={() => handleShopNow(productCards[1].id)} // Add onClick handler
+                        onClick={() => handleShopNow(productCards[1].slug)} // Add onClick handler
                       >
                         Shop Now
                       </Button>
@@ -213,7 +215,7 @@ const NewArrival = () => {
                               fontSize: "12px",
                               fontWeight: 500,
                             }}
-                            onClick={() => handleShopNow(productCards[2].id)} 
+                            onClick={() => handleShopNow(productCards[2].slug)} 
                           >
                             Shop Now
                           </Button>
@@ -266,7 +268,7 @@ const NewArrival = () => {
                               fontSize: "12px",
                               fontWeight: 500,
                             }}
-                            onClick={() => handleShopNow(productCards[3].id)} 
+                            onClick={() => handleShopNow(productCards[3].slug)} 
                           >
                             Shop Now
                           </Button>

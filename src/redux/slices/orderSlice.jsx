@@ -68,7 +68,8 @@ export const loadPaginatedOrders = createAsyncThunk(
       orderBy = "desc",
       status = "",
       keyword = "",
-      userId = "", 
+      userId = "",
+      cancellationReason = ""
     },
     { rejectWithValue }
   ) => {
@@ -80,7 +81,8 @@ export const loadPaginatedOrders = createAsyncThunk(
         orderBy,
         status,
         keyword,
-        userId, 
+        userId,
+        cancellationReason
       });
       return data;
     } catch (error) {

@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchMyOrderDetail, cancelUserOrder } from "../../../redux/slices/orderSlice";
 import { toast } from "react-toastify";
 import { Package, MapPin, CreditCard, Gift, ArrowLeft, X, Truck, CheckCircle, XCircle, AlertCircle, RotateCcw, Clock } from 'lucide-react';
-import 'react-toastify/dist/ReactToastify.css'; 
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function OrderDetail({ order: orderProp }) {
   const { id } = useParams();
@@ -18,15 +18,31 @@ export default function OrderDetail({ order: orderProp }) {
   const [customReason, setCustomReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
+  // Map frontend display reasons to backend CancelReason enum
   const cancelReasons = [
-    'Tôi muốn thay đổi địa chỉ giao hàng',
-    'Tôi muốn thay đổi sản phẩm trong đơn hàng',
-    'Tôi tìm được giá tốt hơn ở nơi khác',
-    'Tôi không cần sản phẩm này nữa',
-    'Đặt nhầm sản phẩm',
-    'Thời gian giao hàng quá lâu',
-    'Khác'
+    { display: 'Thay đổi ý định', value: 'CHANGE_OF_MIND' },
+    { display: 'Tìm được giá tốt hơn', value: 'FOUND_BETTER_PRICE' },
+    { display: 'Đặt nhầm sản phẩm', value: 'ORDERED_BY_MISTAKE' },
+    { display: 'Thời gian giao hàng quá lâu', value: 'SHIPPING_TOO_SLOW' },
+    { display: 'Sản phẩm không như kỳ vọng', value: 'ITEM_NOT_AS_EXPECTED' },
+    { display: 'Vấn đề dịch vụ khách hàng', value: 'CUSTOMER_SERVICE_ISSUE' },
+    { display: 'Khác', value: 'OTHER' },
   ];
+
+  const mapCancelReasonToDisplay = (reason) => {
+  switch (reason) {
+    case 'CHANGE_OF_MIND': return 'Thay đổi ý định';
+    case 'FOUND_BETTER_PRICE': return 'Tìm được giá tốt hơn';
+    case 'ORDERED_BY_MISTAKE': return 'Đặt nhầm sản phẩm';
+    case 'SHIPPING_TOO_SLOW': return 'Thời gian giao hàng quá lâu';
+    case 'ITEM_NOT_AS_EXPECTED': return 'Sản phẩm không như kỳ vọng';
+    case 'CUSTOMER_SERVICE_ISSUE': return 'Vấn đề dịch vụ khách hàng';
+    case 'OTHER': return 'Lý do khác';
+    case 'ADMIN_CANCELED': return 'Hệ thống đã hủy đơn hàng';
+    default: return reason;
+  }
+};
+
 
   useEffect(() => {
     if (orderProp) return;
@@ -45,26 +61,31 @@ export default function OrderDetail({ order: orderProp }) {
       return;
     }
 
-    if (cancelReason === 'Khác' && !customReason.trim()) {
-      toast.error('Vui lòng nhập lý do hủy đơn hàng', { autoClose: 3000 });
+    if (cancelReason === 'OTHER' && !customReason.trim()) {
+      toast.error('Vui lòng nhập lý do hủy cụ thể', { autoClose: 3000 });
       return;
     }
 
     try {
       setCancelling(true);
-      const reason = cancelReason === 'Khác' ? customReason : cancelReason;
-      await dispatch(cancelUserOrder({ orderId: order.orderId, cancellationReason: reason })).unwrap();
+      const payload = {
+        orderId: order.orderId,
+        cancellationReason: cancelReason,
+        ...(cancelReason === 'OTHER' && { customCancellationReason: customReason }),
+      };
+      await dispatch(cancelUserOrder(payload)).unwrap();
       setShowCancelModal(false);
       setCancelReason('');
       setCustomReason('');
       toast.success('Hủy đơn hàng thành công!', { autoClose: 3000 });
     } catch (err) {
-      toast.error('Có lỗi xảy ra khi hủy đơn hàng: ' + (err || 'Vui lòng thử lại'), { autoClose: 3000 });
+      toast.error('Có lỗi xảy ra khi hủy đơn hàng: ' + (err.message || 'Vui lòng thử lại'), { autoClose: 3000 });
     } finally {
       setCancelling(false);
     }
   };
 
+  // Rest of the component remains unchanged
   if (loading) return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
       <div className="text-center">
@@ -73,7 +94,7 @@ export default function OrderDetail({ order: orderProp }) {
       </div>
     </div>
   );
-  
+
   if (error) return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
       <div className="text-center">
@@ -82,7 +103,7 @@ export default function OrderDetail({ order: orderProp }) {
       </div>
     </div>
   );
-  
+
   if (!order) return null;
 
   const statusColor = {
@@ -107,7 +128,6 @@ export default function OrderDetail({ order: orderProp }) {
     }
   };
 
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-6xl mx-auto p-6">
@@ -124,12 +144,21 @@ export default function OrderDetail({ order: orderProp }) {
                   <p className="text-gray-500 text-sm mt-1">
                     Ngày tạo: {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : ''}
                   </p>
-                  {order.cancellationReason && order.status === "CANCELLED"  && (
+                  {/* {order.cancellationReason && order.status === "CANCELLED" && (
+
+                  {order.cancellationReason && order.status === "CANCELLED" && (
                     <p className="text-red-600 text-sm mt-1">
                       Lý do hủy: {order.cancellationReason}
                     </p>
+                  )} */}
+                   {order.status === "CANCELLED" && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {order.cancellationReason
+                        ? `Lý do hủy: ${mapCancelReasonToDisplay(order.cancellationReason)}`
+                        : 'Lý do hủy: Thanh toán đã bị hủy'}
+                    </p>
                   )}
-                  {order.cancelledAt && order.status === "CANCELLED"  && (
+                  {order.cancelledAt && order.status === "CANCELLED" && (
                     <p className="text-gray-500 text-sm mt-1">
                       Thời gian hủy: {new Date(order.cancelledAt).toLocaleString("vi-VN")}
                     </p>
@@ -167,7 +196,7 @@ export default function OrderDetail({ order: orderProp }) {
                   <p className="text-gray-600 text-sm">{order.customer?.email}</p>
                 </div>
               </div>
-              
+
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
@@ -197,7 +226,7 @@ export default function OrderDetail({ order: orderProp }) {
                 </div>
                 <p className="text-gray-700 font-medium">{order.paymentMethod}</p>
               </div>
-              
+
               {order.voucher && (
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
                   <div className="flex items-center gap-3 mb-4">
@@ -222,7 +251,7 @@ export default function OrderDetail({ order: orderProp }) {
                 </div>
                 <h3 className="font-semibold text-gray-900 text-lg">Danh sách sản phẩm</h3>
               </div>
-              
+
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
@@ -357,18 +386,18 @@ export default function OrderDetail({ order: orderProp }) {
                         <input
                           type="radio"
                           name="cancelReason"
-                          value={reason}
-                          checked={cancelReason === reason}
+                          value={reason.value}
+                          checked={cancelReason === reason.value}
                           onChange={(e) => setCancelReason(e.target.value)}
                           className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                         />
-                        <span className="ml-2 text-sm text-gray-700">{reason}</span>
+                        <span className="ml-2 text-sm text-gray-700">{reason.display}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                {cancelReason === 'Khác' && (
+                {cancelReason === 'OTHER' && (
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nhập lý do cụ thể <span className="text-red-500">*</span>
@@ -392,7 +421,7 @@ export default function OrderDetail({ order: orderProp }) {
                   </button>
                   <button
                     onClick={handleCancelOrder}
-                    disabled={cancelling || !cancelReason || (cancelReason === 'Khác' && !customReason.trim())}
+                    disabled={cancelling || !cancelReason || (cancelReason === 'OTHER' && !customReason.trim())}
                     className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
                   >
                     {cancelling ? (

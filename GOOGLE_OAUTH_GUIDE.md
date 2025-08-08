@@ -1,44 +1,44 @@
 # Google OAuth2 Implementation Guide
 
-## Tổng quan
+--- Tổng quan
 Hệ thống đã được tích hợp Google OAuth2 để cho phép người dùng đăng nhập bằng tài khoản Google.
 
-## Luồng hoạt động
+--- Luồng hoạt động
 
-### 1. Khởi tạo đăng nhập Google
+1. Khởi tạo đăng nhập Google
 - Người dùng click nút "Đăng nhập với Google" trên trang Login
 - Frontend gọi API `GET /api/v1/auth/google-login` để lấy URL redirect
 - Frontend redirect người dùng đến Google OAuth consent screen
 
-### 2. Xử lý callback từ Google
+2. Xử lý callback từ Google
 - Sau khi người dùng xác thực thành công, Google redirect về `http://localhost:5173/oauth2/redirect`
 - Frontend trích xuất `code` từ URL parameters
 - Frontend gửi `code` lên backend qua API `POST /api/v1/auth/google/code`
 
-### 3. Xử lý token và đăng nhập
+3. Xử lý token và đăng nhập
 - Backend trao đổi `code` với Google để lấy access token
 - Backend lấy thông tin user từ Google
 - Backend tạo hoặc cập nhật user trong database
 - Backend trả về JWT token cho frontend
 - Frontend lưu token và redirect người dùng dựa trên role
 
-## Các file đã tạo/cập nhật
+--- Các file đã tạo/cập nhật
 
-### Services
+--- Services
 - `src/services/authService.jsx` - Đã tích hợp Google OAuth functions
 
-### Pages
+--- Pages
 - `src/pages/user/OAuth2Redirect.jsx` - Trang xử lý callback từ Google
 
-### Redux
+--- Redux
 - `src/redux/slices/authSlice.jsx` - Thêm actions cho Google OAuth
 
-### Routes
+--- Routes
 - `src/routes/UserRoutes.jsx` - Thêm route `/oauth2/redirect`
 
-## Cách sử dụng
+--- Cách sử dụng
 
-### 1. Đăng nhập Google
+1. Đăng nhập Google
 ```jsx
 import { initiateGoogleLogin } from '../redux/slices/authSlice';
 
@@ -57,7 +57,7 @@ const Login = () => {
 };
 ```
 
-### 2. Xử lý callback
+2. Xử lý callback
 ```jsx
 import { googleLoginUser, handleGoogleCallback } from '../redux/slices/authSlice';
 
@@ -79,34 +79,34 @@ const OAuth2Redirect = () => {
 };
 ```
 
-## Cấu hình Backend
+--- Cấu hình Backend
 
-### 1. Google OAuth Credentials
+1. Google OAuth Credentials
 - Tạo project trên Google Cloud Console
 - Enable Google+ API
 - Tạo OAuth 2.0 credentials
 - Thêm redirect URI: `http://localhost:5173/oauth2/redirect`
 
-### 2. Environment Variables
+2. Environment Variables
 ```properties
 google.client.id=your_google_client_id
 google.client.secret=your_google_client_secret
 ```
 
-### 3. Backend Endpoints
+3. Backend Endpoints
 - `GET /api/v1/auth/google-login` - Lấy Google OAuth URL
 - `POST /api/v1/auth/google/code` - Xử lý authorization code
 
-## Testing
+--- Testing
 
 1. Test flow đăng nhập Google hoàn chỉnh
 2. Test error handling khi Google trả về lỗi
 3. Test redirect dựa trên user roles
 4. Test token persistence và session management
 
-## Troubleshooting
+--- Troubleshooting
 
-### Lỗi thường gặp
+--- Lỗi thường gặp
 
 1. **"Invalid redirect_uri"**
    - Kiểm tra redirect URI trong Google Cloud Console

@@ -87,3 +87,23 @@ export const getUserVouchers = async () => {
     throw error.response?.data || error.message;
   }
 };
+
+// User - get unused vouchers
+export const getUnusedVouchers = async () => {
+  try {
+    const res = await axiosInstance.get("/user/voucher/viewVoucherFalse");
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// User - get used vouchers
+export const getUsedVouchers = async () => {
+  try {
+    const res = await axiosInstance.get("/user/voucher/viewVoucherTrue");
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
