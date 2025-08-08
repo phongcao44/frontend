@@ -117,15 +117,19 @@ export const fetchMyOrderDetail = createAsyncThunk(
 
 export const cancelUserOrder = createAsyncThunk(
   "order/cancelUserOrder",
-  async ({ orderId, cancellationReason }, { rejectWithValue }) => {
+  async ({ orderId, cancellationReason, customCancellationReason }, { rejectWithValue }) => {
     try {
-      const data = await cancelOrder(orderId, cancellationReason);
+      const data = await cancelOrder(orderId, {
+        cancellationReason,
+        customCancellationReason,
+      });
       return data;
     } catch (error) {
       return rejectWithValue(error.message || "Failed to cancel order");
     }
   }
 );
+
 
 const orderSlice = createSlice({
   name: "order",

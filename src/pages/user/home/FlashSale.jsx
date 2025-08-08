@@ -73,6 +73,7 @@ useEffect(() => {
 
 
 
+
   return (
     <div className="py-10 px-5 bg-white">
       <div className="max-w-6xl mx-auto">

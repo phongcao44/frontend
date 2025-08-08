@@ -13,7 +13,7 @@ import {
 import Cookies from "js-cookie";
 import { saveAuthToStorage, clearAuthFromStorage, getAuthFromStorage } from "../../utils/authUtils";
 import api from "../../services/api";
-
+import { resetCart } from "./cartSlice";
 export const loginUser = createAsyncThunk(
   "auth/login",
   async (formLogin, { rejectWithValue }) => {
@@ -74,12 +74,16 @@ export const logoutUser = createAsyncThunk(
       clearAuthFromStorage();
       Cookies.remove("access_token");
       Cookies.remove("user");
+            dispatch(resetCart()); // reset giỏ hàng
+
       return data;
     } catch (error) {
       // Even if logout API fails, clear local storage and cookies
       clearAuthFromStorage();
       Cookies.remove("access_token");
       Cookies.remove("user");
+            dispatch(resetCart()); // reset giỏ hàng
+
       return rejectWithValue(error.response?.data || error.message);
     }
   }

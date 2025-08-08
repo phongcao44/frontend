@@ -97,7 +97,7 @@ export const checkoutSelectedItemsThunk = createAsyncThunk(
 
       const res = await axios.post(
         // "http://localhost:8080/api/v1/user/carts/checkout/selected",
-         `${import.meta.env.VITE_API_URL}/user/carts/checkout/selected`,
+        `${import.meta.env.VITE_API_URL}/user/carts/checkout/selected`,
         payload,
         {
           headers: {
@@ -129,7 +129,13 @@ const cartSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    resetCart: (state) => {
+      state.cart = { items: [] }; // Reset đúng cấu trúc state
+      state.loading = false;
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       // === getCart ===
@@ -250,5 +256,5 @@ const cartSlice = createSlice({
       });
   },
 });
-
+export const { resetCart } = cartSlice.actions;
 export default cartSlice.reducer; 

@@ -5,7 +5,11 @@ import { useNavigate } from "react-router-dom";
 const CartIcon = () => {
   const navigate = useNavigate();
   const cart = useSelector((state) => state.cart.cart);
-  const totalQuantity = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+
+  const totalQuantity = (cart?.items || []).reduce(
+    (sum, item) => sum + (item.quantity || 0),
+    0
+  );
 
   return (
     <div
@@ -41,7 +45,7 @@ const badgeStyle = {
   lineHeight: "1",
   minWidth: 20,
   textAlign: "center",
-  boxShadow: "0 0 0 2px white", // viền ngoài trắng
+  boxShadow: "0 0 0 2px white",
   animation: "badge-pop 0.3s ease-in-out",
 };
 
