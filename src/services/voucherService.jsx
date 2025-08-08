@@ -25,11 +25,9 @@ export const updateVoucher = async (voucherId, data) => {
 
 
 // Admin - delete voucher
-export const deleteVoucher = async (data) => {
+export const deleteVoucher = async (voucherId) => {
   try {
-    const res = await axiosInstance.delete("/admin/voucher/delete", {
-      data, 
-    });
+    const res = await axiosInstance.delete(`/admin/voucher/delete/${voucherId}`);
     return res.data;
   } catch (error) {
     throw error.response?.data || error.message;

@@ -145,14 +145,41 @@ const About = () => {
         ))}
       </div>
 
-      {/* Thêm phần Social Media ở cuối trang */}
-      <div style={styles.socialFollowSection}>
-        <h3 style={styles.socialFollowTitle}>Follow Us On Social Media</h3>
-        <div style={styles.socialIcons}>
-          <a href="https://www.facebook.com/ecommerce122" target="_blank" rel="noopener noreferrer" style={styles.socialLink}>
-            <i className="fab fa-facebook-f" style={{ fontSize: 28, color: '#1877F2' }}></i>
-          </a>
-          {/* Bạn có thể thêm các icon khác nếu muốn */}
+      {/* Payment Methods + Social inline */}
+      <div style={styles.bottomRow}>
+        {/* Social (left) */}
+        <div style={styles.socialFollowSection}>
+          <h3 style={styles.socialFollowTitle}>Follow Us On Social Media</h3>
+          <div style={styles.socialIcons}>
+            <a href="https://www.facebook.com/ecommerce122" target="_blank" rel="noopener noreferrer" style={styles.socialLink}>
+              <i className="fab fa-facebook-f" style={{ fontSize: 28, color: '#1877F2' }}></i>
+            </a>
+          </div>
+        </div>
+
+        {/* Payment (right) */}
+        <div style={styles.paymentInline}>
+          <h3 style={styles.paymentTitle}>Phương thức thanh toán</h3>
+          <div style={styles.paymentLogoRow}>
+            {/* VNPay Logo */}
+            <img
+              src="https://vnpay.vn/s1/statics.vnpay.vn/2023/6/0oxhzjmxbksr1686814746087.png"
+              alt="VNPay"
+              title="VNPay"
+              style={styles.paymentLogoImg}
+            />
+            {/* COD Chip */}
+            <div style={styles.paymentChip} title="Thanh toán khi nhận hàng">
+              <span style={styles.paymentChipText}>COD</span>
+            </div>
+            {/* MoMo Logo */}
+            <img
+              src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png"
+              alt="MoMo"
+              title="MoMo"
+              style={styles.paymentLogoImg}
+            />
+          </div>
         </div>
       </div>
       <div
@@ -204,15 +231,15 @@ const team = [
   },
   {
     name: 'Huỳnh Gia Phúc',
-    role: 'developer',
+    role: 'Developer',
     image: Will,
     twitter: 'https://twitter.com/willsmith',
     instagram: 'https://instagram.com/willsmith',
     linkedin: 'https://linkedin.com/in/willsmith',
   },
   {
-    name: 'Nguyễn Minh Nhật',
-    role: 'developer',
+    name: 'Lê Minh Nhựt',
+    role: 'Developer',
     image: Will,
     twitter: 'https://twitter.com/willsmith',
     instagram: 'https://instagram.com/willsmith',
@@ -220,7 +247,7 @@ const team = [
   },
   {
     name: 'Cao Tấn Phong',
-    role: 'developer',
+    role: 'Developer',
     image: Will,
     twitter: 'https://twitter.com/willsmith',
     instagram: 'https://instagram.com/willsmith',
@@ -228,7 +255,7 @@ const team = [
   },
   {
     name: 'Trần Phát Tài',
-    role: 'developer',
+    role: 'Developer',
     image: Will,
     twitter: 'https://twitter.com/willsmith',
     instagram: 'https://instagram.com/willsmith',
@@ -236,7 +263,7 @@ const team = [
   },
   {
     name: 'Nguyễn Quốc Đại',
-    role: 'developer',
+    role: 'Developer',
     image: Will,
     twitter: 'https://twitter.com/willsmith',
     instagram: 'https://instagram.com/willsmith',
@@ -397,6 +424,132 @@ const styles = {
     justifyContent: 'center',
     paddingBottom: 60,
     flexWrap: 'wrap',
+  },
+  paymentSection: {
+    marginTop: 20,
+    marginBottom: 60,
+    padding: '24px 16px',
+    background: '#fff',
+    borderRadius: 12,
+    boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
+  },
+  paymentTitle: {
+    fontSize: 22,
+    fontWeight: 700,
+    textAlign: 'center',
+    marginBottom: 16,
+    color: '#222',
+  },
+  paymentIcons: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: 16,
+    alignItems: 'center',
+  },
+  paymentIconItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paymentIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+  },
+  paymentIconText: {
+    fontSize: 14,
+    color: '#444',
+  },
+  bottomRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gap: 24,
+    alignItems: 'stretch',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  paymentInline: {
+    background: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    minHeight: 140,
+  },
+  paymentInlineIcons: {
+    display: 'flex',
+    gap: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentLogoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 18,
+    flexWrap: 'wrap',
+  },
+  paymentLogoImg: {
+    height: 28,
+    width: 'auto',
+    objectFit: 'contain',
+    filter: 'none',
+  },
+  paymentChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#10b981',
+    borderRadius: 9999,
+    padding: '6px 12px',
+    minWidth: 56,
+    height: 28,
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  },
+  paymentChipText: {
+    color: '#fff',
+    fontWeight: 700,
+    letterSpacing: 1,
+    fontSize: 14,
+  },
+  socialFollowSection: {
+    background: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    minHeight: 140,
+  },
+  socialFollowTitle: {
+    fontSize: 22,
+    fontWeight: 700,
+    textAlign: 'center',
+    marginBottom: 12,
+    color: '#222',
+  },
+  socialIcons: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  socialLink: {
+    display: 'inline-flex',
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '50%',
+    background: '#f3f4f6',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
   },
   service: {
     flex: '0 0 260px',

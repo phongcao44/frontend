@@ -68,14 +68,39 @@ export const fetchOrderDetail = async (id) => {
   }
 };
 
-export const getMyOrders = async (status = null) => {
+export const getMyOrders = async ({ status = null, page = 0, limit = 10 } = {}) => {
   try {
     const response = await axiosInstance.get("/user/order/list", {
-      params: { status },
+      params: { status, page, limit },
     });
-    return response.data;
+    const data = response.data;
+    // Normalize: if backend returns an array, wrap it into a paginated object
+    if (Array.isArray(data)) {
+      const totalItems = data.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+      const start = Math.min(page * limit, totalItems);
+      const end = Math.min(start + limit, totalItems);
+      const paged = data.slice(start, end);
+      return {
+        orders: paged,
+        totalPages,
+        totalItems,
+        currentPage: page,
+      };
+    }
+    // Otherwise assume it is already in the correct shape
+    return data;
   } catch (error) {
     console.error("getMyOrders error:", error);
+    // If backend returns 404 when empty, normalize to empty result instead of throwing
+    if (error.response?.status === 404) {
+      return {
+        orders: [],
+        totalPages: 1,
+        totalItems: 0,
+        currentPage: page,
+      };
+    }
     throw error.response?.data || "Có lỗi xảy ra khi tải danh sách đơn hàng";
   }
 };

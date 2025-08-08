@@ -57,11 +57,13 @@ export default function VoucherManagement() {
     dispatch(fetchAllVouchers());
   }, [dispatch]);
 
-  const filteredVouchers = allVouchers.filter(
-    (voucher) =>
-      voucher.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) &&
-      (statusFilter === "" || String(voucher.active) === statusFilter)
-  );
+  const filteredVouchers = allVouchers
+    .filter((v) => !v?.deleted)
+    .filter(
+      (voucher) =>
+        voucher.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) &&
+        (statusFilter === "" || String(voucher.active) === statusFilter)
+    );
 
   const paginatedVouchers = filteredVouchers.slice(
     currentPage * itemsPerPage,
@@ -89,10 +91,14 @@ export default function VoucherManagement() {
       reverseButtons: true,
     }).then((result) => {
       if (result.isConfirmed) {
-
-        dispatch(removeVoucher({ voucherId: id })).then(() => {
-          Swal.fire("Đã xóa!", "Voucher đã được xóa.", "success");
-        });
+        dispatch(removeVoucher(id))
+          .unwrap()
+          .then(() => {
+            Swal.fire("Đã xóa!", "Voucher đã được xóa.", "success");
+          })
+          .catch((err) => {
+            Swal.fire("Lỗi", err?.message || "Xóa voucher thất bại", "error");
+          });
       } else if (result.dismiss === Swal.DismissReason.cancel) {
         Swal.fire("Đã hủy", "Voucher vẫn còn nguyên.", "info");
       }
@@ -116,14 +122,58 @@ export default function VoucherManagement() {
   const formatDateTime = (dateTime) =>
     dateTime ? new Date(dateTime).toLocaleString("vi-VN") : "N/A";
 
-  const formatCurrency = (amount) =>
-    amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+  const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined) return "N/A";
+    const n = Number(amount);
+    if (!isFinite(n)) return "N/A";
+    return n.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+  };
 
   const getStatusBadge = (active) => {
     const base = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    return active
-      ? `${base} bg-green-100 text-green-800`
-      : `${base} bg-red-100 text-red-800`;
+    return `${base} ${active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`;
+  };
+
+  const renderDiscount = (v) => {
+    const parseNumberSafe = (val) => {
+      if (val === null || val === undefined) return NaN;
+      if (typeof val === "number") return val;
+      if (typeof val === "string") {
+        const cleaned = val.replace(/[^0-9.-]/g, "");
+        const num = Number(cleaned);
+        return isFinite(num) ? num : NaN;
+      }
+      const num = Number(val);
+      return isFinite(num) ? num : NaN;
+    };
+
+    const type = v?.discountType;
+    const percent = parseNumberSafe(v?.discountPercent ?? 0);
+    const fixed = parseNumberSafe(v?.discountAmount ?? 0);
+    const capNum = parseNumberSafe(v?.maxDiscount);
+
+    // If type is explicitly amount, prioritize fixed amount rendering
+    if (type === "amount") {
+      if (isFinite(fixed) && fixed > 0) return `${formatCurrency(fixed)}`;
+      // fallback: if invalid fixed but percent valid, show percent
+      if (percent > 0) {
+        const capText = isFinite(capNum) && capNum > 0 ? ` (Tối đa ${formatCurrency(capNum)})` : "";
+        return `${percent}%${capText}`;
+      }
+      return "N/A";
+    }
+
+    // Default: percent first
+    if (percent > 0) {
+      const capText = isFinite(capNum) && capNum > 0 ? ` (Tối đa ${formatCurrency(capNum)})` : "";
+      return `${percent}%${capText}`;
+    }
+
+    if (isFinite(fixed) && fixed > 0) {
+      return `${formatCurrency(fixed)}`;
+    }
+
+    return "N/A";
   };
 
   const totalVouchers = filteredVouchers.length;
@@ -328,7 +378,7 @@ export default function VoucherManagement() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {voucher.discountPercent}% (Tối đa {formatCurrency(voucher.maxDiscount)})
+                            {renderDiscount(voucher)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -380,7 +430,7 @@ export default function VoucherManagement() {
                               <Edit size={16} />
                             </button>
                             <button
-                              onClick={() => handleDelete(voucher)}
+                              onClick={() => handleDelete(voucher.id)}
                               className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
                               title="Xóa"
                             >
@@ -422,7 +472,7 @@ export default function VoucherManagement() {
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center text-sm text-gray-600">
                       <Percent size={16} className="mr-2" />
-                      {voucher.discountPercent}% (Tối đa {formatCurrency(voucher.maxDiscount)})
+                      {renderDiscount(voucher)}
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar size={16} className="mr-2" />

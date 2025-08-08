@@ -8,52 +8,97 @@ export default function OrderSection() {
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [orders, setOrders] = useState([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const limit = 10;
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'ALL', label: 'Tất cả', icon: Package, count: 0 },
-    { id: 'PENDING', label: 'Chờ xác nhận', icon: Clock, count: 0 },
-    { id: 'CONFIRMED', label: 'Đã xác nhận', icon: CheckCircle, count: 0 },
-    { id: 'SHIPPED', label: 'Đang giao', icon: Truck, count: 0 },
-    { id: 'DELIVERED', label: 'Đã giao', icon: CheckCircle, count: 0 },
-    { id: 'CANCELLED', label: 'Đã hủy', icon: XCircle, count: 0 },
-    { id: 'RETURNED', label: 'Đã hoàn trả', icon: RotateCcw, count: 0 },
+    { id: 'ALL', label: 'Tất cả', icon: Package },
+    { id: 'PENDING', label: 'Chờ xác nhận', icon: Clock },
+    { id: 'CONFIRMED', label: 'Đã xác nhận', icon: CheckCircle },
+    { id: 'SHIPPED', label: 'Đang giao', icon: Truck },
+    { id: 'DELIVERED', label: 'Đã giao', icon: CheckCircle },
+    { id: 'CANCELLED', label: 'Đã hủy', icon: XCircle },
+    { id: 'RETURNED', label: 'Đã hoàn trả', icon: RotateCcw },
   ];
+
+  const [counts, setCounts] = useState({
+    ALL: 0,
+    PENDING: 0,
+    CONFIRMED: 0,
+    SHIPPED: 0,
+    DELIVERED: 0,
+    CANCELLED: 0,
+    RETURNED: 0,
+  });
+
+  const fetchCounts = async () => {
+    try {
+      const mapping = [
+        { id: 'ALL', status: undefined },
+        { id: 'PENDING', status: 'PENDING' },
+        { id: 'CONFIRMED', status: 'CONFIRMED' },
+        { id: 'SHIPPED', status: 'SHIPPED' },
+        { id: 'DELIVERED', status: 'DELIVERED' },
+        { id: 'CANCELLED', status: 'CANCELLED' },
+        { id: 'RETURNED', status: 'RETURNED' },
+      ];
+      const results = await Promise.all(
+        mapping.map(m => getMyOrders({ status: m.status, page: 0, limit: 1 }))
+      );
+      const next = { ...counts };
+      mapping.forEach((m, idx) => {
+        next[m.id] = results[idx]?.totalItems ?? 0;
+      });
+      setCounts(next);
+    } catch (e) {
+      // keep counts as-is on error
+    }
+  };
+
+  useEffect(() => {
+    fetchCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         setLoading(true);
         setError(null);
-        const status = activeTab === 'ALL' ? null : activeTab;
-        const data = await getMyOrders(status);
-        setOrders(data);
-        
-        // Update counts for each tab
-        const statusCounts = {};
-        data.forEach(order => {
-          statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
-        });
-        
-        tabs.forEach(tab => {
-          if (tab.id === 'ALL') {
-            tab.count = data.length;
-          } else {
-            tab.count = statusCounts[tab.id] || 0;
-          }
-        });
+        const status = activeTab === 'ALL' ? undefined : activeTab;
+        const data = await getMyOrders({ status, page: currentPage, limit });
+        setOrders(data.orders || []);
+        setTotalPages(data.totalPages || 1);
+        setTotalItems(data.totalItems || 0);
       } catch (error) {
         console.error('Failed to fetch orders:', error);
-        setError(error.toString());
+        setOrders([]);
+        setTotalPages(1);
+        setTotalItems(0);
+        setError(typeof error === 'string' ? error : 'Có lỗi xảy ra khi tải đơn hàng');
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrders();
-  }, [activeTab]);
+  }, [activeTab, currentPage]);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setCurrentPage(0);
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   const filteredOrders = orders.filter(order => {
     if (searchTerm && !order.orderId.toString().includes(searchTerm.toLowerCase())) {
@@ -132,7 +177,7 @@ export default function OrderSection() {
               return (
                 <div
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`
                     relative p-4 rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-105
                     ${activeTab === tab.id
@@ -144,7 +189,7 @@ export default function OrderSection() {
                   <div className="flex items-center justify-between">
                     <Icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-white' : 'text-gray-500'}`} />
                     <span className={`text-lg font-bold ${activeTab === tab.id ? 'text-white' : 'text-gray-900'}`}>
-                      {tab.count}
+                      {counts[tab.id] ?? 0}
                     </span>
                   </div>
                   <p className={`text-xs mt-2 ${activeTab === tab.id ? 'text-blue-100' : 'text-gray-500'}`}>
@@ -267,6 +312,38 @@ export default function OrderSection() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Pagination */}
+        <div className="flex justify-center p-6">
+          <div className="flex items-center space-x-2">
+            <button
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 0}
+            >
+              <span className="text-gray-600">←</span>
+            </button>
+            {Array.from({ length: totalPages }, (_, idx) => (
+              <button
+                key={idx}
+                className={`px-3 py-2 rounded-lg ${currentPage === idx
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                  : 'border border-gray-300 hover:bg-gray-50 text-gray-700'}`}
+                onClick={() => handlePageChange(idx)}
+                disabled={currentPage === idx}
+              >
+                {idx + 1}
+              </button>
+            ))}
+            <button
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+            >
+              <span className="text-gray-600">→</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
