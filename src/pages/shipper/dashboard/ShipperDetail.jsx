@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams } from "react-router-dom";
-import { handleDownloadPDF } from "../../../services/handleDownloadPDF";
+import Cookies from "js-cookie";
 import {
   Card,
   Table,
@@ -24,7 +24,7 @@ import {
   clearCurrentOrder,
   editOrderStatus,
 } from "../../../redux/slices/orderSlice";
-
+import { Modal, Input } from "antd";
 const { Text } = Typography;
 const { Option } = Select;
 
@@ -33,6 +33,148 @@ export default function OrderDetail() {
   const { id } = useParams();
   const { currentOrder, loading, error } = useSelector((state) => state.order);
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [showRedoModal, setShowRedoModal] = useState(false);
+  const [redoReason, setRedoReason] = useState("");
+  const deliveryFailureReason = currentOrder?.deliveryFailureReason || "Không có lý do";
+  const parseJwt = (token) => {
+    try {
+      const base64Payload = token.split('.')[1];
+      const payload = atob(base64Payload); // decode base64
+      return JSON.parse(payload);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const handleMarkShippedAndUpdateLocation = async () => {
+    handleUpdateLocation();     // Cập nhật vị trí giao hàng
+    await handleMarkShipped();  // Cập nhật trạng thái đơn hàng sang 'SHIPPED'
+  };
+
+
+  const handleRedoSubmit = async () => {
+    if (!redoReason.trim()) {
+      message.warning("Vui lòng nhập lý do gửi hàng lại");
+      return;
+    }
+
+    const accessToken = Cookies.get("access_token");
+    if (!accessToken) {
+      message.error("Vui lòng đăng nhập trước khi thực hiện");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/location/${currentOrder.orderId}/redeliver`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ reason: redoReason }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Giao hàng lại thất bại");
+      }
+
+      message.success("Đã gửi yêu cầu giao hàng lại thành công");
+      setShowRedoModal(false);
+      setRedoReason("");
+
+      // Tải lại chi tiết đơn hàng để cập nhật trạng thái mới
+      dispatch(loadOrderDetail(currentOrder.orderId));
+    } catch (error) {
+      message.error(error.message || "Lỗi không xác định khi gửi yêu cầu");
+    }
+  };
+
+
+  const handleMarkShipped = async () => {
+    if (!currentOrder?.orderId) {
+      message.error("Không có đơn hàng để cập nhật.");
+      return;
+    }
+
+    const accessToken = Cookies.get("access_token");
+    if (!accessToken) {
+      message.error("Vui lòng đăng nhập trước khi thực hiện.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/location/${currentOrder.orderId}/mark-shipped`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Cập nhật trạng thái thất bại");
+      }
+
+      message.success("Cập nhật trạng thái Đang giao hàng thành công");
+
+      // Load lại chi tiết đơn hàng sau khi cập nhật
+      dispatch(loadOrderDetail(currentOrder.orderId));
+    } catch (error) {
+      message.error(error.message || "Lỗi không xác định khi cập nhật trạng thái");
+    }
+  };
+
+  const handleUpdateLocation = () => {
+    if (!navigator.geolocation) {
+      message.error("Trình duyệt không hỗ trợ định vị");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const accessToken = Cookies.get("access_token"); // Lấy token từ cookie
+        if (!accessToken) {
+          message.error("Vui lòng đăng nhập trước khi cập nhật vị trí");
+          return;
+        }
+
+        const decoded = parseJwt(accessToken);
+        const userId = decoded?.userId || decoded?.id || decoded?.sub; // Thử các trường thường dùng
+
+        if (!userId) {
+          message.error("Không xác định được userId từ token");
+          return;
+        }
+
+        const payload = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          orderId: currentOrder.orderId,
+        };
+        console.log("Payload gửi lên:", payload);
+        fetch("http://localhost:8080/api/v1/location/update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Lỗi khi cập nhật vị trí");
+            return res.text();
+          })
+          .then(() => {
+            message.success("Cập nhật vị trí thành công");
+          })
+          .catch(() => {
+            message.error("Không thể cập nhật vị trí");
+          });
+      },
+      () => {
+        message.error("Không lấy được vị trí GPS");
+      }
+    );
+  };
 
   useEffect(() => {
     dispatch(loadOrderDetail(Number(id)));
@@ -363,6 +505,47 @@ export default function OrderDetail() {
         </Row>
       </Card>
 
+      <Row gutter={[16, 16]} justify="center" style={{ marginTop: 24 }}>
+        <Col xs={24} sm={24} md={12} lg={8}>
+          <Button block type="primary" onClick={handleUpdateLocation}>
+            Cập nhật vị trí giao hàng <br />(trong quá trình vận chuyển)
+          </Button>
+        </Col>
+
+        <Col xs={24} sm={24} md={12} lg={8}>
+          <Button
+            block
+            type="primary"
+            onClick={handleMarkShippedAndUpdateLocation}
+            disabled={currentOrder.status === "SHIPPED" || currentOrder.status === "DELIVERED"}
+          >
+            Đang giao hàng <br />(đơn hàng sắp được giao tới khách hàng)
+          </Button>
+        </Col>
+
+        <Col xs={24} sm={24} md={12} lg={8}>
+          <Button block type="default" onClick={() => setShowRedoModal(true)}>
+            Giao hàng lại
+          </Button>
+        </Col>
+      </Row>
+
+      <Modal
+        title="Lý do gửi hàng lại"
+        visible={showRedoModal}
+        onCancel={() => setShowRedoModal(false)}
+        onOk={handleRedoSubmit}
+        okText="Gửi"
+      >
+        <Input.TextArea
+          rows={4}
+          value={redoReason}
+          onChange={(e) => setRedoReason(e.target.value)}
+          placeholder="Nhập lý do gửi hàng lại..."
+        />
+      </Modal>
+
+
       <Card>
         <Row gutter={24}>
           {/* LEFT */}
@@ -406,7 +589,7 @@ export default function OrderDetail() {
             </Row>
 
             <Divider />
-                
+
             <Row gutter={24} style={{ marginTop: 24 }}>
               <Col span={12}>
               </Col>
@@ -451,8 +634,6 @@ export default function OrderDetail() {
                   placeholder="Chọn trạng thái"
                   onChange={(value) => setSelectedStatus(value)}
                 >
-                  <Option value="PENDING">Chờ xử lý</Option>
-                  <Option value="SHIPPED">Đang giao hàng</Option>
                   <Option value="DELIVERED">Đã giao hàng</Option>
                   <Option value="CANCELLED">Đã hủy</Option>
                 </Select>
