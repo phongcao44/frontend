@@ -57,7 +57,8 @@ export default function OrderManagement() {
   const totalElements = useSelector(
     (state) => state.order.list?.totalElements || 0
   );
-
+  const [shippers, setShippers] = useState([]);
+  const [loadingShippers, setLoadingShippers] = useState(false);
   // Debounced function to handle search
   const debouncedSearch = useCallback(
     debounce((value) => {
@@ -75,6 +76,17 @@ export default function OrderManagement() {
     }, 500),
     [dispatch, itemsPerPage, sortBy, orderBy, statusFilter, activeTab]
   );
+
+  useEffect(() => {
+    if (activeTab === "quản lý shipper") {
+      setLoadingShippers(true);
+      fetch("http://localhost:8080/api/v1/users/moderators-with-orders")  // sửa URL đúng API của bạn
+        .then((res) => res.json())
+        .then((data) => setShippers(data))
+        .catch((e) => console.error("Load shippers error", e))
+        .finally(() => setLoadingShippers(false));
+    }
+  }, [activeTab]);
 
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -148,9 +160,9 @@ export default function OrderManagement() {
   };
 
   const tabs = [
-    { name: "Tất cả đơn hàng", count: totalElements },
+    { name: "vị trí đơn hàng", count: totalElements },
     {
-      name: "Chưa thanh toán",
+      name: "quản lý shipper",
       count: orders.filter((o) => o.payment?.status === "PENDING").length,
     },
   ];
@@ -277,19 +289,17 @@ export default function OrderManagement() {
                     setStatusFilter("PENDING");
                   }
                 }}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
-                  activeTab === tab.name
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
-                }`}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${activeTab === tab.name
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                  }`}
               >
                 <span>{tab.name}</span>
                 <span
-                  className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                    activeTab === tab.name
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
+                  className={`ml-2 px-2 py-1 text-xs rounded-full ${activeTab === tab.name
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-600"
+                    }`}
                 >
                   {tab.count}
                 </span>
@@ -434,6 +444,61 @@ export default function OrderManagement() {
           </div>
         )}
 
+        {activeTab === "quản lý shipper" && (
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h2 className="text-xl font-semibold mb-4">Danh sách Shipper</h2>
+
+            {loadingShippers ? (
+              <div className="flex justify-center items-center space-x-2 text-gray-600">
+                <RefreshCw className="h-5 w-5 animate-spin" />
+                <span>Đang tải dữ liệu shipper...</span>
+              </div>
+            ) : shippers.length === 0 ? (
+              <p>Không có shipper nào.</p>
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tên Shipper
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Số đơn đang giao
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Mã đơn hàng đang giao
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {shippers.map((shipper) => (
+                    <tr key={shipper.userId}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {shipper.username || "Không có tên"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {shipper.email || "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {shipper.orderIds?.length || 0}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {shipper.orderIds && shipper.orderIds.length > 0
+                          ? shipper.orderIds.join(", ")
+                          : "Không có đơn hàng"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+
         {!loading && !isLoading && !error && validOrders.length > 0 && (
           <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden lg:block">
@@ -464,9 +529,6 @@ export default function OrderManagement() {
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Tổng tiền
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Hành động
                       </th>
                     </tr>
                   </thead>
@@ -543,14 +605,6 @@ export default function OrderManagement() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() =>
-                                navigate(`/admin/orders/${order.orderId}`)
-                              }
-                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
                           </div>
                         </td>
                       </tr>
