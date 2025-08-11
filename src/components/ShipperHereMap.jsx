@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 const ShipperHereMap = ({ userLocation, shippingLocation }) => {
   const mapRef = useRef(null);
 
+  
   useEffect(() => {
     if (!window.H || !window.H.Map) {
       console.error("HERE Maps SDK chưa được load!");
@@ -33,6 +34,12 @@ const ShipperHereMap = ({ userLocation, shippingLocation }) => {
     const redIcon = new window.H.map.Icon("https://maps.google.com/mapfiles/ms/icons/red-dot.png");
     const shippingMarker = new window.H.map.Marker(shippingLocation, { icon: redIcon });
     map.addObject(shippingMarker);
+    const ui = window.H.ui.UI.createDefault(map, defaultLayers);
+    // InfoBubble khách hàng
+    const shippingBubble = new window.H.ui.InfoBubble(shippingLocation, {
+      content: "<div style='font-weight:bold; color:#a40b0b;'>Khách hàng</div>",
+    });
+    ui.addBubble(shippingBubble);
 
     //  Gọi HERE Routing API để lấy đường đi
     const router = platform.getRoutingService(null, 8);
