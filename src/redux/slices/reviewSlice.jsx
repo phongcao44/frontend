@@ -148,7 +148,9 @@ const reviewSlice = createSlice({
       })
       .addCase(createReviewThunk.fulfilled, (state, action) => {
         state.loading = false;
-        state.reviews.push(action.payload);
+        // Backend returns a success message string (e.g., "Review created successfully."),
+        // not the created review object. Avoid pushing into reviews to prevent corrupting the list.
+        state.error = null;
       })
       .addCase(createReviewThunk.rejected, (state, action) => {
         state.loading = false;

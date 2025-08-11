@@ -7,7 +7,7 @@ import axiosInstance from "../utils/axiosInstance";
  */
 export const createReview = async (reviewData) => {
   try {
-    const response = await axiosInstance.post(`/`, reviewData);
+    const response = await axiosInstance.post(`/user/review/add`, reviewData);
     return response.data;
   } catch (error) {
     console.error("createReview error:", error);
