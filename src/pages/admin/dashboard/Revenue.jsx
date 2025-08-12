@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchDashboardStats } from "../../../redux/slices/dashboardSlice";
 import { RevenueChart } from "./Dashboard"; // import chart từ cùng thư mục
 import RevenueChartCombined from "./RevenueChartCombined";
+import { loadTopBestSellingProducts } from "../../../redux/slices/productSlice";
 
 
 
@@ -13,9 +14,12 @@ const { Title } = Typography;
 const Revenue = () => {
   const dispatch = useDispatch();
   const { stats, loading } = useSelector((state) => state.dashboard);
+  const { topBestSelling } = useSelector((state) => state.products);
 
   useEffect(() => {
     dispatch(fetchDashboardStats());
+    // Fetch top best-selling products for admin section
+    dispatch(loadTopBestSellingProducts());
   }, [dispatch]);
 
   if (loading || !stats) {
@@ -93,11 +97,11 @@ const Revenue = () => {
 
 
         {/* Top 5 sản phẩm bán chạy */}
-        {stats.top5BestSellers?.length > 0 && (
+        {topBestSelling?.length > 0 && (
           <div style={{ marginTop: 40 }}>
             <Title level={4} style={{ marginBottom: 24 }}>Top 5 Sản Phẩm Bán Chạy</Title>
             <Row gutter={[24, 24]} justify="center" align="stretch">
-              {stats.top5BestSellers.map((product) => (
+              {topBestSelling.map((product) => (
                 <Col xs={24} sm={12} md={8} lg={6} xl={4} key={product.id}>
                   <Card
   hoverable
@@ -123,8 +127,8 @@ const Revenue = () => {
     }}
   >
     <img
-      src={product.image}
-      alt={product.productName}
+      src={product.imageUrl}
+      alt={product.name}
       style={{
         maxHeight: "100%",
         maxWidth: "200%",
@@ -147,13 +151,13 @@ const Revenue = () => {
 >
 
     <div>
-      <Title level={5} style={{ marginBottom: 6 }}>{product.productName}</Title>
+      <Title level={5} style={{ marginBottom: 6 }}>{product.name}</Title>
       <div style={{ color: "#fa8c16", fontWeight: 600, marginBottom: 4 }}>
-        Giá: {product.price.toLocaleString()} VND
+        Giá: {product.price?.toLocaleString()} VND
       </div>
     </div>
     <div style={{ color: "#52c41a", fontWeight: 500, marginTop: "auto" }}>
-      Đã Bán: {product.purchaseCount} Sản Phẩm
+      Đã Bán: {product.soldQuantity} Sản Phẩm
     </div>
   </div>
 </Card>
