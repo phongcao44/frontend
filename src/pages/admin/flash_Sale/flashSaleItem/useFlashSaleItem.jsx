@@ -43,8 +43,7 @@ export default function useFlashSaleItem(id) {
     description: "",
   };
 
-  console.log(productDetail)
-  console.log(variants)
+  console.log(flashSaleVariantDetails)
 
   const [form, setForm] = useState({
     flashSaleId: parseInt(id) || 0,
@@ -143,6 +142,7 @@ export default function useFlashSaleItem(id) {
   // Load flash sale items
   useEffect(() => {
     if (id) {
+      console.log("tải nè")
       dispatch(fetchFlashSaleVariantDetails(id))
         .unwrap()
         .then((result) => {

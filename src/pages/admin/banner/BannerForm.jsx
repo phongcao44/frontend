@@ -506,10 +506,9 @@ export default function BannerFormModal({ open, onClose, id }) {
             className={`w-full px-3 py-2 border ${
               errors.position ? "border-red-500" : "border-gray-300"
             } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+            disabled
           >
             <option value="HOME_TOP">HOME_TOP</option>
-            <option value="HOME_MIDDLE">HOME_MIDDLE</option>
-            <option value="HOME_BOTTOM">HOME_BOTTOM</option>
           </select>
           {errors.position && (
             <p className="mt-1 text-sm text-red-500">{errors.position}</p>
