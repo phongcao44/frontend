@@ -38,8 +38,8 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const cart = useSelector((state) => state.cart.cart); // Get cart state
-  const cartLoading = useSelector((state) => state.cart.loading); // Get cart loading state
+  const cart = useSelector((state) => state.cart.cart);
+  const cartLoading = useSelector((state) => state.cart.loading);
 
   if (!isOpen || !product) return null;
 
@@ -104,6 +104,11 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
   const isStockExceeded =
     selectedVariant && totalQuantity > selectedVariant.stockQuantity;
 
+  // Xử lý lỗi ảnh
+  const handleImageError = (e) => {
+    e.target.src = "/public/assets/images/error.jpg"; // Ảnh mặc định khi lỗi
+  };
+
   const modalContent = (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
@@ -126,9 +131,10 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
 
         <div className="mb-4">
           <img
-            src={product.imageUrl || "/placeholder.png"}
+            src={product.imageUrl || "/public/assets/images/error.jpg"}
             alt={product.name}
             className="w-full h-48 object-cover rounded-md mb-3"
+            onError={handleImageError}
           />
           <h4 className="font-medium text-gray-800">{product.name}</h4>
         </div>
@@ -341,9 +347,7 @@ const ProductCard = ({ product, onRemove }) => {
     flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
       ? displayOriginalPrice - discountOverrideByFlashSale
       : null;
-  const image =
-    imageUrl ||
-    "https://i.pinimg.com/736x/f0/b6/ce/f0b6ce5a334490ba1ec286bd8bc348e9.jpg";
+  const image = imageUrl || "/public/assets/images/error.jpg";
   const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
 
   const discountLabel = discountPercentage
@@ -351,6 +355,11 @@ const ProductCard = ({ product, onRemove }) => {
     : discountAmount
     ? `- ${(discountAmount || 0).toLocaleString("vi-VN")}đ`
     : null;
+
+  // Xử lý lỗi ảnh
+  const handleImageError = (e) => {
+    e.target.src = "/public/assets/images/error.jpg"; // Ảnh mặc định khi lỗi
+  };
 
   const handleNavigate = () => {
     navigate(`/product/${slug}`);
@@ -524,6 +533,7 @@ const ProductCard = ({ product, onRemove }) => {
               src={image}
               alt={name || "Product"}
               className="absolute top-0 left-0 w-full h-full object-cover"
+              onError={handleImageError}
             />
             {showDiscountLabel && discountLabel && (
               <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">

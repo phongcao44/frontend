@@ -49,21 +49,24 @@ export default function VariantFormPanel({
       try {
         // Clear previous barcode
         barcodeRef.current.innerHTML = "";
-        
+
         // Create SVG element for barcode
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svg = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "svg"
+        );
         svg.style.width = "100%";
         svg.style.height = "auto";
         barcodeRef.current.appendChild(svg);
-        
+
         // Determine format based on barcode length and content
         let format = "CODE128"; // default
         const barcode = variantForm.barcode.toString();
-        
+
         console.log("Barcode value:", barcode);
         console.log("Barcode length:", barcode.length);
         console.log("Is numeric:", /^\d+$/.test(barcode));
-        
+
         if (/^\d{13}$/.test(barcode)) {
           format = "EAN13";
         } else if (/^\d{12}$/.test(barcode)) {
@@ -71,9 +74,9 @@ export default function VariantFormPanel({
         } else if (/^\d{8}$/.test(barcode)) {
           format = "EAN8";
         }
-        
+
         console.log("Selected format:", format);
-        
+
         // Generate barcode display with better styling
         JsBarcode(svg, barcode, {
           format: format,
@@ -89,7 +92,7 @@ export default function VariantFormPanel({
           background: "#ffffff",
           lineColor: "#000000",
         });
-        
+
         console.log("Barcode generated successfully");
       } catch (error) {
         console.error("Barcode generation error:", error);
@@ -209,7 +212,17 @@ export default function VariantFormPanel({
         <Title level={5}>Kích thước</Title>
         <Select
           value={variantForm.sizeId}
-          onChange={(value) => onChange("sizeId", value)}
+          onChange={(value) => {
+            onChange("sizeId", value);
+            // In ra sizeId được chọn
+            console.log("Size ID được chọn:", value);
+            // Tìm và in thông tin chi tiết của size
+            const selectedSize = sizes.find((s) => s.id === value);
+            console.log(
+              "Thông tin size:",
+              selectedSize || "Không có size được chọn"
+            );
+          }}
           style={{ width: "100%" }}
           placeholder="Chọn size"
           allowClear
@@ -278,43 +291,45 @@ export default function VariantFormPanel({
           placeholder="Barcode sẽ được tự động tạo"
           disabled={!isEditMode} // Disable input if not in edit mode since backend generates it
         />
-        
+
         {/* Barcode Display - Only show when barcode exists */}
         {variantForm.barcode && (
-          <Card 
-            size="small" 
-            style={{ 
-              marginTop: 12, 
+          <Card
+            size="small"
+            style={{
+              marginTop: 12,
               textAlign: "center",
               backgroundColor: "#ffffff",
               border: "1px solid #e8e8e8",
               borderRadius: "8px",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             }}
             title={
-              <span style={{ 
-                fontSize: "14px", 
-                fontWeight: "500",
-                color: "#666"
-              }}>
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  color: "#666",
+                }}
+              >
                 Mã vạch
               </span>
             }
-            bodyStyle={{ 
+            bodyStyle={{
               padding: "16px",
-              backgroundColor: "#fafafa"
+              backgroundColor: "#fafafa",
             }}
           >
-            <div 
-              ref={barcodeRef} 
-              style={{ 
+            <div
+              ref={barcodeRef}
+              style={{
                 minHeight: "100px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: "#ffffff",
                 borderRadius: "4px",
-                padding: "8px"
+                padding: "8px",
               }}
             ></div>
           </Card>
@@ -405,23 +420,31 @@ export default function VariantFormPanel({
         title="Thêm kích thước mới"
         open={sizeModalVisible}
         onOk={async () => {
-          if (!newSize.name.trim()) {
-            message.warning("Vui lòng nhập tên kích thước");
+          if (!newSize.name?.trim()) {
+            message.warning("Vui lòng nhập tên kích thước!");
             return;
           }
+
+          const sizeData = {
+            name: newSize.name.trim(), // Đổi theo backend
+            description: (newSize.description || "").trim(),
+          };
+
           try {
-            await dispatch(
-              createSize({
-                sizeName: newSize.name,
-                description: newSize.description,
-              })
-            ).unwrap();
-            message.success("Đã thêm kích thước mới");
+            const response = await dispatch(createSize(sizeData)).unwrap();
+            message.success(
+              `Đã thêm kích thước "${
+                response.sizeName || response.name || newSize.name
+              }" thành công!`
+            );
             setSizeModalVisible(false);
             setNewSize({ name: "", description: "" });
           } catch (err) {
+            console.error("createSize error:", err);
             message.error(
-              `Thêm kích thước thất bại: ${err.message || "Không xác định"}`
+              `Thêm kích thước thất bại: ${
+                err?.message || "Lỗi không xác định"
+              }`
             );
           }
         }}
@@ -429,20 +452,32 @@ export default function VariantFormPanel({
           setSizeModalVisible(false);
           setNewSize({ name: "", description: "" });
         }}
+        okText="Thêm"
+        cancelText="Hủy"
       >
-        <Input
-          placeholder="Tên kích thước"
-          value={newSize.name}
-          onChange={(e) => setNewSize((s) => ({ ...s, name: e.target.value }))}
-          style={{ marginBottom: 12 }}
-        />
-        <Input
-          placeholder="Mô tả"
-          value={newSize.description}
-          onChange={(e) =>
-            setNewSize((s) => ({ ...s, description: e.target.value }))
-          }
-        />
+        <Space direction="vertical" style={{ width: "100%" }}>
+          <div>
+            <Title level={5}>Tên kích thước</Title>
+            <Input
+              placeholder="Nhập tên kích thước (ví dụ: M, L, XL)"
+              value={newSize.name}
+              onChange={(e) =>
+                setNewSize((s) => ({ ...s, name: e.target.value }))
+              }
+              style={{ marginBottom: 12 }}
+            />
+          </div>
+          <div>
+            <Title level={5}>Mô tả (tùy chọn)</Title>
+            <Input
+              placeholder="Nhập mô tả (ví dụ: Kích thước trung)"
+              value={newSize.description}
+              onChange={(e) =>
+                setNewSize((s) => ({ ...s, description: e.target.value }))
+              }
+            />
+          </div>
+        </Space>
       </Modal>
     </Space>
   );

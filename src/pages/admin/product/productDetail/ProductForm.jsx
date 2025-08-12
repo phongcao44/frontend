@@ -109,6 +109,9 @@ const ProductForm = () => {
       dispatch(loadProductById(productId));
       dispatch(getProductSpecificationById(productId));
       dispatch(getProductImagesByProduct(productId));
+    } else {
+      // Reset fileList when creating a new product
+      setFileList([]);
     }
   }, [dispatch, productId]);
 
@@ -120,7 +123,6 @@ const ProductForm = () => {
         returnPolicy: null,
         specifications: [],
       });
-      setFileList([]);
       setShippingEnabled(true);
     }
   }, [productId, form]);
@@ -135,7 +137,6 @@ const ProductForm = () => {
           }))
         : [];
 
-     
       setFormData((prev) => {
         const newFormData = {
           ...prev,
@@ -155,7 +156,6 @@ const ProductForm = () => {
         return newFormData;
       });
 
-      
       form.setFieldsValue({
         productName: stableProduct.name,
         description: stableProduct.description,
@@ -167,9 +167,10 @@ const ProductForm = () => {
       });
       setShippingEnabled(stableProduct.status === "IN_STOCK");
 
+      // Update fileList only when productImages change
       setFileList((prev) => {
         const newFileList = stableProductImages.map((image, index) => ({
-          uid: image.id.toString(), 
+          uid: image.id.toString(),
           name: image.productName || `image-${image.id}`,
           url: image.imageUrl,
           status: "done",
@@ -181,6 +182,9 @@ const ProductForm = () => {
         }
         return newFileList;
       });
+    } else {
+      // Ensure fileList is reset when there is no productId
+      setFileList([]);
     }
   }, [
     stableProduct,
@@ -250,21 +254,10 @@ const ProductForm = () => {
         message.error("Vui lòng chọn một chính sách đổi trả");
         return;
       }
-      // if (!formData.specifications.length) {
-      //   message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
-      //   return;
-      // }
       if (!fileList.length) {
         message.error("Vui lòng thêm ít nhất một hình ảnh sản phẩm");
         return;
       }
-
-      // for (const spec of formData.specifications) {
-      //   if (!spec.key?.trim() || !spec.value?.trim()) {
-      //     message.error("Thông số kỹ thuật không được để trống");
-      //     return;
-      //   }
-      // }
 
       const productData = {
         name: values.productName,
@@ -341,21 +334,10 @@ const ProductForm = () => {
         message.error("Vui lòng chọn một chính sách đổi trả");
         return;
       }
-      // if (!currentSpecs.length) {
-      //   message.error("Vui lòng thêm ít nhất một thông số kỹ thuật");
-      //   return;
-      // }
       if (!fileList.length) {
         message.error("Vui lòng thêm ít nhất một hình ảnh sản phẩm");
         return;
       }
-
-      // for (const spec of currentSpecs) {
-      //   if (!spec.key?.trim() || !spec.value?.trim()) {
-      //     message.error("Thông số kỹ thuật không được để trống");
-      //     return;
-      //   }
-      // }
 
       const updatedProduct = {
         name: values.productName,
@@ -371,19 +353,17 @@ const ProductForm = () => {
         editProduct({ id: productId, productData: updatedProduct })
       ).unwrap();
 
-   
       const existingImageIds = stableProductImages.map((img) => img.id);
       const currentImageIds = fileList
         .map((file) => file.uid)
         .filter((uid) => !uid.includes("-"));
 
-   
       for (const imageId of existingImageIds) {
         if (!currentImageIds.includes(imageId.toString())) {
           await dispatch(removeProductImage(imageId)).unwrap();
         }
       }
- 
+
       for (const [index, file] of fileList.entries()) {
         if (file.file instanceof File) {
           const formData = new FormData();
@@ -392,12 +372,11 @@ const ProductForm = () => {
           if (file.variantId) {
             formData.append("variantId", file.variantId);
           }
-          formData.append("isMain", index === 0);  
+          formData.append("isMain", index === 0);
           await dispatch(createProductImage(formData)).unwrap();
         }
       }
 
-      
       const existingSpecs = Array.isArray(stableSpecificationData)
         ? stableSpecificationData
         : [];
