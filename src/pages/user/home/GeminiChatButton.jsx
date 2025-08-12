@@ -43,7 +43,7 @@ const GeminiChatButton = () => {
       if (!userId) {
         setChatHistory((prev) => [
           ...prev,
-          { role: "ai", text: "❌ Xin lỗi, không xác định được tài khoản của bạn. Vui lòng đăng nhập lại để sử dụng dịch vụ hỗ trợ." },
+          { role: "ai", text: "Xin lỗi, không xác định được tài khoản của bạn. Vui lòng đăng nhập lại để sử dụng dịch vụ hỗ trợ." },
         ]);
         setLoading(false);
         return;
@@ -57,10 +57,10 @@ const GeminiChatButton = () => {
       const aiMessage = { role: "ai", text: res.data.reply };
       setChatHistory((prev) => [...prev, aiMessage]);
     } catch (error) {
-      console.error("❌ Lỗi API:", error);
+      console.error("Lỗi API:", error);
       setChatHistory((prev) => [
         ...prev,
-        { role: "ai", text: "❌ Xin lỗi, hiện tại hệ thống đang gặp sự cố. Vui lòng thử lại sau hoặc liên hệ hotline 1900-xxxx để được hỗ trợ trực tiếp." },
+        { role: "ai", text: " Xin lỗi, hiện tại hệ thống đang gặp sự cố. Vui lòng thử lại sau hoặc liên hệ hotline 0905087335 để được hỗ trợ trực tiếp." },
       ]);
     } finally {
       setLoading(false);
