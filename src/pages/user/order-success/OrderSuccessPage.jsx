@@ -16,34 +16,10 @@ export default function OrderSuccessPage() {
     };
   }, [dispatch, orderId]);
 
-  console.log("đ ", currentOrder)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <p className="text-base md:text-lg text-gray-600">Đang tải...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <p className="text-base md:text-lg text-red-600">Lỗi: {error}</p>
-      </div>
-    );
-  }
-
-  if (!currentOrder) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <p className="text-base md:text-lg text-gray-600">Không tìm thấy đơn hàng</p>
-      </div>
-    );
-  }
-
-  const orderTime = currentOrder.createdAt
-    ? new Date(currentOrder.createdAt).toLocaleString("vi-VN", {
+  // Dù có lỗi từ backend (ví dụ voucher discountPercent null), vẫn hiển thị trang thành công với dữ liệu an toàn
+  const safeOrder = currentOrder || {};
+  const orderTime = safeOrder.createdAt
+    ? new Date(safeOrder.createdAt).toLocaleString("vi-VN", {
         dateStyle: "short",
         timeStyle: "short",
       })
@@ -59,7 +35,7 @@ export default function OrderSuccessPage() {
           Đặt Hàng Thành Công!
         </h1>
         <p className="text-base md:text-lg text-gray-600 mb-8">
-          Cảm ơn bạn đã mua sắm tại cửa hàng. Đơn hàng của bạn (Mã: <span className="font-semibold text-blue-600">{currentOrder.orderCode}</span>) đã được xác nhận.
+          Cảm ơn bạn đã mua sắm tại cửa hàng. Đơn hàng của bạn (Mã: <span className="font-semibold text-blue-600">{safeOrder.orderCode || `#${orderId}`}</span>) đã được xác nhận.
         </p>
 
         <Card
@@ -79,14 +55,14 @@ export default function OrderSuccessPage() {
                 <i className="ri-file-list-3-line text-gray-400"></i>
                 <span>Mã đơn hàng</span>
               </div>
-              <span className="font-medium">{currentOrder.orderCode}</span>
+              <span className="font-medium">{safeOrder.orderCode || `#${orderId}`}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <i className="ri-wallet-line text-gray-400"></i>
                 <span>Phương thức thanh toán</span>
               </div>
-              <span className="font-medium">{currentOrder.paymentMethod || "Không xác định"}</span>
+              <span className="font-medium">{safeOrder.paymentMethod || "Không xác định"}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -101,19 +77,25 @@ export default function OrderSuccessPage() {
                 <span>Tổng tiền</span>
               </div>
               <span className="font-medium">
-                {(currentOrder.totalAmount || 0).toLocaleString("vi-VN")} ₫
+                {Number(safeOrder.totalAmount ?? 0).toLocaleString("vi-VN")} ₫
               </span>
             </div>
           </div>
         </Card>
 
-        <p className="text-sm text-gray-500 mb-8">
-          Bạn vui lòng kiểm tra đơn hàng của mình trong mục "Đơn hàng của tôi" hoặc bấm vào "Xem Đơn Hàng".
-        </p>
+        {error ? (
+          <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-md px-3 py-2 mb-8 inline-block">
+            Hệ thống đang xử lý thông tin chi tiết đơn hàng. Bạn vẫn có thể xem đơn hàng trong mục "Đơn hàng của tôi".
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500 mb-8">
+            Bạn vui lòng kiểm tra đơn hàng của mình trong mục "Đơn hàng của tôi" hoặc bấm vào "Xem Đơn Hàng".
+          </p>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-             to={`/order/${currentOrder.orderId}`}
+             to={`/order/${orderId}`}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center whitespace-nowrap no-underline"
           >
             Xem Đơn Hàng
