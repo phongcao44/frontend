@@ -1,5 +1,7 @@
 import { memo, useState } from "react";
 import { Row, Col, Input, Button, Space } from "antd";
+import { Link } from "react-router-dom";
+
 import {
   FacebookOutlined,
   TwitterOutlined,
@@ -58,17 +60,21 @@ const Footer = () => {
           <Col xs={24} sm={12} md={8} lg={4}>
             <h5 className="text-white text-base font-semibold mb-3">Account</h5>
             <Space direction="vertical" size={4}>
-              {["My Account", "Login / Register", "Cart", "Wishlist", "Shop"].map(
-                (item) => (
-                  <a
-                    key={item}
-                    href="#"
-                    className="text-gray-400 text-sm hover:text-white transition-colors duration-200 block"
-                  >
-                    {item}
-                  </a>
-                )
-              )}
+              {[
+                { label: "My Account", to: "/user" },
+                { label: "Login / Register", to: "/signup" },
+                { label: "Cart", to: "/cart" },
+                { label: "Wishlist", to: "/wishlist" },
+                { label: "Shop", to: "/products" },
+              ].map(({ label, to }) => (
+                <Link
+                  key={label}
+                  to={to}
+                  className="text-gray-400 text-sm hover:text-white transition-colors duration-200 block"
+                >
+                  {label}
+                </Link>
+              ))}
             </Space>
           </Col>
 
