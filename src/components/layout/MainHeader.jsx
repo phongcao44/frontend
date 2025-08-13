@@ -104,7 +104,7 @@ const MainHeader = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Link to="/" className="flex-shrink-0">
+            <Link to="/" className="flex-shrink-0 no-underline hover:no-underline">
               <div className="text-xl sm:text-2xl font-bold text-black hover:text-gray-700 transition-colors">
                 Exclusive
               </div>

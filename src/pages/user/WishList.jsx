@@ -261,7 +261,40 @@ const WishList = () => {
             {wishlistItems.map((item) => (
               <SwiperSlide key={item.wishlistId}>
                 <ProductCard
-                  product={item.product}
+                  product={{
+                    ...item.product,
+                    id: item.product.id,
+                    name: item.product.name,
+                    image: item.product.imageUrl || "/placeholder.png",
+                    rating: item.product.averageRating,
+                    reviews: item.product.totalReviews,
+                    inStock: item.product.status === "IN_STOCK",
+                    price:
+                      item.product?.discountedPrice != null &&
+                      item.product?.discountedPrice > 0
+                        ? item.product.discountedPrice
+                        : item.product?.variants?.[0]?.finalPriceAfterDiscount ??
+                          item.product?.variants?.[0]?.priceOverride ??
+                          item.product?.price,
+                    originalPrice:
+                      item.product?.originalPrice ??
+                      item.product?.variants?.[0]?.priceOverride ??
+                      item.product?.price,
+                    discountOverrideByFlashSale:
+                      item.product?.discountedPrice != null &&
+                      item.product?.discountedPrice > 0
+                        ? item.product.discountedPrice
+                        : null,
+                    discountedPrice:
+                      item.product?.discountOverrideByFlashSale != null
+                        ? item.product.discountOverrideByFlashSale
+                        : null,
+                    flashSale: !!item.product?.discountOverrideByFlashSale,
+                    discountType:
+                      item.product?.discountOverrideByFlashSale != null
+                        ? "PERCENTAGE"
+                        : item.product?.discountType,
+                  }}
                   showRemove={true}
                   onRemove={() => handleRemoveFromWishlist(item)}
                   onAddToCart={() => handleAddToCart(item)}
@@ -337,21 +370,38 @@ const WishList = () => {
                 <SwiperSlide key={item.wishlistId}>
                   <ProductCard
                     product={{
+                      ...item.product,
                       id: item.product.id,
                       name: item.product.name,
-                      price:
-                        item.product.variants?.[0]?.finalPriceAfterDiscount ||
-                        item.product.variants?.[0]?.priceOverride ||
-                        item.product.price,
-                      originalPrice: item.product.variants?.[0]?.priceOverride,
                       image: item.product.imageUrl || "/placeholder.png",
                       rating: item.product.averageRating,
                       reviews: item.product.totalReviews,
-                      discount: item.product.variants?.[0]?.discountOverrideByFlashSale
-                        ? `-${item.product.variants[0].discountOverrideByFlashSale}%`
-                        : null,
                       inStock: item.product.status === "IN_STOCK",
-                      ...item.product,
+                      price:
+                        item.product?.discountedPrice != null &&
+                        item.product?.discountedPrice > 0
+                          ? item.product.discountedPrice
+                          : item.product?.variants?.[0]?.finalPriceAfterDiscount ??
+                            item.product?.variants?.[0]?.priceOverride ??
+                            item.product?.price,
+                      originalPrice:
+                        item.product?.originalPrice ??
+                        item.product?.variants?.[0]?.priceOverride ??
+                        item.product?.price,
+                      discountOverrideByFlashSale:
+                        item.product?.discountedPrice != null &&
+                        item.product?.discountedPrice > 0
+                          ? item.product.discountedPrice
+                          : null,
+                      discountedPrice:
+                        item.product?.discountOverrideByFlashSale != null
+                          ? item.product.discountOverrideByFlashSale
+                          : null,
+                      flashSale: !!item.product?.discountOverrideByFlashSale,
+                      discountType:
+                        item.product?.discountOverrideByFlashSale != null
+                          ? "PERCENTAGE"
+                          : item.product?.discountType,
                     }}
                     showRemove={false}
                     onAddToCart={() => handleAddToCart(item)}

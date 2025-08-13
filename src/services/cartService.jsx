@@ -6,6 +6,10 @@ export const fetchCart = async () => {
     return res.data;
 
   } catch (err) {
+    // Nếu server trả 404 (chưa có giỏ hàng), coi như giỏ trống để không làm vỡ UX
+    if (err?.response?.status === 404) {
+      return { items: [] };
+    }
     console.error("Fetch Cart failed:", err);
     throw err;
   }
