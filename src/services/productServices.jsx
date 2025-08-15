@@ -144,8 +144,13 @@ export const searchProducts = async (keyword) => {
 };
 
 export const deleteProduct = async (id) => {
-  const res = await axiosInstance.delete(`/admin/product/delete/${id}`);
-  return res.data;
+  try {
+    const res = await axiosInstance.delete(`/admin/product/delete/${id}`);
+    return res.data;
+  } catch (error) {
+    const message = error.response?.data?.message || error.response?.data?.data?.message || error.message || "Delete failed";
+    throw new Error(message);
+  }
 };
 
 export const fetchProductsByCategory = async (categoryId) => {
