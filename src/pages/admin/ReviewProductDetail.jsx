@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Table, Typography, Rate, Avatar, Input, Select, Space, Tag, Button, message, Popconfirm } from "antd";
-import { SearchOutlined, EyeOutlined, EyeInvisibleOutlined, FilterOutlined } from "@ant-design/icons";
+import { SearchOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { fetchAdminReviews, toggleReviewVisibility } from "../../redux/slices/reviewSlice";
+import { fetchAdminReviews, deleteReviewThunk } from "../../redux/slices/reviewSlice";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -17,7 +17,7 @@ const AdminProductReviewDetail = () => {
     // State cho bộ lọc
     const [searchTerm, setSearchTerm] = useState("");
     const [ratingFilter, setRatingFilter] = useState("");
-    const [statusFilter, setStatusFilter] = useState("");
+    // Đã bỏ trạng thái ẩn/hiện -> không cần statusFilter
 
     useEffect(() => {
         dispatch(fetchAdminReviews(productId));
@@ -35,34 +35,28 @@ const AdminProductReviewDetail = () => {
                              (ratingFilter === "2" && review.rating >= 1.5 && review.rating < 2.5) ||
                              (ratingFilter === "1" && review.rating >= 0.5 && review.rating < 1.5);
         
-        const matchesStatus = !statusFilter || statusFilter === "" ||
-                             (statusFilter === "visible" && !review.isHidden) ||
-                             (statusFilter === "hidden" && review.isHidden);
-        
         // Debug: Log khi có filter được áp dụng
-        if ((ratingFilter && ratingFilter !== "") || (statusFilter && statusFilter !== "") || searchTerm) {
+        if ((ratingFilter && ratingFilter !== "") || searchTerm) {
           console.log(`Filtering review: ${review.userName}`, {
             rating: review.rating,
-            isHidden: review.isHidden,
             ratingFilter,
-            statusFilter,
             searchTerm,
             matchesSearch,
             matchesRating,
-            matchesStatus
+            // no status filter
           });
         }
         
-        return matchesSearch && matchesRating && matchesStatus;
+        return matchesSearch && matchesRating;
     });
 
-    // Xử lý ẩn/hiện đánh giá
-    const handleToggleVisibility = async (reviewId, isHidden) => {
+    // Xử lý xóa đánh giá
+    const handleDeleteReview = async (reviewId) => {
         try {
-            await dispatch(toggleReviewVisibility({ reviewId, isHidden })).unwrap();
-            message.success(isHidden ? "Đã ẩn đánh giá" : "Đã hiện đánh giá");
+            await dispatch(deleteReviewThunk(reviewId)).unwrap();
+            message.success("Đã xóa đánh giá");
         } catch (error) {
-            message.error("Có lỗi xảy ra khi thay đổi trạng thái đánh giá");
+            message.error("Có lỗi xảy ra khi xóa đánh giá");
         }
     };
 
@@ -82,20 +76,8 @@ const AdminProductReviewDetail = () => {
         {
             title: "Nội dung",
             dataIndex: "comment",
-            render: (comment, record) => (
-                <div>
-                    <div style={{ 
-                        color: record.isHidden ? '#999' : '#000',
-                        textDecoration: record.isHidden ? 'line-through' : 'none'
-                    }}>
-                        {comment}
-                    </div>
-                    {record.isHidden && (
-                        <Tag color="red" style={{ marginTop: 4 }}>
-                            Có thể chứa từ ngữ vi phạm
-                        </Tag>
-                    )}
-                </div>
+            render: (comment) => (
+                <div>{comment}</div>
             ),
         },
         {
@@ -108,35 +90,26 @@ const AdminProductReviewDetail = () => {
             dataIndex: "createdAt",
             render: (value) => new Date(value).toLocaleDateString("vi-VN"),
         },
-        {
-            title: "Trạng thái",
-            dataIndex: "isHidden",
-            render: (isHidden) => (
-                <Tag color={isHidden ? "red" : "green"}>
-                    {isHidden ? "Đã ẩn" : "Hiển thị"}
-                </Tag>
-            ),
-        },
+        // Đã bỏ cột Trạng thái
         {
             title: "Thao tác",
             render: (_, record) => (
                 <Space>
                     <Popconfirm
-                        title={record.isHidden ? "Hiện đánh giá này?" : "Ẩn đánh giá này?"}
-                        description={record.isHidden 
-                            ? "Đánh giá sẽ được hiển thị lại cho người dùng" 
-                            : "Đánh giá sẽ bị ẩn khỏi người dùng"
-                        }
-                        onConfirm={() => handleToggleVisibility(record.id, !record.isHidden)}
-                        okText="Xác nhận"
+                        title={"Xóa đánh giá này?"}
+                        description={"Đánh giá sẽ bị xóa vĩnh viễn và không thể khôi phục."}
+                        onConfirm={() => handleDeleteReview(record.id)}
+                        okText="Xóa"
+                        okButtonProps={{ danger: true }}
                         cancelText="Hủy"
                     >
                         <Button
                             type="link"
-                            icon={record.isHidden ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                            danger
+                            icon={<DeleteOutlined />}
                             size="small"
                         >
-                            {record.isHidden ? "Hiện" : "Ẩn"}
+                            Xóa
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -163,49 +136,24 @@ const AdminProductReviewDetail = () => {
                         />
                     </div>
                     <div>
-                                                 <Select
-                             placeholder="Lọc theo đánh giá"
-                             value={ratingFilter}
-                             onChange={setRatingFilter}
-                             style={{ width: 150 }}
-                             allowClear
-                         >
-                             <Option value="5">5 sao (4.5-5.0)</Option>
-                             <Option value="4">4 sao (3.5-4.4)</Option>
-                             <Option value="3">3 sao (2.5-3.4)</Option>
-                             <Option value="2">2 sao (1.5-2.4)</Option>
-                                                           <Option value="1">1 sao (0.5-1.4)</Option>
-                         </Select>
-                    </div>
-                    <div>
                         <Select
-                            placeholder="Lọc theo trạng thái"
-                            value={statusFilter}
-                            onChange={setStatusFilter}
+                            placeholder="Lọc theo đánh giá"
+                            value={ratingFilter}
+                            onChange={setRatingFilter}
                             style={{ width: 150 }}
                             allowClear
                         >
-                            <Option value="visible">Đang hiển thị</Option>
-                            <Option value="hidden">Đã ẩn</Option>
+                            <Option value="5">5 sao (4.5-5.0)</Option>
+                            <Option value="4">4 sao (3.5-4.4)</Option>
+                            <Option value="3">3 sao (2.5-3.4)</Option>
+                            <Option value="2">2 sao (1.5-2.4)</Option>
+                            <Option value="1">1 sao (0.5-1.4)</Option>
                         </Select>
                     </div>
                     <div>
                         <Tag color="blue">
                             Tổng: {filteredReviews.length} đánh giá
                         </Tag>
-                        <Tag color="red">
-                            Đã ẩn: {reviews.filter(r => r.isHidden).length}
-                        </Tag>
-                        {reviews.filter(r => r.isHidden).length > 0 && (
-                            <Button
-                                type="link"
-                                size="small"
-                                onClick={() => setStatusFilter(statusFilter === "hidden" ? "" : "hidden")}
-                                style={{ padding: 0, marginLeft: 8 }}
-                            >
-                                {statusFilter === "hidden" ? "Xem tất cả" : "Chỉ xem đã ẩn"}
-                            </Button>
-                        )}
                     </div>
                 </Space>
             </div>

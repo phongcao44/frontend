@@ -43,6 +43,7 @@ import PostManagement from "../pages/admin/posts/PostManagement";
 
 import OrderManagementShipper from "../pages/admin/shipper/OrderManagementShipper";
 import FlashSaleItemPage from "../pages/admin/flash_Sale/flashSaleItem/FlashSaleItemPage";
+import ContactManagement from "../pages/admin/contacts/ContactManagement";
 export default function AdminRoutes() {
   return (
     <Route
@@ -96,6 +97,9 @@ export default function AdminRoutes() {
 
       {/* Voucher */}
       <Route path="/admin/voucher" element={<VoucherManagement />} />
+
+      {/* Contacts */}
+      <Route path="/admin/contacts" element={<ContactManagement />} />
 
       {/* Reviews & Support */}
       <Route path="/admin/reviews" element={<ReviewManagement />} />

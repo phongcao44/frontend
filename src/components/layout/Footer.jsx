@@ -19,10 +19,10 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-black text-white py-10 px-4 sm:px-5">
+    <footer className="bg-black text-white py-10 px-4 sm:px-6">
       <div className="max-w-screen-xl mx-auto">
         <Row gutter={[16, 16]} justify="start">
-          <Col xs={24} sm={12} md={8} lg={6}>
+          <Col xs={24} sm={12} md={6} lg={6}>
             <h4 className="text-white text-lg font-semibold mb-3">Exclusive</h4>
             <p className="text-gray-400 mb-2">Subscribe</p>
             <p className="text-gray-500 mb-3">Get 10% off your first order</p>
@@ -31,7 +31,7 @@ const Footer = () => {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(x) => setEmail(x.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 bg-black text-gray-400 border-2 border-white rounded-l-md focus:border-white"
                 style={{ borderRight: "none" }}
               />
@@ -45,7 +45,7 @@ const Footer = () => {
             </form>
           </Col>
 
-          <Col xs={24} sm={12} md={8} lg={4}>
+          <Col xs={24} sm={12} md={6} lg={6}>
             <h5 className="text-white text-base font-semibold mb-3">Support</h5>
             <p className="text-gray-400 mb-2">
               111 Bijoy sarani, Dhaka, DH 1515, Bangladesh.
@@ -62,7 +62,7 @@ const Footer = () => {
             </p>
           </Col>
 
-          <Col xs={24} sm={12} md={8} lg={4}>
+          <Col xs={24} sm={12} md={6} lg={6}>
             <h5 className="text-white text-base font-semibold mb-3">Account</h5>
             <Space direction="vertical" size={4}>
               {[
@@ -83,7 +83,7 @@ const Footer = () => {
             </Space>
           </Col>
 
-          <Col xs={24} sm={12} md={8} lg={4}>
+          <Col xs={24} sm={12} md={6} lg={6}>
             <h5 className="text-white text-base font-semibold mb-3">Quick Link</h5>
             <Space direction="vertical" size={4}>
               {[
@@ -104,7 +104,7 @@ const Footer = () => {
           </Col>
         </Row>
 
-        <div className="text-center mt-4">
+        <div className="text-center mt-6">
           <Space size="middle" className="mb-4">
             {[
               { Icon: FacebookOutlined, href: "https://www.facebook.com" },
