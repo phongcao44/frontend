@@ -19,6 +19,9 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
   const { cart } = useSelector((state) => state.cart);
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
 
+  // Dynamic maxQuantity from matchedVariant or prop
+  const effectiveMaxQuantity = matchedVariant?.stockQuantity ?? maxQuantity;
+
   // Kiểm tra trạng thái yêu thích dựa trên wishlistItems
   const isInWishlist = wishlistItems.some((item) => item.product?.id === productId);
 
@@ -29,7 +32,7 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
   useEffect(() => {
     if (productId) {
       dispatch(getCart());
-      dispatch(getUserWishlist()); // Fetch wishlist to ensure latest state
+      dispatch(getUserWishlist());
     }
   }, [dispatch, productId]);
 
@@ -41,7 +44,20 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
   const isColorSelected = !hasColors || selectedColorId !== null;
   const isSizeSelected = !hasSizes || selectedSizeId !== null;
 
-  const isVariantSelected = matchedVariant && maxQuantity > 0 && isColorSelected && isSizeSelected;
+  const isVariantSelected = matchedVariant && effectiveMaxQuantity > 0 && isColorSelected && isSizeSelected;
+
+  // Kiểm tra số lượng hiện có trong giỏ hàng cho biến thể
+  const getCurrentCartQuantity = () => {
+    if (!matchedVariant?.id || !cart?.items) return 0;
+    const cartItem = cart.items.find(item => item.variantId === matchedVariant.id);
+    return cartItem && cartItem.quantity !== undefined ? cartItem.quantity : 0;
+  };
+
+  // Kiểm tra xem sản phẩm (dù khác variant) đã có trong giỏ hàng chưa
+  const hasSameProductInCart = () => {
+    if (!cart?.items || !matchedVariant?.productName) return false;
+    return cart.items.some(item => item.productName === matchedVariant.productName && item.variantId !== matchedVariant.id);
+  };
 
   const handleAddToCart = async (e) => {
     e.stopPropagation();
@@ -60,6 +76,19 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
     if (!matchedVariant?.id) {
       message.error("Lỗi: Không tìm thấy biến thể sản phẩm!");
       return;
+    }
+
+    const currentQuantityInCart = getCurrentCartQuantity();
+    const totalQuantity = currentQuantityInCart + quantity;
+
+    if (totalQuantity > effectiveMaxQuantity) {
+      message.error(`Số lượng vượt quá giới hạn (${effectiveMaxQuantity})! Hiện tại đã có ${currentQuantityInCart} sản phẩm trong giỏ hàng.`);
+      return;
+    }
+
+    // Cảnh báo nếu sản phẩm đã có trong giỏ với variant khác
+    if (hasSameProductInCart()) {
+      message.info(`Sản phẩm "${matchedVariant.productName}" với biến thể khác đã có trong giỏ hàng.`);
     }
 
     setIsAdding(true);
@@ -89,6 +118,14 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
 
     if (!matchedVariant?.id) {
       message.error("Lỗi: Không tìm thấy biến thể sản phẩm!");
+      return;
+    }
+
+    const currentQuantityInCart = getCurrentCartQuantity();
+    const totalQuantity = currentQuantityInCart + quantity;
+
+    if (totalQuantity > effectiveMaxQuantity) {
+      message.error(`Số lượng vượt quá giới hạn (${effectiveMaxQuantity})! Hiện tại đã có ${currentQuantityInCart} sản phẩm trong giỏ hàng.`);
       return;
     }
 
@@ -127,16 +164,14 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
   };
 
   const handleQuantityChange = (value) => {
-    const newValue = Math.max(1, Math.min(maxQuantity, Number(value) || 1));
+    const newValue = Math.max(1, Math.min(effectiveMaxQuantity, Number(value) || 1));
     setQuantity(newValue);
   };
 
   const handleWishlistToggle = async () => {
     try {
       if (!isInWishlist) {
-        // Thêm vào danh sách yêu thích
         await dispatch(addProductToWishlist(productId)).unwrap();
-        // Refetch wishlist to ensure UI updates
         await dispatch(getUserWishlist()).unwrap();
         Swal.fire({
           title: "Thành công!",
@@ -145,7 +180,6 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
           timer: 1500,
         });
       } else {
-        // Kiểm tra lại wishlistId ngay trước khi xóa
         const currentWishlistItem = wishlistItems.find((item) => item.product?.id === productId);
         const currentWishlistId = currentWishlistItem?.wishlistId;
 
@@ -160,9 +194,7 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
           return;
         }
 
-        // Xóa khỏi danh sách yêu thích
         await dispatch(removeProductFromWishlist(currentWishlistId)).unwrap();
-        // Refetch wishlist to ensure UI updates
         await dispatch(getUserWishlist()).unwrap();
         Swal.fire({
           title: "Thành công!",
@@ -198,8 +230,8 @@ const AddToCart = ({ productId, matchedVariant, maxQuantity = 10, selectedColorI
         />
         <button
           onClick={() => handleQuantityChange(quantity + 1)}
-          disabled={quantity >= maxQuantity}
-          className={`h-8 px-2 ${quantity >= maxQuantity ? "bg-gray-200" : "bg-white"}`}
+          disabled={quantity >= effectiveMaxQuantity}
+          className={`h-8 px-2 ${quantity >= effectiveMaxQuantity ? "bg-gray-200" : "bg-white"}`}
         >
           <PlusOutlined />
         </button>

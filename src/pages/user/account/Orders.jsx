@@ -60,6 +60,8 @@ export default function Orders() {
     }
   };
 
+  
+
   useEffect(() => {
     fetchCounts();
   }, []);
@@ -215,13 +217,10 @@ export default function Orders() {
             <Outlet context={{ searchTerm, dateFilter }} />
           </div>
           
-          {/* Loading overlay chỉ áp dụng cho Outlet */}
+          {/* Simplified loading overlay */}
           {isTransitioning && (
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50 flex items-center justify-center backdrop-blur-sm z-10">
-              <div className="flex items-center gap-3 text-blue-600">
-                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm font-medium">Đang tải...</span>
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           )}
         </div>
