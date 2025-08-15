@@ -12,7 +12,6 @@ export default function UserAccountPage() {
   const location = useLocation();
   const { userDetail, loading } = useSelector((state) => state.users);
 
-
   // Determine active tab from URL
   const getActiveTab = () => {
     const path = location.pathname;
@@ -20,7 +19,7 @@ export default function UserAccountPage() {
     if (path.includes('/user/addresses')) return 'addresses';
     if (path.includes('/user/profile') || path === '/user') return 'profile';
     if (path.includes('/user/edit-profile')) return 'edit-profile';
-    if (path.includes('/user/wishlist')) return 'wishlist';
+    if (path === '/wishlist') return 'wishlist';
     if (path.includes('/user/myVouchers')) return 'myVouchers';
     if (path.includes('/user/deliveredProduct')) return 'deliveredProduct';
     if (path.includes('/user/returns')) return 'returns';
@@ -42,25 +41,15 @@ export default function UserAccountPage() {
     fetchData();
   }, [dispatch]);
 
-
-
   const menuItems = [
     { id: 'profile', label: 'Thông tin cá nhân', icon: User },
     { id: 'orders', label: 'Đơn hàng của tôi', icon: Package },
     { id: 'addresses', label: 'Địa chỉ', icon: MapPin },
-    { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart },
+    { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart, path: '/wishlist' },
     { id: 'myVouchers', label: 'Voucher của tôi', icon: Settings },
     { id: 'deliveredProduct', label: 'Sản phẩm đã giao', icon: ProductFilled },
     { id: 'returns', label: 'Yêu cầu trả hàng', icon: RotateCcw },
   ];
-
-  // if (loading) {
-  //   return (
-  //     <div className="flex items-center justify-center h-screen">
-  //       <div className="text-lg">Đang tải thông tin...</div>
-  //     </div>
-  //   );
-  // }
 
   if (error) {
     return (
@@ -103,7 +92,7 @@ export default function UserAccountPage() {
                     return (
                       <li key={item.id}>
                         <button
-                          onClick={() => navigate(`/user/${item.id === 'profile' ? 'profile' : item.id}`)}
+                          onClick={() => navigate(item.path || `/user/${item.id === 'profile' ? 'profile' : item.id}`)}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${activeTab === item.id
                             ? 'bg-blue-50 text-blue-600 font-semibold'
                             : 'text-gray-700 hover:bg-gray-50'
