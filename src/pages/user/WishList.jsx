@@ -183,6 +183,7 @@ const WishList = () => {
     );
   }
 
+
   return (
     <div className="min-h-screen bg-white py-10 px-5">
       <div className="max-w-6xl mx-auto">
@@ -336,23 +337,7 @@ const WishList = () => {
               {wishlistItems.map((item) => (
                 <SwiperSlide key={item.wishlistId}>
                   <ProductCard
-                    product={{
-                      id: item.product.id,
-                      name: item.product.name,
-                      price:
-                        item.product.variants?.[0]?.finalPriceAfterDiscount ||
-                        item.product.variants?.[0]?.priceOverride ||
-                        item.product.price,
-                      originalPrice: item.product.variants?.[0]?.priceOverride,
-                      image: item.product.imageUrl || "/placeholder.png",
-                      rating: item.product.averageRating,
-                      reviews: item.product.totalReviews,
-                      discount: item.product.variants?.[0]?.discountOverrideByFlashSale
-                        ? `-${item.product.variants[0].discountOverrideByFlashSale}%`
-                        : null,
-                      inStock: item.product.status === "IN_STOCK",
-                      ...item.product,
-                    }}
+                    product={item.product}
                     showRemove={false}
                     onAddToCart={() => handleAddToCart(item)}
                     onClick={() => handleProductClick(item)}
