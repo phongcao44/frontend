@@ -3,359 +3,183 @@ import { useDispatch, useSelector } from "react-redux";
 import Swal from "sweetalert2";
 import {
   getAddresses,
-  createAddress,
-  editAddress,
   removeAddress,
 } from "../../../redux/slices/addressSlice";
+import AddressForm from "./AddressForm";
 
 export default function AddressBook() {
   const dispatch = useDispatch();
   const { addresses, loading, error } = useSelector((state) => state.address);
 
-  const [showModal, setShowModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [editingAddressId, setEditingAddressId] = useState(null);
-  const [formData, setFormData] = useState({
-    recipientName: "",
-    phone: "",
-    fullAddress: "",
-    provinceName: "",
-    districtName: "",
-    wardName: "",
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [localAddresses, setLocalAddresses] = useState([]);
 
   // Fetch addresses on component mount
   useEffect(() => {
     dispatch(getAddresses());
   }, [dispatch]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  // Sync local list whenever Redux addresses change
+  useEffect(() => {
+    setLocalAddresses(addresses || []);
+  }, [addresses]);
 
   const handleEditAddress = (address) => {
-    setIsEditing(true);
-    setIsAddingNew(false);
-    setEditingAddressId(address.addressId);
-    setFormData({
-      recipientName: address.recipientName,
-      phone: address.phone,
-      fullAddress: address.fullAddress,
-      provinceName: address.provinceName,
-      districtName: address.districtName,
-      wardName: address.wardName,
-    });
-    setShowModal(true);
+    setSelectedAddress(address);
+    setShowForm(true);
   };
 
   const handleDeleteAddress = async (id) => {
     try {
+      // Ask for confirmation first
+      const result = await Swal.fire({
+        title: "Xóa địa chỉ?",
+        text: "Địa chỉ này sẽ bị ẩn khỏi danh sách của bạn.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Xóa",
+        cancelButtonText: "Hủy",
+        confirmButtonColor: "#dc2626",
+        cancelButtonColor: "#6b7280",
+      });
+
+      if (!result.isConfirmed) return;
+
+      // Optimistic UI update: remove immediately
+      setLocalAddresses((prev) => prev.filter((a) => (a.id || a.addressId) !== id));
+
+      // Call API to set deleted = true
       await dispatch(removeAddress(id)).unwrap();
-      await Swal.fire("Success!", "Address deleted successfully.", "success");
-      setShowModal(false);
-      setIsEditing(false);
-      setIsAddingNew(false);
-    } catch (error) {
-      await Swal.fire("Error!", "Failed to delete address.", "error");
-    }
-  };
 
-  const handleSaveAddress = async () => {
-    if (
-      !formData.recipientName ||
-      !formData.phone ||
-      !formData.fullAddress ||
-      !formData.provinceName ||
-      !formData.districtName ||
-      !formData.wardName
-    ) {
-      await Swal.fire("Error!", "Please fill in all required fields.", "error");
-      return;
-    }
-
-    const addressData = {
-      recipientName: formData.recipientName,
-      phone: formData.phone,
-      fullAddress: formData.fullAddress,
-      provinceName: formData.provinceName,
-      districtName: formData.districtName,
-      wardName: formData.wardName,
-    };
-
-    try {
-      if (isEditing) {
-        await dispatch(
-          editAddress({ id: editingAddressId, payload: addressData })
-        ).unwrap();
-        await Swal.fire("Success!", "Address updated successfully.", "success");
-      } else {
-        await dispatch(createAddress(addressData)).unwrap();
-        await Swal.fire("Success!", "Address added successfully.", "success");
-      }
-      setShowModal(false);
-      setIsEditing(false);
-      setIsAddingNew(false);
-      setFormData({
-        recipientName: "",
-        phone: "",
-        fullAddress: "",
-        provinceName: "",
-        districtName: "",
-        wardName: "",
+      // Success toast like the screenshot
+      await Swal.fire({
+        icon: "success",
+        title: "Thành công!",
+        text: "Địa chỉ đã được xóa.",
+        toast: true,
+        position: "top-end",
+        timer: 1800,
+        showConfirmButton: false,
       });
     } catch (error) {
-      await Swal.fire(
-        "Error!",
-        `Failed to ${isEditing ? "update" : "add"} address.`,
-        "error"
-      );
+      // Revert by refetching
+      dispatch(getAddresses());
+      await Swal.fire({
+        icon: "error",
+        title: "Lỗi!",
+        text: "Không thể xóa địa chỉ. Vui lòng thử lại.",
+      });
     }
   };
 
   const handleNewAddress = () => {
-    setIsAddingNew(true);
-    setIsEditing(false);
-    setFormData({
-      recipientName: "",
-      phone: "",
-      fullAddress: "",
-      provinceName: "",
-      districtName: "",
-      wardName: "",
-    });
-    setShowModal(true);
+    setSelectedAddress(null);
+    setShowForm(true);
   };
 
-  const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
-
   return (
-    <div className="bg-white rounded-lg shadow-sm p-8 mx-auto">
-      <h2 className="text-xl font-medium text-red-500 mb-8">Addresccs Book</h2>
+    <div className="bg-gradient-to-b from-green-50 to-white rounded-xl p-6 md:p-8 mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 11c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19.5 8c0 7-7.5 13-7.5 13S4.5 15 4.5 8a7.5 7.5 0 1115 0z"/></svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-extrabold text-green-700">Địa chỉ của tôi</h2>
+            <p className="text-sm text-gray-500">Quản lý địa chỉ giao hàng của bạn</p>
+          </div>
+        </div>
+        <button
+          onClick={handleNewAddress}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white shadow-sm hover:bg-green-700"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 11c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19.5 8c0 7-7.5 13-7.5 13S4.5 15 4.5 8a7.5 7.5 0 1115 0z"/></svg>
+          Thêm địa chỉ mới
+        </button>
+      </div>
 
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
 
-      {/* Default Address Display */}
-      {defaultAddress ? (
-        <div className="border border-gray-300 rounded-md p-4 mb-6">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900">
-              {defaultAddress.recipientName}
-            </span>
-            <span className="text-gray-500">|</span>
-            <span className="text-gray-600">{defaultAddress.phone}</span>
-            {defaultAddress.isDefault && (
-              <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded">
-                Default
-              </span>
-            )}
-          </div>
-          <p className="text-gray-700 text-sm">{defaultAddress.fullAddress}</p>
-          <p className="text-gray-700 text-sm">
-            {defaultAddress.wardName}, {defaultAddress.districtName},{" "}
-            {defaultAddress.provinceName}
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={() => handleEditAddress(defaultAddress)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
-            >
-              Edit
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="border-2 border-dashed border-gray-300 rounded-md p-4 mb-6 text-center">
-          <p className="text-gray-600">No address available</p>
-        </div>
-      )}
-
       {/* Address List or Empty State */}
-      {addresses.length === 0 ? (
-        <p className="text-gray-600 mb-6">No addresses saved.</p>
+      {localAddresses.length === 0 ? (
+        <p className="text-gray-600 mb-6">Chưa có địa chỉ nào.</p>
       ) : (
-        <ul className="space-y-4 mb-6">
-          {addresses.map((address) => (
-            <li key={address.addressId} className="border-b pb-4">
-              <div className="flex justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">
-                    {address.recipientName}
-                  </h3>
-                  <p className="text-sm text-gray-600">{address.fullAddress}</p>
-                  <p className="text-sm text-gray-600">
-                    {address.wardName}, {address.districtName},{" "}
-                    {address.provinceName}
-                  </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {localAddresses.map((address) => {
+            const id = address.id || address.addressId;
+            const ward = address.ward || address.wardName;
+            const district = address.district || address.districtName;
+            const province = address.province || address.provinceName;
+            return (
+              <div key={id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.686 2 6 4.686 6 8c0 4.5 6 12 6 12s6-7.5 6-12c0-3.314-2.686-6-6-6zm0 8.5A2.5 2.5 0 1 1 12 5a2.5 2.5 0 0 1 0 5.5z"/></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">{address.recipientName}</h3>
+                      <div className="flex items-center gap-2 text-gray-500 text-sm mt-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 5a2 2 0 012-2h2l2 4-2 1a12 12 0 006 6l1-2 4 2v2a2 2 0 01-2 2h-1C9.716 20 4 14.284 4 7V6a1 1 0 00-1-1H3z" /></svg>
+                        <span>{address.phone}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditAddress(address)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 text-green-600 hover:bg-green-100 text-sm font-medium"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-0.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+                      Sửa
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAddress(id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm font-medium"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 7h12v2H6V7zm2 3h8l-1 9H9L8 10zm3-6h2v2h-2V4z"/></svg>
+                      Xóa
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEditAddress(address)}
-                    className="text-blue-500 hover:text-blue-600 text-sm"
-                  >
-                    Edit
-                  </button>
+
+                <div className="mt-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-md px-4 py-3 text-gray-800 font-semibold">
+                    {address.fullAddress}
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600 text-sm mt-2 bg-white border border-gray-200 rounded-md px-3 py-2 shadow-inner">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-green-50 text-green-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.686 2 6 4.686 6 8c0 4.5 6 12 6 12s6-7.5 6-12c0-3.314-2.686-6-6-6zm0 8.5A2.5 2.5 0 1 1 12 5a2.5 2.5 0 0 1 0 5.5z"/></svg>
+                    </span>
+                    <span>
+                      {ward}, {district}, {province}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 mt-4 pt-4 flex items-center justify-between">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                    Địa chỉ giao hàng
+                  </span>
+                  <span className="text-xs text-gray-400">ID: #{id}</span>
                 </div>
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <button
-        onClick={handleNewAddress}
-        className="w-full px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-      >
-        Add New Address
-      </button>
-
-      {/* Modal for Adding/Editing Address */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">
-                {isAddingNew ? "Add New Address" : "Edit Address"}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  setIsEditing(false);
-                  setIsAddingNew(false);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Recipient Name*
-                </label>
-                <input
-                  type="text"
-                  name="recipientName"
-                  value={formData.recipientName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number*
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Province/City*
-                </label>
-                <input
-                  type="text"
-                  name="provinceName"
-                  value={formData.provinceName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  District*
-                </label>
-                <input
-                  type="text"
-                  name="districtName"
-                  value={formData.districtName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ward*
-                </label>
-                <input
-                  type="text"
-                  name="wardName"
-                  value={formData.wardName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Addrdess*
-                </label>
-                <input
-                  type="text"
-                  name="fullAddress"
-                  value={formData.fullAddress}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveAddress}
-                  className="flex-1 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  disabled={
-                    !formData.recipientName ||
-                    !formData.phone ||
-                    !formData.fullAddress ||
-                    !formData.provinceName ||
-                    !formData.districtName ||
-                    !formData.wardName
-                  }
-                >
-                  {isEditing ? "Update Address" : "Save Address"}
-                </button>
-                {isEditing && (
-                  <button
-                    onClick={() => handleDeleteAddress(editingAddressId)}
-                    className="flex-1 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setShowModal(false);
-                    setIsEditing(false);
-                    setIsAddingNew(false);
-                  }}
-                  className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
+      )}
+      {showForm && (
+        <AddressForm
+          address={selectedAddress}
+          onClose={() => {
+            setShowForm(false);
+            // Refresh list just in case
+            dispatch(getAddresses());
+          }}
+        />
       )}
     </div>
   );

@@ -51,8 +51,9 @@ export default function AddressForm({ address, onClose }) {
         setDistricts(data);
         
         // Nếu đang edit và có district, tìm và set districtId
-        if (address && address.district && data.length > 0) {
-          const foundDistrict = data.find(d => d.DistrictName === address.district);
+        const districtNameFromAddr = address?.district || address?.districtName;
+        if (address && districtNameFromAddr && data.length > 0) {
+          const foundDistrict = data.find(d => d.DistrictName === districtNameFromAddr);
           if (foundDistrict) {
             setFormData(prev => ({ ...prev, districtId: foundDistrict.DistrictID.toString() }));
           }
@@ -77,8 +78,9 @@ export default function AddressForm({ address, onClose }) {
         setWards(data);
         
         // Nếu đang edit và có ward, tìm và set wardCode
-        if (address && address.ward && data.length > 0) {
-          const foundWard = data.find(w => w.WardName === address.ward);
+        const wardNameFromAddr = address?.ward || address?.wardName;
+        if (address && wardNameFromAddr && data.length > 0) {
+          const foundWard = data.find(w => w.WardName === wardNameFromAddr);
           if (foundWard) {
             setFormData(prev => ({ ...prev, wardCode: foundWard.WardCode }));
           }
@@ -98,17 +100,18 @@ export default function AddressForm({ address, onClose }) {
         recipientName: address.recipientName || '',
         phone: address.phone || '',
         fullAddress: address.fullAddress || '',
-        ward: address.ward || '',
-        district: address.district || '',
-        province: address.province || '',
+        ward: address.ward || address.wardName || '',
+        district: address.district || address.districtName || '',
+        province: address.province || address.provinceName || '',
         provinceId: '',
         districtId: '',
         wardCode: ''
       });
       
       // Tìm và set provinceId, districtId, wardCode dựa trên tên
-      if (address.province) {
-        const foundProvince = provinces.find(p => p.ProvinceName === address.province);
+      const provinceNameFromAddr = address.province || address.provinceName;
+      if (provinceNameFromAddr) {
+        const foundProvince = provinces.find(p => p.ProvinceName === provinceNameFromAddr);
         if (foundProvince) {
           setFormData(prev => ({ ...prev, provinceId: foundProvince.ProvinceID.toString() }));
         }
@@ -218,8 +221,9 @@ export default function AddressForm({ address, onClose }) {
         province: formData.province
       };
 
-      if (address?.id) {
-        await dispatch(editAddress({ id: address.id, payload: addressRequest })).unwrap();
+      const editId = address?.id ?? address?.addressId;
+      if (editId) {
+        await dispatch(editAddress({ id: editId, payload: addressRequest })).unwrap();
       } else {
         await dispatch(createAddress(addressRequest)).unwrap();
       }
@@ -229,7 +233,7 @@ export default function AddressForm({ address, onClose }) {
       // Hiển thị thông báo thành công
       Swal.fire({
         title: 'Thành công!',
-        text: address?.id ? 'Địa chỉ đã được cập nhật thành công' : 'Địa chỉ đã được thêm thành công',
+        text: editId ? 'Địa chỉ đã được cập nhật thành công' : 'Địa chỉ đã được thêm thành công',
         icon: 'success',
         timer: 3000,
         showConfirmButton: false,
@@ -247,10 +251,10 @@ export default function AddressForm({ address, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+      <div className="bg-white rounded-xl p-6 w-full max-w-xl shadow-lg">
+        <div className="flex justify-between items-start mb-6">
+          <h2 className="text-2xl font-semibold text-gray-900">
             {address ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới'}
           </h2>
           <button
