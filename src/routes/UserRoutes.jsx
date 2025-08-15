@@ -29,6 +29,8 @@ import AddressBook from "../pages/user/account/AddressBook";
 
 import Orders from "../pages/user/account/Orders";
 import OrderSuccessPage from "../pages/user/order-success/OrderSuccessPage";
+import OrderFailedPage from "../pages/user/order-failed/OrderFailedPage";
+import VNPayCallback from "../pages/user/payment/VNPayCallback";
 
 import ProductSearch from "../pages/user/productList/ProductSearch";
 import Blog from "../pages/user/Blog";
@@ -68,7 +70,8 @@ const UserRoutes = () => {
         </Route>
 
         <Route path="payment-success/:orderId" element={<OrderSuccessPage />} />
-        <Route path="/payment-failed/:orderId" element={<ErrorPage />} />
+        <Route path="payment-failed/:orderId" element={<OrderFailedPage />} />
+        <Route path="vnpay-callback" element={<VNPayCallback />} />
 
         {/* Auth */}
         <Route path="login" element={<Login />} />

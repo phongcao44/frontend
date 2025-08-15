@@ -237,19 +237,6 @@ export default function FlashSaleItemManagement({ onBack }) {
       return false;
     }
 
-    // Kiểm tra số lượng đã bán
-    const soldQuantity = parseInt(editForm.soldQuantity);
-    if (soldQuantity < 0) {
-      Swal.fire("Lỗi", "Số lượng đã bán không được âm", "error");
-      return false;
-    }
-
-    // Kiểm tra số lượng tổng
-    if (quantity < soldQuantity) {
-      Swal.fire("Lỗi", "Số lượng tổng không được nhỏ hơn số lượng đã bán", "error");
-      return false;
-    }
-
     // Kiểm tra giá trị giảm giá
     const discountValue = parseFloat(editForm.discountValue);
     if (discountValue < 0) {
@@ -293,9 +280,9 @@ export default function FlashSaleItemManagement({ onBack }) {
       flashSaleId: parseInt(id),
       productId: parseInt(editForm.productId),
       variantId: parseInt(editForm.variantId),
-      quantity: parseInt(editForm.quantity),
+      quantityLimit: parseInt(editForm.quantity),
       soldQuantity: parseInt(editForm.soldQuantity),
-      price: parseFloat(editForm.discountValue),
+      discountedPrice: parseFloat(editForm.discountValue),
       discountType: editForm.discountType,
     };
     console.log("Edit submit payload:", payload); // Debug
@@ -384,9 +371,9 @@ export default function FlashSaleItemManagement({ onBack }) {
       flashSaleId: parseInt(id),
       productId: parseInt(form.productId),
       variantId: parseInt(form.variantId),
-      quantity: parseInt(form.quantity),
+      quantityLimit: parseInt(form.quantity),
       soldQuantity: parseInt(form.soldQuantity),
-      price: parseFloat(form.discountValue),
+      discountedPrice: parseFloat(form.discountValue),
       discountType: form.discountType,
     };
     console.log("Add submit payload:", payload); // Debug
@@ -997,8 +984,6 @@ export default function FlashSaleItemManagement({ onBack }) {
                       const numValue = parseInt(value);
                       if (numValue <= 0) {
                         e.target.setCustomValidity("Số lượng phải lớn hơn 0");
-                      } else if (numValue < parseInt(editForm.soldQuantity)) {
-                        e.target.setCustomValidity("Số lượng tổng không được nhỏ hơn số lượng đã bán");
                       } else {
                         e.target.setCustomValidity("");
                       }
@@ -1016,25 +1001,8 @@ export default function FlashSaleItemManagement({ onBack }) {
                 <input
                   type="number"
                   value={safe(editForm.soldQuantity)}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setEditForm({ ...editForm, soldQuantity: value });
-                    
-                    // Validation real-time
-                    if (value) {
-                      const numValue = parseInt(value);
-                      if (numValue < 0) {
-                        e.target.setCustomValidity("Số lượng đã bán không được âm");
-                      } else if (numValue > parseInt(editForm.quantity)) {
-                        e.target.setCustomValidity("Số lượng đã bán không được vượt quá số lượng tổng");
-                      } else {
-                        e.target.setCustomValidity("");
-                      }
-                    }
-                  }}
-                  required
-                  min="0"
-                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full bg-gray-100"
                 />
               </div>
               <div className="flex space-x-2">

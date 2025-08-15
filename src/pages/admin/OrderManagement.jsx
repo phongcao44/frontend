@@ -195,10 +195,9 @@ export default function OrderManagement() {
     return true;
   });
 
-  const totalRevenue = validOrders.reduce(
-    (sum, order) => sum + Number(order.totalAmount || 0),
-    0
-  );
+  const totalRevenue = validOrders
+  .filter(order => order.status === "DELIVERED")
+  .reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
   const completedOrders = validOrders.filter(
     (o) => o.status === "DELIVERED"
   ).length;
@@ -488,7 +487,7 @@ export default function OrderManagement() {
                                   navigate(`/admin/orders/${order.orderId}`)
                                 }
                               >
-                                {order.orderId}
+                                {order.orderCode}
                               </div>
                             </div>
                           </div>
@@ -578,7 +577,7 @@ export default function OrderManagement() {
                             navigate(`/admin/orders/${order.orderId}`)
                           }
                         >
-                          {order.orderId}
+                          {order.orderCode}
                         </h3>
                         <p className="text-sm text-gray-500">
                           {formatDate(order.createdAt)}

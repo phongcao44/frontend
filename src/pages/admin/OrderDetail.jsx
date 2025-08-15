@@ -13,11 +13,12 @@ import {
   Row,
   Col,
   Avatar,
-  Badge,
   Spin,
   Alert,
   message,
   Select,
+  Modal,
+  Input,
 } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import {
@@ -35,6 +36,8 @@ export default function OrderDetail() {
   const { orderId } = useParams();
   const { currentOrder, loading, error } = useSelector((state) => state.order);
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [customCancellationReason, setCustomCancellationReason] = useState("");
 
   useEffect(() => {
     dispatch(loadOrderDetail(Number(orderId)));
@@ -44,111 +47,133 @@ export default function OrderDetail() {
   }, [dispatch, orderId]);
 
   useEffect(() => {
-    // Set default status to current order status
     if (currentOrder?.status) {
       setSelectedStatus(currentOrder.status);
+      setCancellationReason("");
+      setCustomCancellationReason("");
     }
   }, [currentOrder]);
 
-  // Kiểm tra xem đơn hàng có thể cập nhật trạng thái hay không
-  const canUpdateStatus = () => {
-    if (!currentOrder?.status) return false;
-    
-    // Không cho phép cập nhật nếu đơn hàng đã hủy hoặc đã trả hàng
-    const blockedStatuses = ['CANCELLED', 'RETURNED', 'REFUNDED'];
-    return !blockedStatuses.includes(currentOrder.status);
+  // Danh sách lý do hủy đơn hàng
+  const cancelReasons = [
+    "CHANGE_OF_MIND",
+    "FOUND_BETTER_PRICE",
+    "ORDERED_BY_MISTAKE",
+    "SHIPPING_TOO_SLOW",
+    "ITEM_NOT_AS_EXPECTED",
+    "CUSTOMER_SERVICE_ISSUE",
+    "OTHER",
+    "ADMIN_CANCELED",
+  ];
+
+  // Dịch lý do hủy đơn hàng
+  const translateCancelReason = (reason) => {
+    switch (reason) {
+      case "CHANGE_OF_MIND":
+        return "Thay đổi ý định";
+      case "FOUND_BETTER_PRICE":
+        return "Tìm thấy giá tốt hơn";
+      case "ORDERED_BY_MISTAKE":
+        return "Đặt hàng nhầm";
+      case "SHIPPING_TOO_SLOW":
+        return "Giao hàng quá chậm";
+      case "ITEM_NOT_AS_EXPECTED":
+        return "Sản phẩm không như kỳ vọng";
+      case "CUSTOMER_SERVICE_ISSUE":
+        return "Vấn đề dịch vụ khách hàng";
+      case "OTHER":
+        return "Lý do khác";
+      case "ADMIN_CANCELED":
+        return "Quản trị viên hủy";
+      default:
+        return "Không rõ";
+    }
   };
 
-  const handleStatusChange = async () => {
+  // Định nghĩa các trạng thái hợp lệ
+  const validTransitions = {
+    PENDING: ["CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED"],
+    CONFIRMED: ["SHIPPED", "CANCELLED", "RETURNED"],
+    SHIPPED: ["DELIVERED", "RETURNED"],
+    DELIVERED: ["RETURNED"],
+    CANCELLED: [],
+    RETURNED: [],
+  };
+
+  // Kiểm tra trạng thái có thể cập nhật hay không
+  const canUpdateStatus = () => {
+    if (!currentOrder?.status) return false;
+    return !["CANCELLED", "RETURNED"].includes(currentOrder.status);
+  };
+
+  // Lấy danh sách trạng thái hợp lệ để hiển thị trong dropdown
+  const getValidStatusOptions = () => {
+    if (!currentOrder?.status) return [];
+    return validTransitions[currentOrder.status] || [];
+  };
+
+  // Xử lý thay đổi trạng thái
+  const handleStatusChange = () => {
+    console.log("Selected status:", selectedStatus); // Debug: Log selected status
     if (!selectedStatus) {
       message.warning("Vui lòng chọn trạng thái");
       return;
     }
-
-    // Kiểm tra xem có thể cập nhật trạng thái không
     if (!canUpdateStatus()) {
       message.error("Không thể cập nhật trạng thái đơn hàng đã hủy hoặc đã trả hàng");
       return;
     }
-
-    // Kiểm tra xem trạng thái mới có hợp lệ không
     if (selectedStatus === currentOrder.status) {
       message.warning("Trạng thái đã được chọn hiện tại");
       return;
     }
+    if (!validTransitions[currentOrder.status].includes(selectedStatus)) {
+      message.error("Chuyển trạng thái không hợp lệ");
+      return;
+    }
 
+    // Xử lý trạng thái CANCELLED với lý do ADMIN_CANCELED
+    if (selectedStatus === "CANCELLED") {
+      Modal.confirm({
+        title: "Xác nhận hủy đơn hàng",
+        content: (
+          <div>
+            <p>Bạn có chắc chắn muốn hủy đơn hàng?</p>
+            <Text type="secondary">Lý do: Quản trị viên hủy</Text>
+          </div>
+        ),
+        okText: "Xác nhận",
+        cancelText: "Hủy",
+        onOk: () => updateStatus("ADMIN_CANCELED"),
+      });
+    } else {
+      // Không yêu cầu lý do cho RETURNED hoặc các trạng thái khác
+      updateStatus();
+    }
+  };
+
+  // Hàm thực hiện cập nhật trạng thái
+  const updateStatus = async (reason = undefined) => {
+    const payload = {
+      id: currentOrder.orderId,
+      status: selectedStatus,
+      cancellationReason: selectedStatus === "CANCELLED" ? reason : undefined,
+      customCancellationReason: undefined, // Không sử dụng cho admin
+    };
+    console.log("Payload for editOrderStatus:", payload); // Debug: Log payload
     try {
-      await dispatch(
-        editOrderStatus({
-          id: currentOrder.orderId,
-          status: selectedStatus,
-        })
-      ).unwrap();
+      await dispatch(editOrderStatus(payload)).unwrap();
       message.success(`Đã cập nhật trạng thái đơn hàng thành ${translateStatus(selectedStatus)}`);
+      await dispatch(loadOrderDetail(Number(orderId))).unwrap();
+      setCancellationReason("");
+      setCustomCancellationReason("");
     } catch (err) {
-      message.error("Cập nhật trạng thái thất bại");
+      console.error("Update status error:", err); // Debug: Log error
+      message.error(err.message || "Cập nhật trạng thái thất bại. Vui lòng thử lại.");
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: 24, textAlign: "center" }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: 24 }}>
-        <Alert
-          message="Lỗi"
-          description={
-            typeof error === "string"
-              ? error
-              : error.message || "Không thể tải dữ liệu đơn hàng."
-          }
-          type="error"
-          showIcon
-        />
-      </div>
-    );
-  }
-
-  if (!currentOrder) {
-    return (
-      <div style={{ padding: 24 }}>
-        <Alert
-          message="Không tìm thấy đơn hàng"
-          description={`Không tìm thấy đơn hàng với ID ${orderId}.`}
-          type="warning"
-          showIcon
-        />
-      </div>
-    );
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "PENDING":
-        return "warning";
-      case "CONFIRMED":
-        return "processing";
-      case "SHIPPED":
-        return "cyan";
-      case "DELIVERED":
-        return "success";
-      case "CANCELLED":
-        return "error";
-      case "RETURNED":
-        return "error";
-      case "REFUNDED":
-        return "error";
-      default:
-        return "default";
-    }
-  };
-
+  // Hàm dịch trạng thái
   const translateStatus = (status) => {
     switch (status) {
       case "PENDING":
@@ -163,13 +188,32 @@ export default function OrderDetail() {
         return "Đã hủy";
       case "RETURNED":
         return "Đã trả hàng";
-      case "REFUNDED":
-        return "Đã hoàn tiền";
       default:
         return "Không rõ";
     }
   };
 
+  // Hàm lấy màu trạng thái
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "PENDING":
+        return "warning";
+      case "CONFIRMED":
+        return "processing";
+      case "SHIPPED":
+        return "cyan";
+      case "DELIVERED":
+        return "success";
+      case "CANCELLED":
+        return "error";
+      case "RETURNED":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  // Hàm lấy màu trạng thái thanh toán
   const getPaymentColor = (status) => {
     switch (status) {
       case "PENDING":
@@ -183,6 +227,7 @@ export default function OrderDetail() {
     }
   };
 
+  // Hàm dịch trạng thái thanh toán
   const translatePaymentStatus = (status) => {
     switch (status) {
       case "PENDING":
@@ -196,48 +241,58 @@ export default function OrderDetail() {
     }
   };
 
+  // Hàm lấy màu trạng thái vận chuyển
   const getFulfillmentColor = (status) => {
     switch (status) {
       case "SHIPPED":
+        return "cyan";
       case "DELIVERED":
         return "success";
       case "PENDING":
         return "warning";
+      case "CONFIRMED":
+        return "processing";
       case "CANCELLED":
+        return "error";
+      case "RETURNED":
         return "error";
       default:
         return "default";
     }
   };
 
+  // Hàm dịch trạng thái vận chuyển
   const translateFulfillmentStatus = (status) => {
     switch (status) {
+      case "PENDING":
+        return "Chờ giao hàng";
+      case "CONFIRMED":
+        return "Đã xác nhận giao hàng";
       case "SHIPPED":
         return "Đã gửi hàng";
       case "DELIVERED":
         return "Đã giao hàng";
-      case "PENDING":
-        return "Chờ giao hàng";
       case "CANCELLED":
         return "Đã hủy giao hàng";
+      case "RETURNED":
+        return "Đã trả hàng";
       default:
         return "Không rõ";
     }
   };
 
-
-
-  const subTotal = (currentOrder.items || []).reduce(
-    (sum, item) => sum + Number(item.totalPrice),
+  // Tính toán tổng hợp đơn hàng
+  const subTotal = currentOrder?.subTotal || 0;
+  const discountAmount = currentOrder?.discountAmount || 0;
+  const shippingFee = currentOrder?.shippingFee || 0;
+  const totalAmount = currentOrder?.totalAmount || 0;
+  const totalProductQuantity = (currentOrder?.items || []).reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
     0
   );
-  const discountAmount = currentOrder.voucher
-    ? Number(currentOrder.voucher.discountAmount) || 0
-    : 0;
-  const shippingFee = 30000;
-  const totalAmount = subTotal - discountAmount + shippingFee;
 
-  const productData = (currentOrder.items || []).map((item, index) => ({
+  // Chuẩn bị dữ liệu sản phẩm cho bảng
+  const productData = (currentOrder?.items || []).map((item, index) => ({
     key: String(index + 1),
     product: {
       image:
@@ -253,6 +308,7 @@ export default function OrderDetail() {
     total: Number(item.totalPrice),
   }));
 
+  // Cột cho bảng sản phẩm
   const productColumns = [
     {
       title: "Số lượng",
@@ -279,6 +335,7 @@ export default function OrderDetail() {
     },
   ];
 
+  // Render chi tiết sản phẩm khi mở rộng
   const expandedRowRender = (record) => (
     <Row gutter={16} style={{ padding: "8px 24px" }}>
       <Col>
@@ -295,16 +352,11 @@ export default function OrderDetail() {
         </Text>
         <br />
         <Text type="secondary">SKU: {record.product.sku}</Text>
-        <br />
       </Col>
     </Row>
   );
 
-  const totalProductQuantity = (currentOrder.items || []).reduce(
-    (sum, item) => sum + Number(item.quantity || 0),
-    0
-  );
-
+  // Dữ liệu tóm tắt đơn hàng
   const summaryData = [
     { label: "Số lượng sản phẩm", value: `${totalProductQuantity}` },
     { label: "Tổng tiền hàng", value: `${subTotal.toLocaleString()} VND` },
@@ -317,11 +369,49 @@ export default function OrderDetail() {
     },
   ];
 
+  // Xử lý trạng thái loading
+  if (loading) {
+    return (
+      <div style={{ padding: 24, textAlign: "center" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  // Xử lý lỗi
+  if (error) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert
+          message="Lỗi"
+          description={
+            typeof error === "string"
+              ? error
+              : error.message || "Không thể tải dữ liệu đơn hàng."
+          }
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
+
+  // Xử lý không tìm thấy đơn hàng
+  if (!currentOrder) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert
+          message="Không tìm thấy đơn hàng"
+          description={`Không tìm thấy đơn hàng với ID ${orderId}.`}
+          type="warning"
+          showIcon
+        />
+      </div>
+    );
+  }
+
   return (
-    <div
-      style={{ padding: 24, backgroundColor: "#f5f5f5", minHeight: "100vh" }}
-    >
-      {/* Header section */}
+    <div style={{ padding: 24, backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
       <Card style={{ marginBottom: 16 }}>
         <Row
           style={{
@@ -361,24 +451,23 @@ export default function OrderDetail() {
             </Text>
           </Col>
         </Row>
-
         <Row style={{ padding: "12px 16px", alignItems: "center" }}>
           <Col span={3}>
             <Text strong style={{ fontSize: "14px" }}>
-              {currentOrder.orderId || "unknown"}
+              {currentOrder.orderCode || "unknown"}
             </Text>
           </Col>
           <Col span={4}>
             <Text style={{ fontSize: "14px" }}>
               {currentOrder.createdAt
                 ? new Date(currentOrder.createdAt)
-                  .toLocaleDateString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                  .replace(",", "") + " SA"
+                    .toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                    .replace(",", "") + " SA"
                 : "unknown"}
             </Text>
           </Col>
@@ -389,6 +478,25 @@ export default function OrderDetail() {
             <Tag color={getStatusColor(currentOrder.status)}>
               {translateStatus(currentOrder.status)}
             </Tag>
+            {currentOrder.status === "CANCELLED" && (
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary">
+                  Lý do hủy: {translateCancelReason(currentOrder.cancellationReason)}
+                </Text>
+                {currentOrder.cancellationReason === "OTHER" && (
+                  <div>
+                    <Text type="secondary">
+                      Chi tiết: {currentOrder.customCancellationReason || "Không có"}
+                    </Text>
+                  </div>
+                )}
+              </div>
+            )}
+            {currentOrder.status === "RETURNED" && (
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary">Đã trả hàng</Text>
+              </div>
+            )}
           </Col>
           <Col span={4}>
             <Tag color={getPaymentMethodColor(currentOrder.paymentMethod)}>
@@ -402,10 +510,8 @@ export default function OrderDetail() {
           </Col>
         </Row>
       </Card>
-
       <Card>
         <Row gutter={24}>
-          {/* LEFT */}
           <Col span={16}>
             <Card style={{ marginBottom: 16 }}>
               <Table
@@ -420,7 +526,6 @@ export default function OrderDetail() {
                 size="small"
               />
             </Card>
-
             <Row gutter={16}>
               <Col span={8}>
                 <Text strong>Kho lấy hàng</Text>
@@ -432,8 +537,8 @@ export default function OrderDetail() {
               <Col span={8}>
                 <Text strong>Trạng thái vận chuyển</Text>
                 <br />
-                <Tag color="orange">
-                  {currentOrder.fulfillmentStatus || "Chưa xác định"}
+                <Tag color={getFulfillmentColor(currentOrder.fulfillmentStatus)}>
+                  {translateFulfillmentStatus(currentOrder.fulfillmentStatus)}
                 </Tag>
               </Col>
               <Col span={8}>
@@ -444,9 +549,7 @@ export default function OrderDetail() {
                 </Button>
               </Col>
             </Row>
-
             <Divider />
-                
             <Row gutter={24} style={{ marginTop: 24 }}>
               <Col span={12}>
                 <Button
@@ -485,53 +588,48 @@ export default function OrderDetail() {
               </Col>
             </Row>
           </Col>
-
-          {/* RIGHT */}
           <Col span={8}>
             <Card style={{ marginBottom: 16 }}>
               <Text strong>Cập nhật trạng thái đơn hàng</Text>
               <div style={{ marginTop: 8 }}>
-                {!canUpdateStatus() ? (
+                <Text type="secondary">Chọn trạng thái đơn hàng</Text>
+                <br />
+                <Select
+                  style={{ width: "100%", marginTop: 8 }}
+                  placeholder="Chọn trạng thái"
+                  value={selectedStatus ? translateStatus(selectedStatus) : undefined}
+                  onChange={(value) => {
+                    console.log("Status selected:", value); // Debug: Log status change
+                    setSelectedStatus(value);
+                  }}
+                  disabled={!canUpdateStatus()}
+                >
+                  {(canUpdateStatus() ? getValidStatusOptions() : [currentOrder.status]).map((status) => (
+                    <Option key={status} value={status}>
+                      {translateStatus(status)}
+                    </Option>
+                  ))}
+                </Select>
+                <Button
+                  type="primary"
+                  block
+                  style={{ marginTop: 8 }}
+                  onClick={handleStatusChange}
+                  disabled={!canUpdateStatus() || !selectedStatus || selectedStatus === currentOrder.status}
+                >
+                  Cập nhật trạng thái
+                </Button>
+                {!canUpdateStatus() && (
                   <Alert
                     message="Không thể cập nhật trạng thái"
                     description={`Đơn hàng đã ${translateStatus(currentOrder?.status).toLowerCase()}. Không thể thay đổi trạng thái.`}
                     type="warning"
                     showIcon
-                    style={{ marginBottom: 16 }}
+                    style={{ marginTop: 16 }}
                   />
-                ) : (
-                  <>
-                    <Text type="secondary">Chọn trạng thái đơn hàng</Text>
-                    <br />
-                    <Select
-                      style={{ width: "100%", marginTop: 8 }}
-                      placeholder="Chọn trạng thái"
-                      value={selectedStatus}
-                      onChange={(value) => setSelectedStatus(value)}
-                      disabled={!canUpdateStatus()}
-                    >
-                      <Option value="PENDING">Chờ xử lý</Option>
-                      <Option value="CONFIRMED">Đã xác nhận</Option>
-                      <Option value="SHIPPED">Đã gửi hàng</Option>
-                      <Option value="DELIVERED">Đã giao hàng</Option>
-                      <Option value="CANCELLED">Đã hủy</Option>
-                    </Select>
-                    <Button
-                      type="primary"
-                      block
-                      style={{ marginTop: 8 }}
-                      onClick={handleStatusChange}
-                      disabled={!canUpdateStatus()}
-                    >
-                      Cập nhật trạng thái
-                    </Button>
-                  </>
                 )}
               </div>
             </Card>
-
-
-
             <Card>
               <Text strong>Thông tin người mua</Text>
               <div style={{ marginTop: 8 }}>
@@ -544,7 +642,6 @@ export default function OrderDetail() {
                 </Text>
               </div>
               <Divider style={{ borderColor: "#d9d9d9", margin: "32px 0" }} />
-
               <Space>
                 <Text strong>Người liên hệ</Text>
                 <Button type="text" icon={<MoreOutlined />} />

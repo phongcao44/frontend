@@ -49,7 +49,7 @@ const Contact = () => {
             </div>
             <h3 style={styles.title}>Call To Us</h3>
             <p style={styles.text}>We are available 24/7, 7 days a week.</p>
-            <p style={styles.text}>Phone: +8801611112222</p>
+            <p style={styles.text}>Phone: 0123456789</p>
           </div>
           <div style={styles.line} />
           <div style={styles.infoBlock}>
@@ -58,8 +58,8 @@ const Contact = () => {
             </div>
             <h3 style={styles.title}>Write To US</h3>
             <p style={styles.text}>Fill out our form and we will contact you within 24 hours.</p>
-            <p style={styles.text}>Emails: customer@exclusive.com</p>
-            <p style={styles.text}>Emails: support@exclusive.com</p>
+            <p style={styles.text}>Emails: ecommerce@gmail.com</p>
+            <p style={styles.text}>Emails: support@sapo.com</p>
           </div>
         </div>
 

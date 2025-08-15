@@ -25,11 +25,9 @@ export const updateVoucher = async (voucherId, data) => {
 
 
 // Admin - delete voucher
-export const deleteVoucher = async (data) => {
+export const deleteVoucher = async (voucherId) => {
   try {
-    const res = await axiosInstance.delete("/admin/voucher/delete", {
-      data, 
-    });
+    const res = await axiosInstance.delete(`/admin/voucher/delete/${voucherId}`);
     return res.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -82,6 +80,26 @@ export const getCollectibleVouchers = async () => {
 export const getUserVouchers = async () => {
   try {
     const res = await axiosInstance.get("/user/voucher/viewVoucher");
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// User - get unused vouchers
+export const getUnusedVouchers = async () => {
+  try {
+    const res = await axiosInstance.get("/user/voucher/viewVoucherFalse");
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// User - get used vouchers
+export const getUsedVouchers = async () => {
+  try {
+    const res = await axiosInstance.get("/user/voucher/viewVoucherTrue");
     return res.data;
   } catch (error) {
     throw error.response?.data || error.message;

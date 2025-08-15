@@ -13,6 +13,7 @@ import "./locales/i18n";
 
 
 
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <Provider store={store}>

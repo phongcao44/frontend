@@ -46,31 +46,11 @@ const FlashSale = () => {
       const res = await dispatch(fetchActiveFlashSale()).unwrap();
       if (res) {
         dispatch(fetchFlashSaleItems(res.id));
-      }
+      }nn
     };
 
     loadActiveFlashSale();
   }, [dispatch]);
-  useEffect(() => {
-  dispatch(fetchActiveFlashSale());
-}, [dispatch]);
-
-useEffect(() => {
-  if (activeFlashSale?.id) {
-    dispatch(fetchFlashSaleItems(activeFlashSale.id));
-  }
-}, [dispatch, activeFlashSale]);
-
-// useEffect(() => {
-//   dispatch(fetchActiveFlashSale());
-// }, [dispatch]);
-
-// useEffect(() => {
-//   if (activeFlashSale?.id) {
-//     dispatch(fetchFlashSaleItems(activeFlashSale.id));
-//   }
-// }, [dispatch, activeFlashSale]);
-
 
 
   return (

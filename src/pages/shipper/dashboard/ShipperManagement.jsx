@@ -60,16 +60,18 @@ export default function OrderManagement() {
   const [sortBy, setSortBy] = useState("createdAt");
   const [orderBy, setOrderBy] = useState("desc");
   const [statusFilter, setStatusFilter] = useState("");
-
+  const orders = useSelector((state) => state.order.list?.content || []);
+  const allowedStatuses = ["CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  const filteredOrders = orders.filter(order => allowedStatuses.includes(order.status));
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const orders = useSelector((state) => state.order.list?.content || []);
+  
+
   const loading = useSelector((state) => state.order.loading || false);
   const error = useSelector((state) => state.order.error || null);
   const totalPages = useSelector((state) => state.order.list?.totalPages || 1);
-  const totalElements = useSelector(
-    (state) => state.order.list?.totalElements || 0
-  );
+  const pendingOrders = orders.filter(o => o.status === "PENDING").length;
+  const totalElements = useSelector((state) => state.order.list?.totalElements || 0);
 
   // Debounced function to handle search
   const debouncedSearch = useCallback(
@@ -81,7 +83,7 @@ export default function OrderManagement() {
           sortBy,
           orderBy,
           status:
-            statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+           statusFilter ? statusFilter.split(",") : [],
           keyword: value,
         })
       ).finally(() => setTimeout(() => setIsLoading(false), 500));
@@ -108,41 +110,41 @@ export default function OrderManagement() {
         sortBy,
         orderBy,
         status:
-          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+          statusFilter ? statusFilter.split(",") : [],
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
   };
 
   //toa dộ
- useEffect(() => {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const { latitude, longitude } = position.coords;
-      const accessToken = Cookies.get("access_token");
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const accessToken = Cookies.get("access_token");
 
-      if (!accessToken) {
-        console.error("Không tìm thấy access_token trong localStorage");
-        return;
+        if (!accessToken) {
+          console.error("Không tìm thấy access_token trong localStorage");
+          return;
+        }
+
+        fetch('http://localhost:8080/api/v1/location/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`, // <-- phải có "Bearer"
+          },
+          body: JSON.stringify({ latitude, longitude }),
+        })
+          .then((res) => res.text())
+          .then((data) => console.log('Location sent:', data))
+          .catch((err) => console.error('Error sending location:', err));
+      },
+      (error) => {
+        console.error('Error getting location:', error);
       }
-
-      fetch('http://localhost:8080/api/v1/location/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`, // <-- phải có "Bearer"
-        },
-        body: JSON.stringify({ latitude, longitude }),
-      })
-        .then((res) => res.text())
-        .then((data) => console.log('Location sent:', data))
-        .catch((err) => console.error('Error sending location:', err));
-    },
-    (error) => {
-      console.error('Error getting location:', error);
-    }
-  );
-}, []);
+    );
+  }, []);
 
 
   useEffect(() => {
@@ -154,7 +156,7 @@ export default function OrderManagement() {
         sortBy,
         orderBy,
         status:
-          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+          statusFilter || "",
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
@@ -208,7 +210,7 @@ export default function OrderManagement() {
         sortBy,
         orderBy,
         status:
-          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+          statusFilter || "",
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
@@ -231,7 +233,7 @@ export default function OrderManagement() {
   };
 
   // Filter out invalid orders and log issues for debugging
-  const validOrders = orders.filter((order) => {
+  const validOrders = filteredOrders.filter((order) => {
     if (!order || !order.orderId) {
       console.warn("Invalid order detected:", order);
       return false;
@@ -243,12 +245,11 @@ export default function OrderManagement() {
     (sum, order) => sum + Number(order.totalAmount || 0),
     0
   );
+
   const completedOrders = validOrders.filter(
     (o) => o.status === "DELIVERED"
   ).length;
-  const pendingOrders = validOrders.filter(
-    (o) => o.status === "PENDING"
-  ).length;
+
   const todayOrders = validOrders.filter((o) => {
     if (!o.createdAt) return false;
     const orderDate = new Date(o.createdAt);
@@ -258,7 +259,6 @@ export default function OrderManagement() {
 
   const statusOptions = [
     { value: "", label: "Tất cả trạng thái" },
-    { value: "PENDING", label: "Chờ xử lý" },
     { value: "CONFIRMED", label: "Đã xác nhận" },
     { value: "SHIPPED", label: "Đã gửi hàng" },
     { value: "DELIVERED", label: "Đã giao hàng" },
@@ -308,19 +308,17 @@ export default function OrderManagement() {
                     setStatusFilter("PENDING");
                   }
                 }}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
-                  activeTab === tab.name
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
-                }`}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${activeTab === tab.name
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                  }`}
               >
                 <span>{tab.name}</span>
                 <span
-                  className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                    activeTab === tab.name
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
+                  className={`ml-2 px-2 py-1 text-xs rounded-full ${activeTab === tab.name
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-600"
+                    }`}
                 >
                   {tab.count}
                 </span>
@@ -537,7 +535,7 @@ export default function OrderManagement() {
                           </span>
                         </td>
 
-                        
+
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentColor(
@@ -586,9 +584,9 @@ export default function OrderManagement() {
                       <div className="ml-4">
                         <h3
                           className="text-lg font-semibold text-blue-600 cursor-pointer hover:text-blue-800"
-                           onClick={() =>
-                                  navigate(`/shipper/dashboard/${order.orderId}`)
-                                }
+                          onClick={() =>
+                            navigate(`/shipper/dashboard/${order.orderId}`)
+                          }
                         >
                           {order.orderId}
                         </h3>

@@ -21,7 +21,7 @@ export const fetchAllSizes = async () => {
  */
 export const addSize = async (sizeData) => {
   try {
-    const response = await axiosInstance.post("/size/add", sizeData);
+    const response = await axiosInstance.post("/admin/size/add", sizeData);
     return response.data;
   } catch (error) {
     console.error("addSize error:", error);

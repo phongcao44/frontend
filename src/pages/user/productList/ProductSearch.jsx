@@ -66,7 +66,7 @@ function ProductSearch() {
   const getPriceRange = () => {
     const range = priceRanges.find((r) => r.id === selectedPriceRange);
     if (range.id === "all") {
-      return { priceMin: null, priceMax: null }; // Use null instead of empty string
+      return { priceMin: null, priceMax: null };
     }
     return {
       priceMin: range.min === 0 ? null : range.min,

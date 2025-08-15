@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { RotateCcw, Image as ImageIcon } from 'lucide-react';
-import { getReturnRequestsByUser } from '../../services/returnProduct';
+import { fetchUserReturnRequests } from '../../services/returnRequestService';
 
 const MyReturnRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getReturnRequestsByUser()
+    fetchUserReturnRequests()
       .then((data) => setRequests(data))
       .catch(() => console.error('Failed to fetch return requests'))
       .finally(() => setLoading(false));
@@ -69,19 +69,27 @@ const MyReturnRequests = () => {
           <div className="divide-y divide-gray-100">
             {requests.map((req) => {
               const statusInfo = getStatus(req.status);
+              
               return (
                 <div key={req.id} className="flex flex-col md:flex-row gap-4 p-6">
+                  {/* Product Image */}
                   <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center">
-                    {req.mediaUrl ? (
+                    {req.productImageUrl ? (
                       <img
-                        src={req.mediaUrl}
-                        alt="proof"
+                        src={req.productImageUrl}
+                        alt={req.productName}
                         className="object-cover w-full h-full rounded-xl"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
-                    ) : (
+                    ) : null}
+                    <div className="w-full h-full flex items-center justify-center" style={{display: req.productImageUrl ? 'none' : 'flex'}}>
                       <ImageIcon className="w-8 h-8 text-gray-400" />
-                    )}
+                    </div>
                   </div>
+                  
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-gray-900">{req.productName}</h2>
                     <div className="text-sm text-gray-500 space-y-1 mt-1">
@@ -91,6 +99,7 @@ const MyReturnRequests = () => {
                       <p><strong>Gửi lúc:</strong> {new Date(req.createdAt).toLocaleString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })}</p>
                     </div>
                   </div>
+                  
                   <div className="md:w-40 flex md:justify-end items-start">
                     <span
                       className={`px-3 py-1 text-sm font-medium rounded-full border ${statusInfo.class}`}

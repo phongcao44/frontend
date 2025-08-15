@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"; // Add useRef
+import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Upload as UploadIcon, AlertTriangle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -8,7 +8,7 @@ import {
 } from "../../../redux/slices/bannerSlice";
 import {
   loadProductsPaginate,
-  loadProductById,
+  loadProductBySlug,
 } from "../../../redux/slices/productSlice";
 
 const debounce = (func, wait) => {
@@ -35,8 +35,9 @@ export default function BannerFormModal({ open, onClose, id }) {
   const products = paginated?.data?.content || [];
 
   const editingBanner = id ? (banners || []).find((b) => b.id === id) : null;
-  const [isProductDetailLoading, setIsProductDetailLoading] = useState(false);
+  console.log("id:", id, "banners:", banners, "editingBanner:", editingBanner);
 
+  const [isProductDetailLoading, setIsProductDetailLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     targetUrl: "",
@@ -55,7 +56,6 @@ export default function BannerFormModal({ open, onClose, id }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Add refs for dropdown and input
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -71,10 +71,9 @@ export default function BannerFormModal({ open, onClose, id }) {
     const value = e.target.value;
     setSearchTerm(value);
     debouncedSearch(value);
-    setIsDropdownOpen(true); // Open dropdown on search change
+    setIsDropdownOpen(true);
   };
 
-  // Handle clicks outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -108,6 +107,7 @@ export default function BannerFormModal({ open, onClose, id }) {
       keyword: debouncedSearchTerm || null,
     };
     dispatch(loadProductsPaginate(params)).catch((err) => {
+      console.error("Error loading products:", err);
       setLocalError(err.message || "Không thể tải danh sách sản phẩm");
     });
   }, [dispatch, currentPage, itemsPerPage, debouncedSearchTerm]);
@@ -120,6 +120,7 @@ export default function BannerFormModal({ open, onClose, id }) {
       !bannerError
     ) {
       dispatch(getBanners()).catch((err) => {
+        console.error("Error loading banners:", err);
         setLocalError(err.message || "Không load được dữ liệu");
       });
     }
@@ -127,14 +128,17 @@ export default function BannerFormModal({ open, onClose, id }) {
 
   useEffect(() => {
     if (editingBanner && editingBanner.targetUrl) {
+      console.log("Loading product for targetUrl:", editingBanner.targetUrl);
       setIsProductDetailLoading(true);
-      dispatch(loadProductById(editingBanner.targetUrl))
+      dispatch(loadProductBySlug(editingBanner.targetUrl))
         .unwrap()
         .then((product) => {
+          console.log("Loaded product:", product);
           setSearchTerm(product.name || "");
           setIsProductDetailLoading(false);
         })
         .catch((err) => {
+          console.error("Error loading product:", err);
           setLocalError(err.message || "Không thể tải thông tin sản phẩm");
           setIsProductDetailLoading(false);
         });
@@ -142,6 +146,7 @@ export default function BannerFormModal({ open, onClose, id }) {
   }, [dispatch, editingBanner]);
 
   useEffect(() => {
+    console.log("Updating formData with editingBanner:", editingBanner);
     if (editingBanner) {
       setFormData({
         title: editingBanner.title || "Unknown",
@@ -199,14 +204,9 @@ export default function BannerFormModal({ open, onClose, id }) {
     if (formData.timeStart && formData.timeEnd) {
       const start = new Date(formData.timeStart);
       const end = new Date(formData.timeEnd);
-      const now = new Date();
 
       if (start >= end) {
         newErrors.timeEnd = "Thời gian kết thúc phải sau thời gian bắt đầu";
-      }
-
-      if (start < now && !id) {
-        newErrors.timeStart = "Thời gian bắt đầu phải từ hiện tại trở đi";
       }
     }
 
@@ -312,25 +312,38 @@ export default function BannerFormModal({ open, onClose, id }) {
     onClose();
   };
 
-  const handleProductSelect = (productId) => {
-    const selectedProduct = products.find((p) => p.id === productId);
+  const handleProductSelect = (productSlug) => {
+    const selectedProduct = products.find((p) => p.slug === productSlug);
     setFormData((prev) => ({
       ...prev,
-      targetUrl: productId,
+      targetUrl: productSlug,
     }));
     setSearchTerm(selectedProduct?.name || "");
-    setIsDropdownOpen(false); // Close dropdown only after selecting a product
+    setIsDropdownOpen(false);
     setDebouncedSearchTerm("");
   };
 
   const handleSearchFocus = () => {
-    setIsDropdownOpen(true); // Open dropdown on focus
+    setIsDropdownOpen(true);
   };
 
   const totalPages = paginated?.data?.totalPages || 1;
 
   const isLoading =
     bannerLoading || productsLoading || (id && isProductDetailLoading);
+  console.log(
+    "isLoading:",
+    isLoading,
+    "bannerLoading:",
+    bannerLoading,
+    "productsLoading:",
+    productsLoading,
+    "isProductDetailLoading:",
+    isProductDetailLoading,
+    "hasEditingBanner:",
+    !!editingBanner
+  );
+
   const hasError = bannerError || productsError || localError;
 
   if (!open) return null;
@@ -420,14 +433,14 @@ export default function BannerFormModal({ open, onClose, id }) {
               value={searchTerm}
               onChange={handleSearchChange}
               onFocus={handleSearchFocus}
-              ref={inputRef} // Attach ref to input
+              ref={inputRef}
               className={`w-full px-3 py-2 border ${
                 errors.targetUrl ? "border-red-500" : "border-gray-300"
               } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             />
             {isDropdownOpen && (
               <div
-                ref={dropdownRef} // Attach ref to dropdown
+                ref={dropdownRef}
                 className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
               >
                 {productsLoading ? (
@@ -442,8 +455,8 @@ export default function BannerFormModal({ open, onClose, id }) {
                   <>
                     {products.map((product) => (
                       <div
-                        key={product.id}
-                        onClick={() => handleProductSelect(product.id)}
+                        key={product.slug}
+                        onClick={() => handleProductSelect(product.slug)}
                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                       >
                         {product.name}
@@ -493,10 +506,9 @@ export default function BannerFormModal({ open, onClose, id }) {
             className={`w-full px-3 py-2 border ${
               errors.position ? "border-red-500" : "border-gray-300"
             } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+            disabled
           >
             <option value="HOME_TOP">HOME_TOP</option>
-            <option value="HOME_MIDDLE">HOME_MIDDLE</option>
-            <option value="HOME_BOTTOM">HOME_BOTTOM</option>
           </select>
           {errors.position && (
             <p className="mt-1 text-sm text-red-500">{errors.position}</p>

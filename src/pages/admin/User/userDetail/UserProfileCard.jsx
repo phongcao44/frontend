@@ -34,6 +34,7 @@ const UserProfileCard = ({ userInfo, isLoading, handlers, formatDate, formatCurr
       </div>
     </div>
   );
+  
 
   if (isLoading) return <div className="bg-white rounded-lg border border-gray-200 p-6">{renderSkeleton()}</div>;
 

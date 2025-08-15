@@ -110,6 +110,12 @@ export default function ProductDetailPage() {
   const handleDelete = async () => {
     if (!selectedVariant) return;
 
+    // Check if this is the last variant
+    if (variants.length <= 1) {
+      message.warning("Sản phẩm phải có ít nhất một biến thể!");
+      return;
+    }
+
     try {
       await dispatch(removeProductVariant(selectedVariant.id)).unwrap();
       message.success("Xóa biến thể thành công!");

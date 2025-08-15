@@ -4,7 +4,7 @@ import ReactDOM from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Heart, Eye, Star, Trash2, X } from "lucide-react";
-import { addItemToCart } from "../../../redux/slices/cartSlice";
+import { addItemToCart, getCart } from "../../../redux/slices/cartSlice";
 import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice";
 import {
   addProductToWishlist,
@@ -38,6 +38,8 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const cart = useSelector((state) => state.cart.cart);
+  const cartLoading = useSelector((state) => state.cart.loading);
 
   if (!isOpen || !product) return null;
 
@@ -93,7 +95,20 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
     selectedVariant &&
     selectedVariant.stockQuantity > 0;
 
-  // Sử dụng portal để render modal outside của component tree
+  // Check if adding quantity exceeds stock
+  const existingCartItem = cart?.items?.find(
+    (item) => item.variantId === selectedVariant?.id
+  );
+  const existingQuantity = existingCartItem ? existingCartItem.quantity : 0;
+  const totalQuantity = existingQuantity + quantity;
+  const isStockExceeded =
+    selectedVariant && totalQuantity > selectedVariant.stockQuantity;
+
+  // Xử lý lỗi ảnh
+  const handleImageError = (e) => {
+    e.target.src = "/public/assets/images/error.jpg"; // Ảnh mặc định khi lỗi
+  };
+
   const modalContent = (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
@@ -116,9 +131,10 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
 
         <div className="mb-4">
           <img
-            src={product.imageUrl || "/placeholder.png"}
+            src={product.imageUrl || "/public/assets/images/error.jpg"}
             alt={product.name}
             className="w-full h-48 object-cover rounded-md mb-3"
+            onError={handleImageError}
           />
           <h4 className="font-medium text-gray-800">{product.name}</h4>
         </div>
@@ -220,7 +236,8 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
               onClick={() => setQuantity(quantity + 1)}
               className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
               disabled={
-                selectedVariant && quantity >= selectedVariant.stockQuantity
+                selectedVariant &&
+                totalQuantity >= selectedVariant.stockQuantity
               }
             >
               +
@@ -238,24 +255,26 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
           </button>
           <button
             onClick={handleAddToCart}
-            disabled={!canAddToCart}
+            disabled={!canAddToCart || isStockExceeded || cartLoading}
             className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-              canAddToCart
+              canAddToCart && !isStockExceeded && !cartLoading
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
           >
-            Thêm vào giỏ hàng
+            {cartLoading ? "Đang tải..." : "Thêm vào giỏ hàng"}
           </button>
         </div>
 
         {/* Thông báo lỗi */}
-        {!canAddToCart && selectedColor && selectedSize && (
+        {(!canAddToCart || isStockExceeded) && selectedColor && selectedSize && (
           <p className="text-red-500 text-sm mt-2 text-center">
             {!selectedVariant
               ? "Biến thể này không có sẵn"
               : selectedVariant.stockQuantity === 0
               ? "Sản phẩm đã hết hàng"
+              : isStockExceeded
+              ? `Số lượng vượt quá tồn kho (còn ${selectedVariant.stockQuantity - existingQuantity} sản phẩm)`
               : "Vui lòng chọn đầy đủ thông tin"}
           </p>
         )}
@@ -263,7 +282,6 @@ const VariantModal = ({ isOpen, onClose, product, onAddToCart }) => {
     </div>
   );
 
-  // Render modal vào document.body để tránh bị giới hạn bởi parent containers
   if (typeof document !== "undefined") {
     return ReactDOM.createPortal(modalContent, document.body);
   }
@@ -288,6 +306,8 @@ const ProductCard = ({ product, onRemove }) => {
   const { items: wishlistItems, loading: wishlistLoading } = useSelector(
     (state) => state.wishlist
   );
+  const cart = useSelector((state) => state.cart.cart);
+  const cartLoading = useSelector((state) => state.cart.loading);
 
   if (!product) return null;
 
@@ -327,9 +347,7 @@ const ProductCard = ({ product, onRemove }) => {
     flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
       ? displayOriginalPrice - discountOverrideByFlashSale
       : null;
-  const image =
-    imageUrl ||
-    "https://i.pinimg.com/736x/f0/b6/ce/f0b6ce5a334490ba1ec286bd8bc348e9.jpg";
+  const image = imageUrl || "/public/assets/images/error.jpg";
   const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
 
   const discountLabel = discountPercentage
@@ -337,6 +355,11 @@ const ProductCard = ({ product, onRemove }) => {
     : discountAmount
     ? `- ${(discountAmount || 0).toLocaleString("vi-VN")}đ`
     : null;
+
+  // Xử lý lỗi ảnh
+  const handleImageError = (e) => {
+    e.target.src = "/public/assets/images/error.jpg"; // Ảnh mặc định khi lỗi
+  };
 
   const handleNavigate = () => {
     navigate(`/product/${slug}`);
@@ -353,22 +376,49 @@ const ProductCard = ({ product, onRemove }) => {
 
     // Nếu chỉ có 1 biến thể hoặc không có biến thể, thêm trực tiếp vào giỏ hàng
     try {
-      const res = await dispatch(loadVariantsByProduct(productId)).unwrap();
-      const variantIdFromResponse = res?.[0]?.id || variantId;
+      // Fetch latest cart data
+      await dispatch(getCart()).unwrap();
 
-      if (!variantIdFromResponse) {
+      // Get variant details
+      const res = await dispatch(loadVariantsByProduct(productId)).unwrap();
+      const variant = res?.[0] || variants?.[0];
+      const selectedVariantId = variant?.id || variantId;
+
+      if (!selectedVariantId) {
         setNotification({ type: "error", message: "Không tìm thấy biến thể!" });
         setTimeout(() => setNotification(null), 3000);
         return;
       }
 
+      // Check if variant is already in cart
+      const existingCartItem = cart?.items?.find(
+        (item) => item.variantId === selectedVariantId
+      );
+      const existingQuantity = existingCartItem ? existingCartItem.quantity : 0;
+      const quantityToAdd = 1; // Default quantity for single variant
+      const totalQuantity = existingQuantity + quantityToAdd;
+
+      // Check stock
+      if (variant?.stockQuantity < totalQuantity) {
+        setNotification({
+          type: "error",
+          message: `Số lượng vượt quá tồn kho (còn ${variant.stockQuantity - existingQuantity} sản phẩm)`,
+        });
+        setTimeout(() => setNotification(null), 3000);
+        return;
+      }
+
+      // Add to cart
       await dispatch(
-        addItemToCart({ variantId: variantIdFromResponse, quantity: 1 })
+        addItemToCart({ variantId: selectedVariantId, quantity: quantityToAdd })
       ).unwrap();
       setNotification({ type: "success", message: "Đã thêm vào giỏ hàng!" });
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
-      setNotification({ type: "error", message: "Thêm giỏ hàng thất bại!" });
+      setNotification({
+        type: "error",
+        message: error.message || "Thêm giỏ hàng thất bại!",
+      });
       setTimeout(() => setNotification(null), 3000);
     }
   };
@@ -376,11 +426,40 @@ const ProductCard = ({ product, onRemove }) => {
   // Handle thêm vào giỏ hàng từ modal
   const handleAddToCartFromModal = async (variantId, quantity) => {
     try {
+      // Fetch latest cart data
+      await dispatch(getCart()).unwrap();
+
+      // Find the variant details
+      const selectedVariant = product.variants.find(
+        (v) => v.id === variantId
+      );
+
+      // Check if variant is already in cart
+      const existingCartItem = cart?.items?.find(
+        (item) => item.variantId === variantId
+      );
+      const existingQuantity = existingCartItem ? existingCartItem.quantity : 0;
+      const totalQuantity = existingQuantity + quantity;
+
+      // Check stock
+      if (selectedVariant?.stockQuantity < totalQuantity) {
+        setNotification({
+          type: "error",
+          message: `Số lượng vượt quá tồn kho (còn ${selectedVariant.stockQuantity - existingQuantity} sản phẩm)`,
+        });
+        setTimeout(() => setNotification(null), 3000);
+        return;
+      }
+
+      // Add to cart
       await dispatch(addItemToCart({ variantId, quantity })).unwrap();
       setNotification({ type: "success", message: "Đã thêm vào giỏ hàng!" });
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
-      setNotification({ type: "error", message: "Thêm giỏ hàng thất bại!" });
+      setNotification({
+        type: "error",
+        message: error.message || "Thêm giỏ hàng thất bại!",
+      });
       setTimeout(() => setNotification(null), 3000);
     }
   };
@@ -392,25 +471,21 @@ const ProductCard = ({ product, onRemove }) => {
     }
   };
 
-  console.log(wishlistItems);
-
   const handleHeartClick = async (e) => {
     e.stopPropagation();
-    if (wishlistLoading) return; // Prevent multiple clicks during loading
+    if (wishlistLoading) return;
 
     const optimisticIsFavorite = !isFavorite;
-    setIsFavorite(optimisticIsFavorite); // Optimistic update
+    setIsFavorite(optimisticIsFavorite);
 
     try {
       if (!isFavorite) {
-        // Add to wishlist
         await dispatch(addProductToWishlist(productId)).unwrap();
         setNotification({
           type: "success",
           message: "Đã thêm vào danh sách yêu thích!",
         });
       } else {
-        // Remove from wishlist
         const wishlistItem = wishlistItems.find(
           (item) => item.product?.id === productId
         );
@@ -428,7 +503,7 @@ const ProductCard = ({ product, onRemove }) => {
       }
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
-      setIsFavorite(!optimisticIsFavorite); // Revert on error
+      setIsFavorite(!optimisticIsFavorite);
       setNotification({
         type: "error",
         message: error.message || "Thao tác thất bại!",
@@ -436,6 +511,7 @@ const ProductCard = ({ product, onRemove }) => {
       setTimeout(() => setNotification(null), 3000);
     }
   };
+
   const handleEyeClick = (e) => {
     e.stopPropagation();
     // Placeholder for quick view logic
@@ -457,6 +533,7 @@ const ProductCard = ({ product, onRemove }) => {
               src={image}
               alt={name || "Product"}
               className="absolute top-0 left-0 w-full h-full object-cover"
+              onError={handleImageError}
             />
             {showDiscountLabel && discountLabel && (
               <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -502,8 +579,9 @@ const ProductCard = ({ product, onRemove }) => {
               <button
                 className="absolute bottom-2 left-2 right-2 bg-black text-white font-semibold py-2 rounded-md hover:bg-gray-800"
                 onClick={handleAddToCart}
+                disabled={cartLoading}
               >
-                Thêm vào giỏ hàng
+                {cartLoading ? "Đang tải..." : "Thêm vào giỏ hàng"}
               </button>
             )}
           </div>

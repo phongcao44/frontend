@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Layout, Row, Col, Typography, Input, Button, Space } from "antd";
+import { memo, useState } from "react";
+import { Row, Col, Input, Button, Space } from "antd";
 import {
   FacebookOutlined,
   TwitterOutlined,
@@ -8,10 +8,7 @@ import {
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
-import qr from "../../assets/images/qr.png";
-
-const { Footer: AntFooter } = Layout;
-const { Title, Text, Link } = Typography;
+import qr from "../../assets/images/qr.png"; // Changed to WebP
 
 const Footer = () => {
   const [email, setEmail] = useState("");
@@ -23,274 +20,127 @@ const Footer = () => {
   };
 
   return (
-    <AntFooter
-      style={{
-        backgroundColor: "#000",
-        color: "#fff",
-        padding: "40px 0",
-        fontSize: "14px",
-      }}
-    >
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
-        <Row gutter={[16, 16]} justify="start" wrap>
+    <footer className="bg-black text-white py-10 px-4 sm:px-5">
+      <div className="max-w-screen-xl mx-auto">
+        <Row gutter={[16, 16]} justify="start">
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Title
-              level={4}
-              style={{
-                color: "#fff",
-                marginBottom: 12,
-                fontSize: "18px",
-              }}
-            >
-              Exclusive
-            </Title>
-            <Text
-              style={{
-                color: "#ccc",
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              Subscribe
-            </Text>
-            <Text
-              style={{
-                color: "#aaa",
-                display: "block",
-                marginBottom: 12,
-              }}
-            >
-              Get 10% off your first order
-            </Text>
-            <form onSubmit={handleSubscribe}>
-              <div
-                style={{
-                  display: "flex",
-                  width: "100%",
-                  maxWidth: 250,
-                  border: "2px solid #fff",
-                  borderRadius: 4,
-                  overflow: "hidden",
-                }}
+            <h4 className="text-white text-lg font-semibold mb-3">Exclusive</h4>
+            <p className="text-gray-400 mb-2">Subscribe</p>
+            <p className="text-gray-500 mb-3">Get 10% off your first order</p>
+            <form onSubmit={handleSubscribe} className="flex max-w-[250px]">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 bg-black text-gray-400 border-2 border-white rounded-l-md focus:border-white"
+                style={{ borderRight: "none" }}
+              />
+              <Button
+                type="primary"
+                htmlType="submit"
+                className="bg-black border-2 border-white rounded-r-md border-l-0 p-0 min-w-[44px] h-[40px] flex items-center justify-center"
               >
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{
-                    flex: 1,
-                    background: "#000",
-                    color: "#ccc",
-                    border: "none",
-                    outline: "none",
-                    fontSize: "14px",
-                  }}
-                />
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  style={{
-                    backgroundColor: "#000",
-                    color: "#fff",
-                    border: "none",
-                    padding: "0 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <FontAwesomeIcon icon={faPaperPlane} />
-                </Button>
-              </div>
+                <FontAwesomeIcon icon={faPaperPlane} className="text-white" />
+              </Button>
             </form>
           </Col>
 
           <Col xs={24} sm={12} md={8} lg={4}>
-            <Title
-              level={5}
-              style={{
-                color: "#fff",
-                marginBottom: 12,
-                fontSize: "16px",
-              }}
-            >
-              Support
-            </Title>
-            <Text
-              style={{
-                color: "#ccc",
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
+            <h5 className="text-white text-base font-semibold mb-3">Support</h5>
+            <p className="text-gray-400 mb-2">
               111 Bijoy sarani, Dhaka, DH 1515, Bangladesh.
-            </Text>
-            <Text
-              style={{
-                color: "#ccc",
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              exclusive@gmail.com
-            </Text>
-            <Text style={{ color: "#ccc", display: "block" }}>
-              +88015-88888-9999
-            </Text>
+            </p>
+            <p className="text-gray-400 mb-2">exclusive@gmail.com</p>
+            <p className="text-gray-400">+88015-88888-9999</p>
           </Col>
 
           <Col xs={24} sm={12} md={8} lg={4}>
-            <Title
-              level={5}
-              style={{
-                color: "#fff",
-                marginBottom: 12,
-                fontSize: "16px",
-              }}
-            >
-              Account
-            </Title>
+            <h5 className="text-white text-base font-semibold mb-3">Account</h5>
             <Space direction="vertical" size={4}>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                My Account
-              </Link>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                Login / Register
-              </Link>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                Cart
-              </Link>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                Wishlist
-              </Link>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                Shop
-              </Link>
+              {["My Account", "Login / Register", "Cart", "Wishlist", "Shop"].map(
+                (item) => (
+                  <a
+                    key={item}
+                    href="#"
+                    className="text-gray-400 text-sm hover:text-white transition-colors duration-200 block"
+                  >
+                    {item}
+                  </a>
+                )
+              )}
             </Space>
           </Col>
 
           <Col xs={24} sm={12} md={8} lg={4}>
-            <Title
-              level={5}
-              style={{
-                color: "#fff",
-                marginBottom: 12,
-                fontSize: "16px",
-              }}
-            >
-              Quick Link
-            </Title>
+            <h5 className="text-white text-base font-semibold mb-3">Quick Link</h5>
             <Space direction="vertical" size={4}>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                Privacy Policy
-              </Link>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                Terms Of Use
-              </Link>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                FAQ
-              </Link>
-              <Link href="#" style={{ color: "#ccc", fontSize: "14px" }}>
-                Contact
-              </Link>
+              {["Privacy Policy", "Terms Of Use", "FAQ", "Contact"].map((item) => (
+                <a
+                  key={item}
+                  href="#"
+                  className="text-gray-400 text-sm hover:text-white transition-colors duration-200 block"
+                >
+                  {item}
+                </a>
+              ))}
             </Space>
           </Col>
 
           <Col xs={24} sm={12} md={8} lg={6}>
-            <Title
-              level={5}
-              style={{
-                color: "#fff",
-                marginBottom: 12,
-                fontSize: "16px",
-              }}
-            >
-              Download App
-            </Title>
-            <Text
-              style={{
-                color: "#aaa",
-                display: "block",
-                marginBottom: 12,
-              }}
-            >
-              Save $3 with App New User Only
-            </Text>
-            <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
+            <h5 className="text-white text-base font-semibold mb-3">Download App</h5>
+            <p className="text-gray-500 mb-3">Save $3 with App New User Only</p>
+            <Row gutter={[8, 8]} className="mb-4">
               <Col xs={8} sm={6} md={8}>
                 <img
                   src={qr}
                   alt="QR Code"
-                  style={{
-                    width: "100%",
-                    backgroundColor: "#fff",
-                    padding: 4,
-                    borderRadius: 4,
-                  }}
+                  loading="lazy"
+                  className="w-full bg-white p-1 rounded"
                 />
               </Col>
               <Col xs={16} sm={18} md={16}>
-                <Space direction="vertical" style={{ width: "100%" }} size={6}>
+                <Space direction="vertical" className="w-full" size={6}>
                   <Button
                     block
-                    style={{
-                      background: "#000",
-                      border: "1px solid #fff",
-                      color: "#fff",
-                      fontSize: "12px",
-                      padding: "4px 8px",
-                      whiteSpace: "normal",
-                    }}
+                    className="bg-black border-white text-white text-xs py-1"
                   >
                     Get it on Google Play
                   </Button>
                   <Button
                     block
-                    style={{
-                      background: "#000",
-                      border: "1px solid #fff",
-                      color: "#fff",
-                      fontSize: "12px",
-                      padding: "4px 8px",
-                      whiteSpace: "normal",
-                    }}
+                    className="bg-black border-white text-white text-xs py-1"
                   >
                     App Store
                   </Button>
                 </Space>
               </Col>
             </Row>
-            <Space size="small">
-              <a href="#">
-                <FacebookOutlined style={{ fontSize: 16, color: "#fff" }} />
-              </a>
-              <a href="#">
-                <TwitterOutlined style={{ fontSize: 16, color: "#fff" }} />
-              </a>
-              <a href="#">
-                <InstagramOutlined style={{ fontSize: 16, color: "#fff" }} />
-              </a>
-              <a href="#">
-                <LinkedinOutlined style={{ fontSize: 16, color: "#fff" }} />
-              </a>
+            <Space size="middle">
+              {[
+                FacebookOutlined,
+                TwitterOutlined,
+                InstagramOutlined,
+                LinkedinOutlined,
+              ].map((Icon, index) => (
+                <a
+                  key={index}
+                  href="#"
+                  className="text-white hover:text-gray-300 transition-colors duration-200 p-2"
+                >
+                  <Icon style={{ fontSize: "20px" }} />
+                </a>
+              ))}
             </Space>
           </Col>
         </Row>
 
-        <div
-          style={{
-            textAlign: "center",
-            color: "#666",
-            marginTop: 16,
-            fontSize: "12px",
-          }}
-        >
-          <Text>© Copyright Rimel 2022. All rights reserved.</Text>
+        <div className="text-center text-gray-600 mt-4 text-xs">
+          © Copyright Rimel 2022. All rights reserved.
         </div>
       </div>
-    </AntFooter>
+    </footer>
   );
 };
 
-export default Footer;
+export default memo(Footer);

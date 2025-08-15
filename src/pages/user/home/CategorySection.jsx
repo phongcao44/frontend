@@ -17,14 +17,22 @@ const CategorySection = () => {
     dispatch(
       loadParentCategories({
         page: 0,
-        limit: 8,
+        limit: 12,
         sortBy: "name",
         orderBy: "asc",
       })
     );
   }, [dispatch]);
 
-  console.log(parentList)
+  // Handle image loading errors with random selection
+  const handleImageError = (e) => {
+    const images = [
+      "/assets/images/peace.png",
+      "/assets/images/mocking.png",
+    ];
+    const randomIndex = Math.floor(Math.random() * images.length);
+    e.target.src = images[randomIndex];
+  };
 
   const handleCategoryClick = (id, slug) => {
     setActiveCategoryId((prevId) => (prevId === id ? null : id));
@@ -88,13 +96,14 @@ const CategorySection = () => {
                 }`}
               >
                 <img
-                  src={category.image}
+                  src={category.image || "/assets/images/placeholder.png"}
                   alt={category.name}
                   className={`w-12 h-12 object-contain mb-2 ${
                     activeCategoryId === category.id
                       ? "opacity-100"
                       : "opacity-80"
                   }`}
+                  onError={handleImageError}
                 />
                 <span
                   className={`font-medium text-sm truncate ${
