@@ -407,25 +407,8 @@ export default function FlashSaleItemList({
                 <input
                   type="number"
                   value={editForm.soldQuantity || ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setEditForm({ ...editForm, soldQuantity: value });
-                    if (value) {
-                      const numValue = parseInt(value);
-                      if (numValue < 0) {
-                        e.target.setCustomValidity("Số lượng đã bán không được âm");
-                      } else if (numValue > parseInt(editForm.quantity)) {
-                        e.target.setCustomValidity(
-                          "Số lượng đã bán không được vượt quá số lượng tổng"
-                        );
-                      } else {
-                        e.target.setCustomValidity("");
-                      }
-                    }
-                  }}
-                  required
-                  min="0"
-                  className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full bg-gray-100 font-semibold text-gray-800"
                 />
               </div>
               <div className="flex space-x-2">
