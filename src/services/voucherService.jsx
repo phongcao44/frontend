@@ -23,7 +23,6 @@ export const updateVoucher = async (voucherId, data) => {
   }
 };
 
-
 // Admin - delete voucher
 export const deleteVoucher = async (voucherId) => {
   try {
@@ -38,6 +37,36 @@ export const deleteVoucher = async (voucherId) => {
 export const getAllVouchers = async () => {
   try {
     const res = await axiosInstance.get("/admin/voucher/all");
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Admin - get vouchers by user ID
+export const getVouchersByUserId = async (userId) => {
+  try {
+    const res = await axiosInstance.get(`/admin/user/${userId}/vouchers`);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Admin - add voucher to user
+export const addVoucherToUser = async (userId, data) => {
+  try {
+    const res = await axiosInstance.post(`/admin/user/${userId}/voucher/collect`, data);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Admin - remove voucher from user
+export const removeVoucherFromUser = async (userId, voucherId) => {
+  try {
+    const res = await axiosInstance.delete(`/admin/user/${userId}/voucher/${voucherId}`);
     return res.data;
   } catch (error) {
     throw error.response?.data || error.message;

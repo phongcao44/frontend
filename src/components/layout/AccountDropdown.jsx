@@ -28,7 +28,7 @@ const accountMenuItems = [
     key: "cancellations",
     labelKey: "accountMenu.cancellations",
     icon: faCircleXmark,
-    path: "/user/orders/cancellations",
+    path: "/user/orders/cancelled",
   },
   {
     key: "logout",

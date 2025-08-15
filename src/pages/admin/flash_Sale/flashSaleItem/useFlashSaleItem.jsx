@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Swal from "sweetalert2";
 import {
@@ -29,21 +29,18 @@ export default function useFlashSaleItem(id) {
     loading: flashSaleLoading, 
     error: flashSaleError 
   } = useSelector((state) => state.flashSale);
+
   const {
-    paginated,
     loading: productsLoading,
     error: productsError,
     productDetail,
   } = useSelector((state) => state.products);
 
-  const products = Array.isArray(paginated?.data?.content) ? paginated.data.content : [];
   const variants = Array.isArray(productDetail?.variants) ? productDetail.variants : [];
   const flashSale = flashSales.find((fs) => fs.id === parseInt(id)) || {
     name: "Không rõ",
     description: "",
   };
-
-  console.log(flashSaleVariantDetails)
 
   const [form, setForm] = useState({
     flashSaleId: parseInt(id) || 0,
@@ -54,6 +51,7 @@ export default function useFlashSaleItem(id) {
     quantity: "",
     soldQuantity: 0,
   });
+
   const [editForm, setEditForm] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
@@ -67,6 +65,8 @@ export default function useFlashSaleItem(id) {
   const [totalProducts, setTotalProducts] = useState(0);
   const [localError, setLocalError] = useState(null);
 
+  const initialLoadDone = useRef(false);
+
   // Debounce search
   const debouncedSearch = useCallback(
     debounce((value) => {
@@ -78,6 +78,7 @@ export default function useFlashSaleItem(id) {
 
   const debouncedProductSearch = useCallback(
     debounce((value) => {
+      console.log("Debounced search triggered with value:", value);
       setProductSearchTerm(value);
       setProductPage(0);
       if (value.trim()) {
@@ -87,25 +88,24 @@ export default function useFlashSaleItem(id) {
     []
   );
 
-  // Handle search changes
   const handleSearchChange = (value) => {
+    console.log("Search term changed:", value);
     setSearchTerm(value);
     debouncedSearch(value);
   };
 
-  // Handle product search changes
   const handleProductSearchChange = (inputValue) => {
     debouncedProductSearch(inputValue);
   };
 
-  // Load products
+  // Load products when page/search changes
   useEffect(() => {
-    if (productsLoading) return;
     const params = {
       page: productPage,
       limit: itemsPerPage,
       keyword: productSearchTerm.trim() || undefined,
     };
+
     dispatch(loadProductsPaginate(params))
       .unwrap()
       .then((result) => {
@@ -123,40 +123,31 @@ export default function useFlashSaleItem(id) {
       .catch((err) => {
         setLocalError(err.message || "Không thể tải danh sách sản phẩm");
       });
-  }, [dispatch, productPage, itemsPerPage, productSearchTerm, productsLoading]);
+  }, [dispatch, productPage, itemsPerPage, productSearchTerm]);
 
   // Load product details
   useEffect(() => {
-    if (form.productId) {
-      dispatch(loadProductById(form.productId))
-        .unwrap()
-        .then((result) => {
-          setLocalError(null);
-        })
-        .catch((err) => {
-          setLocalError(err.message || "Không thể tải chi tiết sản phẩm");
-        });
-    }
+    if (!form.productId) return;
+    dispatch(loadProductById(form.productId))
+      .unwrap()
+      .then(() => setLocalError(null))
+      .catch((err) => setLocalError(err.message || "Không thể tải chi tiết sản phẩm"));
   }, [dispatch, form.productId]);
 
   // Load flash sale items
   useEffect(() => {
-    if (id) {
-      console.log("tải nè")
-      dispatch(fetchFlashSaleVariantDetails(id))
-        .unwrap()
-        .then((result) => {
-          setLocalError(null);
-        })
-        .catch((err) => {
-          setLocalError(err.message || "Không thể tải danh sách Flash Sale Items");
-        });
-    }
-  }, [id, dispatch]);
+    if (!id) return;
+    dispatch(fetchFlashSaleVariantDetails(id))
+      .unwrap()
+      .then(() => setLocalError(null))
+      .catch((err) => setLocalError(err.message || "Không thể tải danh sách Flash Sale Items"));
+  }, [dispatch, id]);
 
-  // Initial product load on mount
+  // Initial load products (once)
   useEffect(() => {
-    if (allProducts.length === 0 && !productsLoading && !productSearchTerm) {
+    if (initialLoadDone.current) return;
+    if (!productSearchTerm) {
+      initialLoadDone.current = true;
       dispatch(loadProductsPaginate({ page: 0, limit: itemsPerPage }))
         .unwrap()
         .then((result) => {
@@ -169,9 +160,9 @@ export default function useFlashSaleItem(id) {
           setLocalError(err.message || "Không thể tải danh sách sản phẩm ban đầu");
         });
     }
-  }, [dispatch, itemsPerPage, allProducts.length, productsLoading, productSearchTerm]);
+  }, [dispatch, itemsPerPage, productSearchTerm]);
 
-  // Filter and paginate items
+  // Filter + paginate items
   const getCurrentItems = () => {
     return Array.isArray(flashSaleVariantDetails)
       ? flashSaleVariantDetails.filter(
@@ -189,124 +180,102 @@ export default function useFlashSaleItem(id) {
   );
   const totalItems = getCurrentItems().length;
 
-  // Product options for react-select
   const productOptions = allProducts.map((p) => ({
     value: p.id,
     label: p.name || `ID ${p.id}`,
   }));
 
-  // Handle scroll to load more products
-  const handleMenuScrollToBottom = () => {
-    if (productsLoading || allProducts.length >= totalProducts) return;
-    setProductPage((prev) => prev + 1);
-  };
+ const handleMenuScrollToBottom = () => {
+  console.log("Scroll to bottom triggered", { productsLoading, allProductsLength: allProducts.length, totalProducts });
+  if (productsLoading || allProducts.length >= totalProducts) {
+    console.log("Scroll blocked due to loading or max products reached");
+    return;
+  }
+  setProductPage((prev) => {
+    console.log("Increasing productPage to", prev + 1);
+    return prev + 1;
+  });
+};
 
-  // Validation for add form
   const validateAddForm = () => {
     if (!form.productId || !form.variantId || !form.discountValue || !form.quantity) {
       Swal.fire("Lỗi", "Vui lòng điền đầy đủ thông tin", "error");
       return false;
     }
-
     if (
       Array.isArray(flashSaleVariantDetails) &&
       flashSaleVariantDetails.some(
-        (item) => item.productId === parseInt(form.productId) && item.variantId === parseInt(form.variantId)
+        (item) =>
+          item.productId === parseInt(form.productId) &&
+          item.variantId === parseInt(form.variantId)
       )
     ) {
       Swal.fire("Lỗi", "Sản phẩm này đã tồn tại trong Flash Sale!", "error");
       return false;
     }
-
     const quantity = parseInt(form.quantity);
     if (quantity <= 0) {
       Swal.fire("Lỗi", "Số lượng phải lớn hơn 0", "error");
       return false;
     }
-
     const discountValue = parseFloat(form.discountValue);
     if (discountValue < 0) {
       Swal.fire("Lỗi", "Giá trị giảm giá không được âm", "error");
       return false;
     }
-
     if (form.discountType === "PERCENTAGE") {
-      if (discountValue > 100) {
-        Swal.fire("Lỗi", "Phần trăm giảm giá không được vượt quá 100%", "error");
-        return false;
-      }
-      if (discountValue === 0) {
-        Swal.fire("Lỗi", "Phần trăm giảm giá phải lớn hơn 0%", "error");
+      if (discountValue > 100 || discountValue === 0) {
+        Swal.fire("Lỗi", "Phần trăm giảm giá phải > 0% và <= 100%", "error");
         return false;
       }
     }
-
-    if (form.discountType === "AMOUNT") {
-      if (discountValue === 0) {
-        Swal.fire("Lỗi", "Số tiền giảm giá phải lớn hơn 0", "error");
-        return false;
-      }
+    if (form.discountType === "AMOUNT" && discountValue === 0) {
+      Swal.fire("Lỗi", "Số tiền giảm giá phải lớn hơn 0", "error");
+      return false;
     }
-
     return true;
   };
 
-  // Validation for edit form
   const validateEditForm = () => {
     if (!editForm?.discountValue || !editForm?.quantity) {
       Swal.fire("Lỗi", "Vui lòng điền đầy đủ thông tin", "error");
       return false;
     }
-
     const quantity = parseInt(editForm.quantity);
     if (quantity <= 0) {
       Swal.fire("Lỗi", "Số lượng phải lớn hơn 0", "error");
       return false;
     }
-
     const soldQuantity = parseInt(editForm.soldQuantity);
     if (soldQuantity < 0) {
       Swal.fire("Lỗi", "Số lượng đã bán không được âm", "error");
       return false;
     }
-
     if (quantity < soldQuantity) {
       Swal.fire("Lỗi", "Số lượng tổng không được nhỏ hơn số lượng đã bán", "error");
       return false;
     }
-
     const discountValue = parseFloat(editForm.discountValue);
     if (discountValue < 0) {
       Swal.fire("Lỗi", "Giá trị giảm giá không được âm", "error");
       return false;
     }
-
     if (editForm.discountType === "PERCENTAGE") {
-      if (discountValue > 100) {
-        Swal.fire("Lỗi", "Phần trăm giảm giá không được vượt quá 100%", "error");
-        return false;
-      }
-      if (discountValue === 0) {
-        Swal.fire("Lỗi", "Phần trăm giảm giá phải lớn hơn 0%", "error");
+      if (discountValue > 100 || discountValue === 0) {
+        Swal.fire("Lỗi", "Phần trăm giảm giá phải > 0% và <= 100%", "error");
         return false;
       }
     }
-
-    if (editForm.discountType === "AMOUNT") {
-      if (discountValue === 0) {
-        Swal.fire("Lỗi", "Số tiền giảm giá phải lớn hơn 0", "error");
-        return false;
-      }
+    if (editForm.discountType === "AMOUNT" && discountValue === 0) {
+      Swal.fire("Lỗi", "Số tiền giảm giá phải lớn hơn 0", "error");
+      return false;
     }
-
     return true;
   };
 
-  // Handle add form submit
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateAddForm()) return;
-
     const payload = {
       flashSaleId: parseInt(id),
       productId: parseInt(form.productId),
@@ -316,7 +285,6 @@ export default function useFlashSaleItem(id) {
       price: parseFloat(form.discountValue),
       discountType: form.discountType,
     };
-
     dispatch(createFlashSaleItem(payload))
       .then((result) => {
         if (result.meta.requestStatus === "fulfilled") {
@@ -340,11 +308,9 @@ export default function useFlashSaleItem(id) {
       });
   };
 
-  // Handle edit form submit
   const handleEditSubmit = (e) => {
     e.preventDefault();
     if (!validateEditForm()) return;
-
     const payload = {
       flashSaleId: parseInt(id),
       productId: parseInt(editForm.productId),
@@ -354,7 +320,6 @@ export default function useFlashSaleItem(id) {
       price: parseFloat(editForm.discountValue),
       discountType: editForm.discountType,
     };
-
     dispatch(updateFlashSaleItem({ id: editingItemId, payload }))
       .then(() => {
         Swal.fire("Thành công", "Cập nhật sản phẩm thành công!", "success");
@@ -368,7 +333,6 @@ export default function useFlashSaleItem(id) {
       });
   };
 
-  // Handle delete
   const handleDelete = (itemId) => {
     Swal.fire({
       title: "Bạn có chắc chắn?",
@@ -394,7 +358,6 @@ export default function useFlashSaleItem(id) {
     });
   };
 
-  // Handle refresh
   const handleRefresh = () => {
     handleSearchChange("");
     setProductSearchTerm("");

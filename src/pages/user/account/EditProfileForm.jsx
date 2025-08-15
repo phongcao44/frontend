@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchUserView, updateUserDetailThunk } from "../../../redux/slices/userSlice";
 import { changePasswordUser } from "../../../redux/slices/authSlice";
 import { User, Mail, Lock, Eye, EyeOff, Save, X, ArrowLeft, Shield, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 
 export default function EditProfileForm({ onClose }) {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { userDetail, loading } = useSelector((state) => state.users);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [error, setError] = useState("");
@@ -117,7 +119,11 @@ export default function EditProfileForm({ onClose }) {
       
       await dispatch(fetchUserView());
       setTimeout(() => {
-        onClose();
+        if (onClose) {
+          onClose();
+        } else {
+          navigate('/user/profile');
+        }
       }, 1500);
     } catch (err) {
       console.error('Error updating profile:', err);
@@ -154,7 +160,11 @@ export default function EditProfileForm({ onClose }) {
         confirmPassword: ""
       });
       setTimeout(() => {
-        onClose();
+        if (onClose) {
+          onClose();
+        } else {
+          navigate('/user/profile');
+        }
       }, 1500);
     } catch (err) {
       console.error('Error changing password:', err);
@@ -169,7 +179,13 @@ export default function EditProfileForm({ onClose }) {
         {/* Header */}
         <div className="relative p-6 border-b border-gray-100">
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (onClose) {
+                onClose();
+              } else {
+                navigate('/user/profile');
+              }
+            }}
             className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
@@ -211,7 +227,7 @@ export default function EditProfileForm({ onClose }) {
               }`}
             >
               <User className="w-4 h-4" />
-              Thông tin cá nhân
+              Thông tin cá nhân x
             </button>
             <button
               onClick={() => {
@@ -278,7 +294,13 @@ export default function EditProfileForm({ onClose }) {
 
               <div className="flex gap-3 pt-6">
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    if (onClose) {
+                      onClose();
+                    } else {
+                      navigate('/user/profile');
+                    }
+                  }}
                   className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
                 >
                   Hủy
@@ -396,7 +418,13 @@ export default function EditProfileForm({ onClose }) {
 
               <div className="flex gap-3 pt-6">
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    if (onClose) {
+                      onClose();
+                    } else {
+                      navigate('/user/profile');
+                    }
+                  }}
                   className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
                 >
                   Hủy

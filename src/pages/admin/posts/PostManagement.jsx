@@ -13,7 +13,7 @@ export default function PostManagement() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("newest");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [locationFilter, setLocationFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [postsPerPage, setPostsPerPage] = useState(10);
 
@@ -23,6 +23,9 @@ export default function PostManagement() {
   const [mode, setMode] = useState("view");
 
   const [showViewModal, setShowViewModal] = useState(false);
+
+  // State để theo dõi bài viết mới được thêm
+  const [newlyAddedPostId, setNewlyAddedPostId] = useState(null);
 
   useEffect(() => {
     dispatch(getAdminPosts());
@@ -39,19 +42,31 @@ export default function PostManagement() {
       );
     }
 
-    if (categoryFilter !== "all") {
-      result = result.filter((post) => post.category === categoryFilter);
+    if (locationFilter !== "all") {
+      result = result.filter((post) => post.location === locationFilter);
     }
 
+    // Sắp xếp với ưu tiên bài viết mới được thêm
     result.sort((a, b) => {
+      // Nếu có bài viết mới được thêm, ưu tiên nó lên đầu
+      if (newlyAddedPostId) {
+        if (a.id === newlyAddedPostId) return -1;
+        if (b.id === newlyAddedPostId) return 1;
+      }
+      
+      // Sắp xếp theo ngày tạo
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
     });
 
     setFilteredPosts(result);
-    setCurrentPage(1);
-  }, [posts, searchTerm, sortOrder, categoryFilter]);
+    
+    // Reset về trang đầu khi có bài viết mới hoặc khi filter thay đổi
+    if (newlyAddedPostId || searchTerm || locationFilter !== "all") {
+      setCurrentPage(1);
+    }
+  }, [posts, searchTerm, sortOrder, locationFilter, newlyAddedPostId]);
 
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
@@ -96,11 +111,27 @@ export default function PostManagement() {
       if (result.isConfirmed) {
         dispatch(deletePost(id)).then(() => {
           Swal.fire("Đã xóa!", "Bài viết đã được xóa.", "success");
+          // Reset newlyAddedPostId nếu bài viết vừa được thêm bị xóa
+          if (newlyAddedPostId === id) {
+            setNewlyAddedPostId(null);
+          }
         });
       } else if (result.dismiss === Swal.DismissReason.cancel) {
         Swal.fire("Đã hủy", "Bài viết vẫn còn nguyên.", "info");
       }
     });
+  };
+
+  // Hàm để xử lý khi modal đóng và có bài viết mới được thêm
+  const handleModalClose = (newPostId = null) => {
+    setShowViewModal(false);
+    if (newPostId) {
+      setNewlyAddedPostId(newPostId);
+      // Tự động reset highlight sau 3 giây
+      setTimeout(() => {
+        setNewlyAddedPostId(null);
+      }, 3000);
+    }
   };
 
   return (
@@ -150,13 +181,13 @@ export default function PostManagement() {
           <div>
             <select
               className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
             >
-              <option value="all">Tất cả Danh mục</option>
-              {POST_CATEGORIES.map((cate) => (
-                <option key={cate} value={cate}>
-                  {cate}
+              <option value="all">Tất cả Địa điểm</option>
+              {POST_CATEGORIES.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
                 </option>
               ))}
             </select>
@@ -199,7 +230,7 @@ export default function PostManagement() {
                     Mô tả
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Danh mục
+                    Địa điểm
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ngày tạo
@@ -217,7 +248,12 @@ export default function PostManagement() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentPosts.map((post) => (
-                  <tr key={post.id} className="hover:bg-gray-50">
+                  <tr 
+                    key={post.id} 
+                    className={`hover:bg-gray-50 transition-colors duration-200 ${
+                      newlyAddedPostId === post.id ? 'bg-green-50 border-l-4 border-green-400' : ''
+                    }`}
+                  >
                     <td className="px-6 py-4">
                       <div className="h-16 w-20 overflow-hidden rounded-md">
                         <img
@@ -227,9 +263,18 @@ export default function PostManagement() {
                         />
                       </div>
                     </td>
-                    <td className="px-6 py-4">{post.title}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        {post.title}
+                        {newlyAddedPostId === post.id && (
+                          <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Mới
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">{post.description}</td>
-                    <td className="px-6 py-4">{post.category}</td>
+                    <td className="px-6 py-4">{post.location}</td>
                     <td className="px-6 py-4">{formatDate(post.createdAt)}</td>
                     <td className="px-6 py-4">{formatDate(post.updatedAt)}</td>
                     <td className="px-6 py-4">{post.authorName}</td>
@@ -277,7 +322,7 @@ export default function PostManagement() {
 
       <ViewPostModal
         show={showViewModal}
-        onClose={() => setShowViewModal(false)}
+        onClose={handleModalClose}
         post={selectedPost}
         mode={mode}
         setMode={setMode}

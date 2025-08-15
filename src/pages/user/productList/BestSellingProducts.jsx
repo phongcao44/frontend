@@ -1,66 +1,58 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { loadTopSellingProductsPaginate } from "../../../redux/slices/productSlice";
+import { useNavigate, useLocation } from "react-router-dom";
+import { loadTopSellingProductsPaginate, loadBrandsPaginate } from "../../../redux/slices/productSlice";
 import { loadParentCategories } from "../../../redux/slices/categorySlice";
 import ProductCard from "../home/ProductCard";
+
+// Hàm để parse query parameters từ URL
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
 
 function BestSellingProducts() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const query = useQuery();
 
+  // Redux selectors
   const paginatedProducts = useSelector((state) => state.products.topSellingPaginated);
   const productsLoading = useSelector((state) => state.products.loading);
   const productsError = useSelector((state) => state.products.error);
   const { parentList } = useSelector((state) => state.category);
+  const { brandsPaginated, loading: brandsLoading, error: brandsError } = useSelector(
+    (state) => state.products
+  );
 
   // State management for filters and pagination
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedPriceRange, setSelectedPriceRange] = useState("all");
-  const [selectedRating, setSelectedRating] = useState("all");
-  const [selectedBrand, setSelectedBrand] = useState("all");
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("soldQuantity");
-  const [page, setPage] = useState(0);
+  const [selectedPriceRange, setSelectedPriceRange] = useState(query.get("priceRange") || "all");
+  const [selectedRating, setSelectedRating] = useState(query.get("rating") || "all");
+  const [selectedBrand, setSelectedBrand] = useState(query.get("brand") || "all");
+  const [activeFilter, setActiveFilter] = useState(query.get("categoryId") || "all");
+  const [sortBy, setSortBy] = useState(query.get("sortBy") || "soldQuantity");
+  const [page, setPage] = useState(parseInt(query.get("page")) || 0);
   const [limit] = useState(12);
 
   // Temporary filter states
-  const [tempPriceRange, setTempPriceRange] = useState("all");
-  const [tempRating, setTempRating] = useState("all");
-  const [tempBrand, setTempBrand] = useState("all");
-  const [tempCategory, setTempCategory] = useState("all");
+  const [tempPriceRange, setTempPriceRange] = useState(query.get("priceRange") || "all");
+  const [tempRating, setTempRating] = useState(query.get("rating") || "all");
+  const [tempBrand, setTempBrand] = useState(query.get("brand") || "all");
+  const [tempCategory, setTempCategory] = useState(query.get("categoryId") || "all");
+  const [isProductListLoading, setIsProductListLoading] = useState(false);
 
-  const brands = [
-    { id: "all", name: "Tất cả thương hiệu" },
-    { id: "brand-a", name: "Samsung" },
-    { id: "brand-b", name: "Apple" },
-    { id: "brand-c", name: "Xiaomi" },
-    { id: "brand-d", name: "Nike" },
-    { id: "brand-e", name: "Adidas" },
-  ];
+  // Cập nhật URL khi trạng thái thay đổi
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedPriceRange !== "all") params.set("priceRange", selectedPriceRange);
+    if (selectedRating !== "all") params.set("rating", selectedRating);
+    if (selectedBrand !== "all") params.set("brand", selectedBrand);
+    if (activeFilter !== "all") params.set("categoryId", activeFilter);
+    if (sortBy !== "soldQuantity") params.set("sortBy", sortBy);
+    if (page !== 0) params.set("page", page);
 
-  const priceRanges = [
-    { id: "all", label: "Tất cả giá", min: null, max: null },
-    { id: "under-500", label: "Dưới 500K", min: 0, max: 500000 },
-    { id: "500-1000", label: "500K - 1 triệu", min: 500000, max: 1000000 },
-    { id: "1000-2000", label: "1 - 2 triệu", min: 1000000, max: 2000000 },
-    { id: "above-2000", label: "Trên 2 triệu", min: 2000000, max: null },
-  ];
-
-  const ratingOptions = [
-    { id: "all", label: "Tất cả đánh giá", value: 0 },
-    { id: "5star", label: "5 sao", value: 5 },
-    { id: "4plus", label: "4 sao trở lên", value: 4 },
-    { id: "3plus", label: "3 sao trở lên", value: 3 },
-  ];
-
-  const sortOptions = [
-    { value: "soldQuantity", label: "Bán chạy nhất" },
-    { value: "createdAt", label: "Mới nhất" },
-    { value: "price-asc", label: "Giá thấp đến cao" },
-    { value: "price-desc", label: "Giá cao đến thấp" },
-    { value: "averageRating", label: "Đánh giá cao nhất" },
-  ];
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [selectedPriceRange, selectedRating, selectedBrand, activeFilter, sortBy, page, navigate]);
 
   // Fetch parent categories
   useEffect(() => {
@@ -74,33 +66,49 @@ function BestSellingProducts() {
     );
   }, [dispatch]);
 
+  // Fetch brands based on active category filter
   useEffect(() => {
-    const selectedPrice = priceRanges.find((r) => r.id === selectedPriceRange) || priceRanges[0];
-    const selectedRatingOption = ratingOptions.find((r) => r.id === selectedRating) || ratingOptions[0];
+    dispatch(
+      loadBrandsPaginate({
+        page: 0,
+        limit: 10,
+        sortBy: "brand",
+        orderBy: "asc",
+        categoryId: activeFilter !== "all" ? activeFilter : null,
+      })
+    );
+  }, [dispatch, activeFilter]);
 
-    const params = {
-      page,
-      limit,
-      sortBy: mapSortBy(sortBy).sortBy,
-      orderBy: mapSortBy(sortBy).orderBy,
-      brandName: selectedBrand === "all" ? null : selectedBrand,
-      categoryId: activeFilter === "all" ? null : activeFilter,
-      priceMin: selectedPrice.min,
-      priceMax: selectedPrice.max,
-      minRating: selectedRatingOption.value === 0 ? null : selectedRatingOption.value,
+  // Fetch top-selling products
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsProductListLoading(true);
+        const selectedPrice = priceRanges.find((r) => r.id === selectedPriceRange) || priceRanges[0];
+        const selectedRatingOption = ratingOptions.find((r) => r.id === selectedRating) || ratingOptions[0];
+
+        const params = {
+          page,
+          limit,
+          sortBy: mapSortBy(sortBy).sortBy,
+          orderBy: mapSortBy(sortBy).orderBy,
+          brandName: selectedBrand === "all" ? null : selectedBrand,
+          categoryId: activeFilter === "all" ? null : activeFilter,
+          priceMin: selectedPrice.min,
+          priceMax: selectedPrice.max,
+          minRating: selectedRatingOption.value === 0 ? null : selectedRatingOption.value,
+        };
+
+        await dispatch(loadTopSellingProductsPaginate(params)).unwrap();
+      } catch (err) {
+        console.error("Failed to load top-selling products:", err);
+      } finally {
+        setIsProductListLoading(false);
+      }
     };
 
-    dispatch(loadTopSellingProductsPaginate(params));
-  }, [
-    dispatch,
-    page,
-    selectedPriceRange,
-    selectedRating,
-    selectedBrand,
-    activeFilter,
-    sortBy,
-    limit,
-  ]);
+    loadProducts();
+  }, [dispatch, page, selectedPriceRange, selectedRating, selectedBrand, activeFilter, sortBy, limit]);
 
   const mapSortBy = (sortBy) => {
     switch (sortBy) {
@@ -142,15 +150,51 @@ function BestSellingProducts() {
 
   const handlePreviousPage = () => {
     if (page > 0) {
+      setIsProductListLoading(true);
       setPage(page - 1);
     }
   };
 
   const handleNextPage = () => {
-    if (paginatedProducts?.hasNext) {
+    if (!paginatedProducts?.last) {
+      setIsProductListLoading(true);
       setPage(page + 1);
+    } else {
+      alert("Bạn đang ở trang cuối cùng!");
     }
   };
+
+  // Filter options
+  const brands = [
+    { id: "all", name: "Tất cả thương hiệu" },
+    ...(brandsPaginated?.data?.content || []).map((brandName) => ({
+      id: brandName,
+      name: brandName,
+    })),
+  ];
+
+  const priceRanges = [
+    { id: "all", label: "Tất cả giá", min: null, max: null },
+    { id: "under-500", label: "Dưới 500K", min: 0, max: 500000 },
+    { id: "500-1000", label: "500K - 1 triệu", min: 500000, max: 1000000 },
+    { id: "1000-2000", label: "1 - 2 triệu", min: 1000000, max: 2000000 },
+    { id: "above-2000", label: "Trên 2 triệu", min: 2000000, max: null },
+  ];
+
+  const ratingOptions = [
+    { id: "all", label: "Tất cả đánh giá", value: 0 },
+    { id: "5star", label: "5 sao", value: 5 },
+    { id: "4plus", label: "4 sao trở lên", value: 4 },
+    { id: "3plus", label: "3 sao trở lên", value: 3 },
+  ];
+
+  const sortOptions = [
+    { value: "soldQuantity", label: "Bán chạy nhất" },
+    { value: "createdAt", label: "Mới nhất" },
+    { value: "price-asc", label: "Giá thấp đến cao" },
+    { value: "price-desc", label: "Giá cao đến thấp" },
+    { value: "averageRating", label: "Đánh giá cao nhất" },
+  ];
 
   const breadcrumbItems = [
     { name: "Trang chủ", slug: "/" },
@@ -160,6 +204,7 @@ function BestSellingProducts() {
   const productsContent = Array.isArray(paginatedProducts?.content) ? paginatedProducts.content : [];
   const totalProducts = paginatedProducts?.totalElements || 0;
   const totalPages = paginatedProducts?.totalPages || 1;
+  const currentPage = paginatedProducts?.number || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -196,58 +241,6 @@ function BestSellingProducts() {
           <p className="text-gray-600 mb-2">
             Khám phá những sản phẩm được yêu thích nhất
           </p>
-          <p className="text-sm text-orange-600 font-medium">
-            <i className="fas fa-chart-line mr-2"></i>
-            {totalProducts.toLocaleString()} sản phẩm bán chạy
-          </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-4 rounded-xl shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-orange-100 p-2 rounded-lg">
-                <i className="fas fa-trophy text-orange-600"></i>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Top Seller</p>
-                <p className="font-semibold text-gray-900">Tuần này</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-2 rounded-lg">
-                <i className="fas fa-trending-up text-green-600"></i>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Tăng trưởng</p>
-                <p className="font-semibold text-gray-900">+15% so với tuần trước</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-2 rounded-lg">
-                <i className="fas fa-star text-blue-600"></i>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Đánh giá TB</p>
-                <p className="font-semibold text-gray-900">4.7/5 sao</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-purple-100 p-2 rounded-lg">
-                <i className="fas fa-users text-purple-600"></i>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Khách hàng</p>
-                <p className="font-semibold text-gray-900">10K+ đã mua</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Category Pills */}
@@ -356,7 +349,7 @@ function BestSellingProducts() {
                     <i className="fas fa-th-large text-orange-500"></i>
                     Danh mục
                   </h3>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                     <button
                       onClick={() => setTempCategory("all")}
                       className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
@@ -389,21 +382,54 @@ function BestSellingProducts() {
                     <i className="fas fa-copyright text-orange-500"></i>
                     Thương hiệu
                   </h3>
-                  <div className="space-y-2">
-                    {brands.map((brand) => (
-                      <button
-                        key={brand.id}
-                        onClick={() => setTempBrand(brand.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
-                          tempBrand === brand.id
-                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
-                            : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
-                        }`}
+                  {brandsLoading ? (
+                    <div className="flex justify-center items-center py-4">
+                      <svg
+                        className="animate-spin h-6 w-6 text-orange-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
                       >
-                        {brand.name}
-                      </button>
-                    ))}
-                  </div>
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                    </div>
+                  ) : brandsError ? (
+                    <div className="text-orange-500 text-sm py-2">
+                      Lỗi khi tải danh sách thương hiệu: {brandsError}
+                    </div>
+                  ) : brands.length === 1 ? (
+                    <div className="text-gray-500 text-sm py-2">
+                      Không có thương hiệu nào trong danh mục này
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                      {brands.map((brand) => (
+                        <button
+                          key={brand.id}
+                          onClick={() => setTempBrand(brand.id)}
+                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                            tempBrand === brand.id
+                              ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                              : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
+                          }`}
+                        >
+                          {brand.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Price Range Filter */}
@@ -474,7 +500,7 @@ function BestSellingProducts() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
-          {productsLoading && page === 0 ? (
+          {isProductListLoading ? (
             <div className="col-span-full text-center py-12">
               <svg
                 className="animate-spin h-8 w-8 text-orange-500 mx-auto"
@@ -499,7 +525,7 @@ function BestSellingProducts() {
               <p className="text-gray-600 mt-4">Đang tải...</p>
             </div>
           ) : productsError ? (
-            <div className="col-span-full text-center py-12 text-red-500">
+            <div className="col-span-full text-center py-12 text-orange-500">
               <i className="fas fa-exclamation-circle text-4xl mb-4"></i>
               <p>Lỗi: {productsError}</p>
               <button
@@ -552,33 +578,154 @@ function BestSellingProducts() {
         </div>
 
         {/* Pagination Controls */}
-        {totalPages > 1 && !productsLoading && (
-          <div className="flex justify-center items-center space-x-4 mb-12">
+        {totalPages > 1 && !isProductListLoading && (
+          <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-12">
+            {/* Previous Button */}
             <button
               onClick={handlePreviousPage}
-              disabled={page === 0}
+              disabled={paginatedProducts?.first}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                page === 0
+                paginatedProducts?.first
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-orange-600 text-white hover:bg-orange-700"
               }`}
+              aria-label="Go to previous page"
             >
+              <i className="fas fa-chevron-left mr-2"></i>
               Trang trước
             </button>
-            <span className="text-sm text-gray-600">
-              Trang {page + 1} / {totalPages}
-            </span>
+
+            {/* Page Numbers */}
+            <div className="flex items-center space-x-2">
+              {(() => {
+                const pageRange = 5; // Number of page buttons to show
+                const startPage = Math.max(0, currentPage - Math.floor(pageRange / 2));
+                const endPage = Math.min(totalPages - 1, startPage + pageRange - 1);
+                const pages = [];
+
+                // Adjust startPage if nearing the end
+                const adjustedStartPage = Math.max(0, endPage - pageRange + 1);
+
+                // First page
+                if (adjustedStartPage > 0) {
+                  pages.push(
+                    <button
+                      key={0}
+                      onClick={() => {
+                        setIsProductListLoading(true);
+                        setPage(0);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === 0
+                          ? "bg-orange-600 text-white"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                      }`}
+                      aria-label="Go to page 1"
+                    >
+                      1
+                    </button>
+                  );
+                }
+
+                // Ellipsis for skipped pages
+                if (adjustedStartPage > 1) {
+                  pages.push(
+                    <span key="start-ellipsis" className="text-gray-600">
+                      ...
+                    </span>
+                  );
+                }
+
+                // Page numbers
+                for (let i = adjustedStartPage; i <= endPage; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setIsProductListLoading(true);
+                        setPage(i);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === i
+                          ? "bg-orange-600 text-white"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                      }`}
+                      aria-label={`Go to page ${i + 1}`}
+                    >
+                      {i + 1}
+                    </button>
+                  );
+                }
+
+                // Ellipsis for remaining pages
+                if (endPage < totalPages - 2) {
+                  pages.push(
+                    <span key="end-ellipsis" className="text-gray-600">
+                      ...
+                    </span>
+                  );
+                }
+
+                // Last page
+                if (endPage < totalPages - 1) {
+                  pages.push(
+                    <button
+                      key={totalPages - 1}
+                      onClick={() => {
+                        setIsProductListLoading(true);
+                        setPage(totalPages - 1);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === totalPages - 1
+                          ? "bg-orange-600 text-white"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                      }`}
+                      aria-label={`Go to page ${totalPages}`}
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+
+                return pages;
+              })()}
+            </div>
+
+            {/* Next Button */}
             <button
               onClick={handleNextPage}
-              disabled={!paginatedProducts?.hasNext}
+              disabled={paginatedProducts?.last}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                !paginatedProducts?.hasNext
+                paginatedProducts?.last
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-orange-600 text-white hover:bg-orange-700"
               }`}
+              aria-label="Go to next page"
             >
               Trang sau
+              <i className="fas fa-chevron-right ml-2"></i>
             </button>
+
+            {/* Go to Page Input */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Đi đến trang:</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={page + 1}
+                onChange={(e) => {
+                  const inputPage = parseInt(e.target.value) - 1;
+                  if (!isNaN(inputPage) && inputPage >= 0 && inputPage < totalPages) {
+                    setIsProductListLoading(true);
+                    setPage(inputPage);
+                  }
+                }}
+                className="w-16 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-center"
+                aria-label="Enter page number"
+              />
+              <span className="text-sm text-gray-600">/ {totalPages}</span>
+            </div>
           </div>
         )}
       </div>

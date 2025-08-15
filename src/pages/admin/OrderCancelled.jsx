@@ -494,7 +494,7 @@ export default function OrderCancelled() {
                                                             <div
                                                                 className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
                                                                 onClick={() =>
-                                                                    navigate(`/admin/orders/${order.orderCode}`)
+                                                                    navigate(`/admin/orders/${order.orderId}`)
                                                                 }
                                                             >
                                                                 {order.orderCode}
@@ -581,7 +581,7 @@ export default function OrderCancelled() {
                                                 <h3
                                                     className="text-lg font-semibold text-blue-600 cursor-pointer hover:text-blue-800"
                                                     onClick={() =>
-                                                        navigate(`/admin/orders/${order.orderCode}`)
+                                                        navigate(`/admin/orders/${order.orderId}`)
                                                     }
                                                 >
                                                     {order.orderCode}

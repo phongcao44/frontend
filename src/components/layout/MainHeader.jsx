@@ -38,6 +38,18 @@ const MainHeader = () => {
     }
   };
 
+  // Handle logo click
+  const handleLogoClick = (e) => {
+    e.preventDefault(); // Ngăn điều hướng mặc định của Link
+    if (location.pathname === '/') {
+      // Nếu đang ở trang chủ, cuộn lên đầu
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Nếu không ở trang chủ, điều hướng về trang chủ
+      navigate('/');
+    }
+  };
+
   // Close drawer when clicking outside or on larger screens
   useEffect(() => {
     const handleResize = () => {
@@ -104,11 +116,14 @@ const MainHeader = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Link to="/" className="flex-shrink-0 no-underline hover:no-underline">
+            <div
+              onClick={handleLogoClick}
+              className="flex-shrink-0 cursor-pointer"
+            >
               <div className="text-xl sm:text-2xl font-bold text-black hover:text-gray-700 transition-colors">
                 Exclusive
               </div>
-            </Link>
+            </div>
           </div>
 
           {/* Middle Section - Navigation Menu (Desktop/Tablet) */}

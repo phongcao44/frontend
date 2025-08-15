@@ -37,7 +37,6 @@ import Support from "../pages/admin/Support";
 import AdminProductReviewDetail from "../pages/admin/ReviewProductDetail";
 
 import FlashSaleManagement from "../pages/admin/flash_Sale/FlashSaleManagement";
-import FlashSaleItemManagement from "../pages/admin/flash_Sale/FlashSaleItemManagement";
 
 import VoucherManagement from "../pages/admin/voucher/VoucherManagement";
 import PostManagement from "../pages/admin/posts/PostManagement";
