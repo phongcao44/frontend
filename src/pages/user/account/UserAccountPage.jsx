@@ -45,7 +45,6 @@ export default function UserAccountPage() {
     { id: 'profile', label: 'Thông tin cá nhân', icon: User },
     { id: 'orders', label: 'Đơn hàng của tôi', icon: Package },
     { id: 'addresses', label: 'Địa chỉ', icon: MapPin },
-    { id: 'wishlist', label: 'Sản phẩm yêu thích', icon: Heart, path: '/wishlist' },
     { id: 'myVouchers', label: 'Voucher của tôi', icon: Settings },
     { id: 'deliveredProduct', label: 'Sản phẩm đã giao', icon: ProductFilled },
     { id: 'returns', label: 'Yêu cầu trả hàng', icon: RotateCcw },
