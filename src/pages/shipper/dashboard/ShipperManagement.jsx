@@ -61,8 +61,6 @@ export default function OrderManagement() {
   const [orderBy, setOrderBy] = useState("desc");
   const [statusFilter, setStatusFilter] = useState("");
   const orders = useSelector((state) => state.order.list?.content || []);
-  const allowedStatuses = ["CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
-  const filteredOrders = orders.filter(order => allowedStatuses.includes(order.status));
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
@@ -155,8 +153,7 @@ export default function OrderManagement() {
         limit: itemsPerPage,
         sortBy,
         orderBy,
-        status:
-          statusFilter || "",
+        status: statusFilter ? statusFilter.split(",") : [],
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
@@ -195,10 +192,6 @@ export default function OrderManagement() {
 
   const tabs = [
     { name: "Tất cả đơn hàng", count: totalElements },
-    {
-      name: "Chưa thanh toán",
-      count: orders.filter((o) => o.payment?.status === "PENDING").length,
-    },
   ];
 
   const handleRefresh = () => {
@@ -233,7 +226,7 @@ export default function OrderManagement() {
   };
 
   // Filter out invalid orders and log issues for debugging
-  const validOrders = filteredOrders.filter((order) => {
+  const validOrders = orders.filter((order) => {
     if (!order || !order.orderId) {
       console.warn("Invalid order detected:", order);
       return false;
@@ -386,22 +379,6 @@ export default function OrderManagement() {
                     {option.label}
                   </option>
                 ))}
-              </select>
-              <select
-                onChange={(e) => {
-                  const [newSortBy, newOrderBy] = e.target.value.split(":");
-                  setSortBy(newSortBy);
-                  setOrderBy(newOrderBy);
-                  setCurrentPage(0);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="createdAt:desc">Mới nhất</option>
-                <option value="createdAt:asc">Cũ nhất</option>
-                <option value="totalAmount:desc">
-                  Tổng tiền: Cao đến thấp
-                </option>
-                <option value="totalAmount:asc">Tổng tiền: Thấp đến cao</option>
               </select>
             </div>
 
