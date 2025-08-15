@@ -77,7 +77,7 @@ const ProductCard = ({ product, onRemove }) => {
     flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
       ? displayOriginalPrice - discountOverrideByFlashSale
       : null;
-  const image = imageUrl || "/public/assets/images/error.jpg";
+  const image = imageUrl || " /assets/images/error.jpg";
   const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
 
   const discountLabel = discountPercentage
@@ -88,7 +88,7 @@ const ProductCard = ({ product, onRemove }) => {
 
   // Xử lý lỗi ảnh
   const handleImageError = (e) => {
-    e.target.src = "/public/assets/images/error.jpg";
+    e.target.src = "/assets/images/error.jpg";
   };
 
   const handleNavigate = (e) => {
