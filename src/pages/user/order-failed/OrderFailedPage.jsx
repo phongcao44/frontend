@@ -79,13 +79,6 @@ export default function OrderFailedPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/cart"
-              className="bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors text-center whitespace-nowrap no-underline"
-            >
-              <i className="ri-shopping-cart-line mr-2"></i>
-              Thử Thanh Toán Lại
-            </Link>
-            <Link
               to="/"
               className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors text-center whitespace-nowrap no-underline"
             >
@@ -197,13 +190,6 @@ export default function OrderFailedPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            to={`/order/${currentOrder?.orderId}`}
-            className="bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors text-center whitespace-nowrap no-underline"
-          >
-            <i className="ri-refresh-line mr-2"></i>
-            Thanh Toán Lại
-          </Link>
           <Link
             to="/user/orders"
             className="bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-medium hover:bg-blue-200 transition-colors text-center whitespace-nowrap no-underline"
