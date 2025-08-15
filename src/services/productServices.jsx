@@ -53,6 +53,33 @@ export const fetchProductsPaginate = async ({
   }
 };
 
+export const fetchBrandsPaginate = async ({
+  page = 0,
+  limit = 10,
+  sortBy = "brand",
+  orderBy = "asc",
+  categoryId = null,
+  categorySlug = "",
+}) => {
+  try {
+    const res = await axiosInstance.get("/brands/paginate", {
+      params: {
+        page,
+        limit,
+        sortBy,
+        orderBy,
+        categoryId,
+        categorySlug,
+      },
+    });
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching paginated brands:", error);
+    throw new Error(error.response?.data?.message || "Failed to fetch brands");
+  }
+};
+
+
 export const fetchTopSellingProductsPaginate = async ({
   page = 0,
   limit = 10,

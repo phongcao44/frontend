@@ -135,7 +135,7 @@ export default function AddressBook() {
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-8 mx-auto">
-      <h2 className="text-xl font-medium text-red-500 mb-8">Address Book</h2>
+      <h2 className="text-xl font-medium text-red-500 mb-8">Addresccs Book</h2>
 
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
@@ -309,7 +309,7 @@ export default function AddressBook() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Address*
+                  Full Addrdess*
                 </label>
                 <input
                   type="text"

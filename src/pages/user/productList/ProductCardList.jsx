@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { addItemToCart } from "../../../redux/slices/cartSlice";
@@ -7,6 +7,9 @@ import { loadVariantsByProduct } from "../../../redux/slices/productVariantSlice
 
 const ProductCardList = ({ product }) => {
   const [notification, setNotification] = useState(null);
+  const [hasVariants, setHasVariants] = useState(true);
+  const [checkingVariants, setCheckingVariants] = useState(false);
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -26,6 +29,26 @@ const ProductCardList = ({ product }) => {
     totalReviews,
   } = product;
 
+  // Prefetch variants to know whether this product has any
+  useEffect(() => {
+    let mounted = true;
+    const check = async () => {
+      try {
+        setCheckingVariants(true);
+        const res = await dispatch(loadVariantsByProduct(id)).unwrap();
+        if (mounted) setHasVariants(Array.isArray(res) && res.length > 0);
+      } catch (_) {
+        if (mounted) setHasVariants(false);
+      } finally {
+        if (mounted) setCheckingVariants(false);
+      }
+    };
+    if (id) check();
+    return () => {
+      mounted = false;
+    };
+  }, [dispatch, id]);
+
   // Calculate discount label
   let discountLabel = null;
   let originalPrice = discountedPrice;
@@ -36,7 +59,7 @@ const ProductCardList = ({ product }) => {
     } else if (discountType === "FIXED_AMOUNT") {
       discountLabel = `- ${discountOverrideByFlashSale.toLocaleString("vi-VN")}đ`;
     }
-  } 
+  }
 
   const handleNavigate = () => {
     navigate(`/product/${id}`);
@@ -44,6 +67,12 @@ const ProductCardList = ({ product }) => {
 
   const handleAddToCart = async (e) => {
     e.stopPropagation();
+
+    if (!hasVariants) {
+      setNotification({ type: 'error', message: 'Sản phẩm này hiện không có biến thể khả dụng' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
 
     try {
       const res = await dispatch(loadVariantsByProduct(product.id)).unwrap();
@@ -141,10 +170,16 @@ const ProductCardList = ({ product }) => {
           </div>
         </div>
         <button
-          className="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer whitespace-nowrap !rounded-button"
+          className={`w-full mt-3 py-2 rounded-lg transition-colors font-medium whitespace-nowrap !rounded-button ${
+            hasVariants && !checkingVariants
+              ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+              : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+          }`}
           onClick={handleAddToCart}
+          disabled={!hasVariants || checkingVariants}
+          title={!hasVariants ? 'Không có biến thể khả dụng' : undefined}
         >
-          Thêm vào giỏ
+          {checkingVariants ? 'Đang kiểm tra…' : hasVariants ? 'Thêm vào giỏ' : 'Không có biến thể'}
         </button>
       </div>
       {notification && (

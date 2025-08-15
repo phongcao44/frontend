@@ -78,6 +78,11 @@ const SidebarMenu = () => {
           icon: <UserOutlined />,
           label: "Người dùng",
         },
+        {
+          key: "/admin/contacts",
+          icon: <FileTextOutlined />,
+          label: "Quản lý liên hệ",
+        },
         // {
         //   key: "/admin/payments",
         //   icon: <CreditCardOutlined />,

@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   fetchActiveFlashSale,
   fetchFlashSaleItemsPaginated,
 } from "../../../redux/slices/flashSaleSlice";
 import { loadParentCategories } from "../../../redux/slices/categorySlice";
+import { loadBrandsPaginate } from "../../../redux/slices/productSlice";
 import ProductCard from "../home/ProductCard";
+
+// Hàm để parse query parameters từ URL
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
 
 function FlashSaleTimer({ endTime }) {
   const [timeLeft, setTimeLeft] = useState({
@@ -16,11 +22,8 @@ function FlashSaleTimer({ endTime }) {
   });
 
   useEffect(() => {
-    console.log("endTime received:", endTime, typeof endTime);
-
     const parsedEndTime = new Date(endTime);
     if (isNaN(parsedEndTime.getTime())) {
-      console.error("Invalid endTime, using fallback:", endTime);
       setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
       return;
     }
@@ -29,8 +32,6 @@ function FlashSaleTimer({ endTime }) {
       const now = new Date().getTime();
       const end = parsedEndTime.getTime();
       const difference = end - now;
-
-      console.log("Timer tick - now:", now, "end:", end, "difference:", difference);
 
       if (difference > 0) {
         setTimeLeft({
@@ -56,21 +57,21 @@ function FlashSaleTimer({ endTime }) {
       <div className="flex space-x-2">
         <div className="bg-gray-200 bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
           <div className="font-bold text-xl">
-            {isNaN(timeLeft.hours) ? "00" : String(timeLeft.hours).padStart(2, "0")}
+            {String(timeLeft.hours).padStart(2, "0")}
           </div>
           <div className="text-xs">Giờ</div>
         </div>
         <div className="text-2xl font-bold">:</div>
         <div className="bg-gray-200 bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
           <div className="font-bold text-xl">
-            {isNaN(timeLeft.minutes) ? "00" : String(timeLeft.minutes).padStart(2, "0")}
+            {String(timeLeft.minutes).padStart(2, "0")}
           </div>
           <div className="text-xs">Phút</div>
         </div>
         <div className="text-2xl font-bold">:</div>
         <div className="bg-gray-200 bg-opacity-20 px-3 py-2 rounded-lg text-center min-w-[50px]">
           <div className="font-bold text-xl">
-            {isNaN(timeLeft.seconds) ? "00" : String(timeLeft.seconds).padStart(2, "0")}
+            {String(timeLeft.seconds).padStart(2, "0")}
           </div>
           <div className="text-xs">Giây</div>
         </div>
@@ -82,30 +83,65 @@ function FlashSaleTimer({ endTime }) {
 function FlashSaleProducts() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const query = useQuery();
 
   // Redux selectors
   const { activeFlashSale, flashSaleItemsPaginated, loading, error } = useSelector(
     (state) => state.flashSale
   );
   const { parentList } = useSelector((state) => state.category);
+  const { brandsPaginated, loading: brandsLoading, error: brandsError } = useSelector(
+    (state) => state.products
+  );
 
   // State management for filters and pagination
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedPriceRange, setSelectedPriceRange] = useState("all");
-  const [selectedDiscount, setSelectedDiscount] = useState("all");
-  const [selectedBrand, setSelectedBrand] = useState("all");
-  const [selectedRating, setSelectedRating] = useState("all");
-  const [activeFilter, setActiveFilter] = useState(null);
-  const [sortBy, setSortBy] = useState("discount-high");
-  const [page, setPage] = useState(0);
+  const [selectedPriceRange, setSelectedPriceRange] = useState(
+    query.get("priceRange") || "all"
+  );
+  const [selectedDiscount, setSelectedDiscount] = useState(
+    query.get("discount") || "all"
+  );
+  const [selectedBrand, setSelectedBrand] = useState(query.get("brand") || "all");
+  const [selectedRating, setSelectedRating] = useState(
+    query.get("rating") || "all"
+  );
+  const [activeFilter, setActiveFilter] = useState(query.get("categoryId") || null);
+  const [sortBy, setSortBy] = useState(query.get("sortBy") || "discount-high");
+  const [page, setPage] = useState(parseInt(query.get("page")) || 0);
   const [limit] = useState(10);
   const [isProductListLoading, setIsProductListLoading] = useState(false);
 
   // Temporary filter states
-  const [tempPriceRange, setTempPriceRange] = useState("all");
-  const [tempDiscount, setTempDiscount] = useState("all");
-  const [tempBrand, setTempBrand] = useState("all");
-  const [tempRating, setTempRating] = useState("all");
+  const [tempPriceRange, setTempPriceRange] = useState(
+    query.get("priceRange") || "all"
+  );
+  const [tempDiscount, setTempDiscount] = useState(query.get("discount") || "all");
+  const [tempBrand, setTempBrand] = useState(query.get("brand") || "all");
+  const [tempRating, setTempRating] = useState(query.get("rating") || "all");
+
+  // Cập nhật URL khi trạng thái thay đổi
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedPriceRange !== "all") params.set("priceRange", selectedPriceRange);
+    if (selectedDiscount !== "all") params.set("discount", selectedDiscount);
+    if (selectedBrand !== "all") params.set("brand", selectedBrand);
+    if (selectedRating !== "all") params.set("rating", selectedRating);
+    if (activeFilter) params.set("categoryId", activeFilter);
+    if (sortBy !== "discount-high") params.set("sortBy", sortBy);
+    if (page !== 0) params.set("page", page);
+
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [
+    selectedPriceRange,
+    selectedDiscount,
+    selectedBrand,
+    selectedRating,
+    activeFilter,
+    sortBy,
+    page,
+    navigate,
+  ]);
 
   // Fetch parent categories
   useEffect(() => {
@@ -118,6 +154,19 @@ function FlashSaleProducts() {
       })
     );
   }, [dispatch]);
+
+  // Fetch brands based on active category filter
+  useEffect(() => {
+    dispatch(
+      loadBrandsPaginate({
+        page: 0,
+        limit: 10,
+        sortBy: "brand",
+        orderBy: "asc",
+        categoryId: activeFilter || null,
+      })
+    );
+  }, [dispatch, activeFilter]);
 
   // Flash sale end time
   const flashSaleEndTime = activeFlashSale?.endTime
@@ -134,7 +183,7 @@ function FlashSaleProducts() {
       case "newest":
         return { sortBy: "createdAt", orderBy: "desc" };
       default:
-        return { sortBy: "createdAt", orderBy: "asc" };
+        return { sortBy: "discountedPrice", orderBy: "desc" };
     }
   };
 
@@ -146,16 +195,23 @@ function FlashSaleProducts() {
         const res = await dispatch(fetchActiveFlashSale()).unwrap();
         if (res?.id) {
           const { sortBy: apiSortBy, orderBy } = getSortParams(sortBy);
-          const selectedPrice = priceRanges.find((range) => range.id === selectedPriceRange);
-          const selectedDiscountRange = discountRanges.find((range) => range.id === selectedDiscount);
-          const selectedRatingOption = ratingOptions.find((option) => option.id === selectedRating);
+          const selectedPrice = priceRanges.find(
+            (range) => range.id === selectedPriceRange
+          );
+          const selectedDiscountRange = discountRanges.find(
+            (range) => range.id === selectedDiscount
+          );
+          const selectedRatingOption = ratingOptions.find(
+            (option) => option.id === selectedRating
+          );
 
           const params = {
             categoryId: activeFilter,
             brand: selectedBrand !== "all" ? selectedBrand : null,
             minPrice: selectedPrice?.min || null,
             maxPrice: selectedPrice?.max || null,
-            discountRange: selectedDiscountRange?.id !== "all" ? selectedDiscountRange.id : null,
+            discountRange:
+              selectedDiscountRange?.id !== "all" ? selectedDiscountRange.id : null,
             minRating: selectedRatingOption?.value === 0 ? null : selectedRatingOption?.value,
             page,
             limit,
@@ -163,7 +219,10 @@ function FlashSaleProducts() {
             orderBy,
           };
 
-          await dispatch(fetchFlashSaleItemsPaginated({ flashSaleId: res.id, params })).unwrap();
+          const result = await dispatch(
+            fetchFlashSaleItemsPaginated({ flashSaleId: res.id, params })
+          ).unwrap();
+          console.log("Flash sale items loaded:", result);
         }
       } catch (err) {
         console.error("Failed to load flash sale:", err);
@@ -173,7 +232,17 @@ function FlashSaleProducts() {
     };
 
     loadActiveFlashSale();
-  }, [dispatch, activeFilter, selectedBrand, selectedPriceRange, selectedDiscount, selectedRating, sortBy, page, limit]);
+  }, [
+    dispatch,
+    activeFilter,
+    selectedBrand,
+    selectedPriceRange,
+    selectedDiscount,
+    selectedRating,
+    sortBy,
+    page,
+    limit,
+  ]);
 
   // Apply filters
   const handleApplyFilters = () => {
@@ -202,11 +271,10 @@ function FlashSaleProducts() {
   // Filter options
   const brands = [
     { id: "all", name: "Tất cả thương hiệu" },
-    { id: "brand-a", name: "Brand A" },
-    { id: "brand-b", name: "Brand B" },
-    { id: "brand-c", name: "Brand C" },
-    { id: "brand-d", name: "Brand D" },
-    { id: "brand-e", name: "Brand E" },
+    ...(brandsPaginated?.data?.content || []).map((brandName) => ({
+      id: brandName,
+      name: brandName,
+    })),
   ];
 
   const priceRanges = [
@@ -237,13 +305,19 @@ function FlashSaleProducts() {
   // Pagination controls
   const handlePreviousPage = () => {
     if (page > 0) {
+      console.log("Going to previous page, current page:", page);
+      setIsProductListLoading(true);
       setPage(page - 1);
     }
   };
 
   const handleNextPage = () => {
-    if (flashSaleItemsPaginated?.hasNext) {
+    if (!flashSaleItemsPaginated?.last) {
+      console.log("Going to next page, current page:", page);
+      setIsProductListLoading(true);
       setPage(page + 1);
+    } else {
+      alert("Bạn đang ở trang cuối cùng!");
     }
   };
 
@@ -253,6 +327,7 @@ function FlashSaleProducts() {
     : [];
   const totalProducts = flashSaleItemsPaginated?.totalElements || 0;
   const totalPages = flashSaleItemsPaginated?.totalPages || 1;
+  const currentPage = flashSaleItemsPaginated?.number || 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50">
@@ -337,16 +412,13 @@ function FlashSaleProducts() {
             <div className="text-sm text-gray-600 flex items-center space-x-2">
               <i className="fas fa-fire text-red-500"></i>
               <span>
-                <span className="font-bold text-red-600">{totalProducts}</span>{" "}
-                sản phẩm Flash Sale
+                <span className="font-bold text-red-600">{totalProducts}</span> sản phẩm Flash Sale
               </span>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 whitespace-nowrap">
-              Sắp xếp:
-            </span>
+            <span className="text-sm text-gray-600 whitespace-nowrap">Sắp xếp:</span>
             <select
               value={sortBy}
               onChange={(e) => {
@@ -358,6 +430,7 @@ function FlashSaleProducts() {
               <option value="price-low">Giá thấp đến cao</option>
               <option value="price-high">Giá cao đến thấp</option>
               <option value="newest">Mới nhất</option>
+              <option value="discount-high">Giảm giá cao nhất</option>
             </select>
           </div>
         </div>
@@ -385,23 +458,54 @@ function FlashSaleProducts() {
                     <i className="fas fa-copyright text-red-500"></i>
                     Thương hiệu
                   </h3>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {brands.map((brand) => (
-                      <button
-                        key={brand.id}
-                        onClick={() => {
-                          setTempBrand(brand.id);
-                        }}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
-                          tempBrand === brand.id
-                            ? "bg-red-50 text-red-600 font-medium border border-red-200"
-                            : "text-gray-600 hover:bg-red-50 hover:text-red-600"
-                        }`}
+                  {brandsLoading ? (
+                    <div className="flex justify-center items-center py-4">
+                      <svg
+                        className="animate-spin h-6 w-6 text-red-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
                       >
-                        {brand.name}
-                      </button>
-                    ))}
-                  </div>
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                    </div>
+                  ) : brandsError ? (
+                    <div className="text-red-500 text-sm py-2">
+                      Lỗi khi tải danh sách thương hiệu: {brandsError}
+                    </div>
+                  ) : brands.length === 1 ? (
+                    <div className="text-gray-500 text-sm py-2">
+                      Không có thương hiệu nào trong danh mục này
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                      {brands.map((brand) => (
+                        <button
+                          key={brand.id}
+                          onClick={() => setTempBrand(brand.id)}
+                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                            tempBrand === brand.id
+                              ? "bg-red-50 text-red-600 font-medium border border-red-200"
+                              : "text-gray-600 hover:bg-red-50 hover:text-red-600"
+                          }`}
+                        >
+                          {brand.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Price Filter */}
@@ -414,9 +518,7 @@ function FlashSaleProducts() {
                     {priceRanges.map((range) => (
                       <button
                         key={range.id}
-                        onClick={() => {
-                          setTempPriceRange(range.id);
-                        }}
+                        onClick={() => setTempPriceRange(range.id)}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
                           tempPriceRange === range.id
                             ? "bg-red-50 text-red-600 font-medium border border-red-200"
@@ -439,9 +541,7 @@ function FlashSaleProducts() {
                     {discountRanges.map((discount) => (
                       <button
                         key={discount.id}
-                        onClick={() => {
-                          setTempDiscount(discount.id);
-                        }}
+                        onClick={() => setTempDiscount(discount.id)}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
                           tempDiscount === discount.id
                             ? "bg-red-50 text-red-600 font-medium border border-red-200"
@@ -464,9 +564,7 @@ function FlashSaleProducts() {
                     {ratingOptions.map((option) => (
                       <button
                         key={option.id}
-                        onClick={() => {
-                          setTempRating(option.id);
-                        }}
+                        onClick={() => setTempRating(option.id)}
                         className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
                           tempRating === option.id
                             ? "bg-red-50 text-red-600 font-medium border border-red-200"
@@ -537,16 +635,26 @@ function FlashSaleProducts() {
               </h3>
               <p className="text-gray-500 mb-4">Lỗi: {error}</p>
               <button
-                onClick={handleResetFilters}
+                onClick={() => {
+                  handleResetFilters();
+                  dispatch(fetchActiveFlashSale());
+                }}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
               >
-                Làm mới
+                Thử lại
               </button>
             </div>
           ) : productsContent.length > 0 ? (
             productsContent.map((item) => (
               <div key={item.id} className="relative">
-                <ProductCard product={item} />
+                <ProductCard
+                  product={{
+                    ...item,
+                    price: item.lowestPrice,
+                    discount: item.discountedPrice,
+                    originalPrice: item.originalPrice,
+                  }}
+                />
               </div>
             ))
           ) : (
@@ -573,26 +681,28 @@ function FlashSaleProducts() {
           <div className="flex justify-center items-center space-x-4 mb-12">
             <button
               onClick={handlePreviousPage}
-              disabled={page === 0}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                page === 0
+              disabled={flashSaleItemsPaginated?.first}
+              className={`px-6 py-3 rounded-lg text-base font-medium transition-colors z-10 ${
+                flashSaleItemsPaginated?.first
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-red-500 text-white hover:bg-red-600"
               }`}
+              aria-label="Go to previous page"
             >
               Trang trước
             </button>
-            <span className="text-sm text-gray-600">
-              Trang {page + 1} / {totalPages}
+            <span className="text-base text-gray-600">
+              Trang {currentPage + 1} / {totalPages}
             </span>
             <button
               onClick={handleNextPage}
-              disabled={!flashSaleItemsPaginated?.hasNext}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                !flashSaleItemsPaginated?.hasNext
+              disabled={flashSaleItemsPaginated?.last}
+              className={`px-6 py-3 rounded-lg text-base font-medium transition-colors z-10 ${
+                flashSaleItemsPaginated?.last
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                   : "bg-red-500 text-white hover:bg-red-600"
               }`}
+              aria-label="Go to next page"
             >
               Trang sau
             </button>
@@ -602,9 +712,7 @@ function FlashSaleProducts() {
         {/* Flash Sale Benefits */}
         <div className="mt-12 bg-gradient-to-r from-red-500 to-pink-500 text-white p-6 rounded-2xl shadow-lg">
           <div className="text-center mb-6">
-            <h3 className="text-xl font-bold mb-2">
-              Ưu đãi đặc biệt Flash Sale
-            </h3>
+            <h3 className="text-xl font-bold mb-2">Ưu đãi đặc biệt Flash Sale</h3>
             <p className="text-red-100">Chỉ có trong thời gian giới hạn!</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

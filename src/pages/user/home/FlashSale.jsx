@@ -46,7 +46,7 @@ const FlashSale = () => {
       const res = await dispatch(fetchActiveFlashSale()).unwrap();
       if (res) {
         dispatch(fetchFlashSaleItems(res.id));
-      }nn
+      }
     };
 
     loadActiveFlashSale();

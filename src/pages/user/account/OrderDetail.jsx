@@ -485,11 +485,11 @@ export default function OrderDetail({ order: orderProp }) {
         {/* Back Button */}
         <div className="mt-8 flex justify-center">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/user/orders')}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Quay lại
+            Quay lại danh sách đơn hàng
           </button>
         </div>
 

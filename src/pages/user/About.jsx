@@ -1,4 +1,3 @@
-
 import AboutImg from '../../assets/images/AboutImg.png';
 import Tom from '../../assets/images/Tom.png';
 import Emma from '../../assets/images/Emma.png';
@@ -6,7 +5,7 @@ import Will from '../../assets/images/will.png';
 import Services from '../../assets/images/Services.png';
 import Customer from '../../assets/images/customer.png';
 import Money from '../../assets/images/money.png';
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const About = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -14,49 +13,6 @@ const About = () => {
   const totalSlides = Math.ceil(team.length / membersPerPage);
   const startIndex = currentSlide * membersPerPage;
   const visibleMembers = team.slice(startIndex, startIndex + membersPerPage);
-
-  useEffect(() => {
-    // Inject Fchat script
-    const script = document.createElement("script");
-    script.src = "https://cdn.fchat.vn/assets/embed/webchat.js?id=686dc526b7fbfe64fd0f1c82";
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script); // Cleanup khi component unmount
-    };
-  }, []);
-
-
-  useEffect(() => {
-    // Định nghĩa window.fbMessengerPlugins nếu chưa có
-    window.fbMessengerPlugins = window.fbMessengerPlugins || {
-      init: function () {
-        FB.init({
-          appId: "1784956665094089",
-          xfbml: true,
-          version: "v3.0",
-        });
-      },
-      callable: [],
-    };
-
-    window.fbAsyncInit = window.fbAsyncInit || function () {
-      window.fbMessengerPlugins.callable.forEach(function (item) {
-        item();
-      });
-      window.fbMessengerPlugins.init();
-    };
-
-    // Thêm script Facebook SDK động
-    if (!document.getElementById("facebook-jssdk")) {
-      const js = document.createElement("script");
-      js.id = "facebook-jssdk";
-      js.src = "//connect.facebook.net/vi_VN/sdk.js";
-      document.body.appendChild(js);
-    }
-  }, []);
-
 
   return (
     <div style={styles.container}>
@@ -182,15 +138,6 @@ const About = () => {
           </div>
         </div>
       </div>
-      <div
-        className="fb-customerchat"
-        attribution="biz_inbox"
-        page_id="697490283449445"
-        theme_color="#DB4444"
-        logged_in_greeting="Xin chào! Bạn cần hỗ trợ gì không?"
-        logged_out_greeting="Vui lòng đăng nhập Facebook để chat với chúng tôi."
-      ></div>
-      <script type="text/javascript" src="https://cdn.fchat.vn/assets/embed/webchat.js?id=686dc526b7fbfe64fd0f1c82" async="async"></script>
     </div>
   );
 };
@@ -582,5 +529,4 @@ const styles = {
     fontSize: 14,
     color: '#555',
   },
-
 };

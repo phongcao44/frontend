@@ -10,9 +10,59 @@ import {
   getUserVouchers,
   getUnusedVouchers,
   getUsedVouchers,
+  getVouchersByUserId,
+  addVoucherToUser,
+  removeVoucherFromUser,
 } from "../../services/voucherService";
 
+// Helper function for safe number parsing
+const parseNumberSafe = (val) => {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const cleaned = val.replace(/[^0-9.-]/g, "");
+    const num = Number(cleaned);
+    return isFinite(num) ? num : 0;
+  }
+  const num = Number(val);
+  return isFinite(num) ? num : 0;
+};
 
+// Helper function to normalize voucher data
+const normalizeVoucherData = (voucher) => {
+  if (!voucher) return null;
+  
+  const v = { ...voucher };
+  const discountPercent = parseNumberSafe(v.discountPercent);
+  let discountAmount = parseNumberSafe(v.discountAmount);
+  const maxDiscount = parseNumberSafe(v.maxDiscount);
+  const minOrderAmount = parseNumberSafe(v.minOrderAmount);
+  const quantity = parseNumberSafe(v.quantity);
+  const inferredType = v.discountType || (discountPercent > 0 ? "percent" : "amount");
+  
+  // Compatibility: some BE send fixed discount in maxDiscount when type is amount
+  if ((v?.discountType === "amount" || inferredType === "amount") && 
+      (!discountAmount || discountAmount <= 0) && maxDiscount > 0) {
+    discountAmount = maxDiscount;
+  }
+  
+  return {
+    ...v,
+    discountPercent,
+    discountAmount,
+    maxDiscount,
+    minOrderAmount,
+    quantity,
+    discountType: inferredType,
+    deleted: Boolean(v.deleted),
+  };
+};
+
+// ================================
+// Async Thunks
+// ================================
+
+// Admin thunks
 export const fetchAllVouchers = createAsyncThunk(
   "voucher/fetchAll",
   async (_, { rejectWithValue }) => {
@@ -50,15 +100,49 @@ export const removeVoucher = createAsyncThunk(
   "voucher/delete",
   async (voucherId, { rejectWithValue }) => {
     try {
-      return await deleteVoucher(voucherId);
+      await deleteVoucher(voucherId);
+      return voucherId;
     } catch (error) {
       return rejectWithValue(error);
     }
   }
 );
 
+export const fetchVouchersByUserId = createAsyncThunk(
+  "voucher/fetchByUserId",
+  async (userId, { rejectWithValue }) => {
+    try {
+      return await getVouchersByUserId(userId);
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
 
+export const adminAddVoucherToUser = createAsyncThunk(
+  "voucher/adminAddToUser",
+  async ({ userId, data }, { rejectWithValue }) => {
+    try {
+      return await addVoucherToUser(userId, data);
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
 
+export const adminRemoveVoucherFromUser = createAsyncThunk(
+  "voucher/adminRemoveFromUser",
+  async ({ userId, voucherId }, { rejectWithValue }) => {
+    try {
+      await removeVoucherFromUser(userId, voucherId);
+      return { userId, voucherId };
+    } catch (error) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
+// User thunks
 export const fetchCollectibleVouchers = createAsyncThunk(
   "voucher/fetchCollectible",
   async (_, { rejectWithValue }) => {
@@ -132,167 +216,294 @@ export const userCollectVoucher = createAsyncThunk(
 const voucherSlice = createSlice({
   name: "voucher",
   initialState: {
+    // Data states
     allVouchers: [],
     collectibleVouchers: [],
     userVouchers: [],
     unusedVouchers: [],
     usedVouchers: [],
+    userSpecificVouchers: [], // For admin viewing user's vouchers
+    appliedVoucher: null,
+    
+    // Loading states
     loading: false,
+    createLoading: false,
+    updateLoading: false,
+    deleteLoading: false,
+    applyLoading: false,
+    collectLoading: false,
+    
+    // Error states
     error: null,
+    createError: null,
+    updateError: null,
+    deleteError: null,
+    applyError: null,
+    collectError: null,
   },
-  reducers: {},
+  reducers: {
+    clearErrors: (state) => {
+      state.error = null;
+      state.createError = null;
+      state.updateError = null;
+      state.deleteError = null;
+      state.applyError = null;
+      state.collectError = null;
+    },
+    clearAppliedVoucher: (state) => {
+      state.appliedVoucher = null;
+    },
+    resetUserVouchers: (state) => {
+      state.userVouchers = [];
+      state.unusedVouchers = [];
+      state.usedVouchers = [];
+      state.collectibleVouchers = [];
+    },
+  },
   extraReducers: (builder) => {
     builder
-
-      // Fetch all vouchers
+      // ================================
+      // Fetch All Vouchers (Admin)
+      // ================================
       .addCase(fetchAllVouchers.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchAllVouchers.fulfilled, (state, action) => {
         state.loading = false;
-        const parseNumberSafe = (val) => {
-          if (val === null || val === undefined) return 0;
-          if (typeof val === "number") return val;
-          if (typeof val === "string") {
-            const cleaned = val.replace(/[^0-9.-]/g, "");
-            const num = Number(cleaned);
-            return isFinite(num) ? num : 0;
-          }
-          const num = Number(val);
-          return isFinite(num) ? num : 0;
-        };
-
-        state.allVouchers = (action.payload || []).map((v) => {
-          const discountPercent = parseNumberSafe(v?.discountPercent);
-          let discountAmount = parseNumberSafe(v?.discountAmount);
-          const maxDiscount = parseNumberSafe(v?.maxDiscount);
-          const minOrderAmount = parseNumberSafe(v?.minOrderAmount);
-          const quantity = parseNumberSafe(v?.quantity);
-          const inferredType = v?.discountType || (discountPercent > 0 ? "percent" : "amount");
-          // Compat: some BE send fixed discount in maxDiscount when type is amount
-          if ((v?.discountType === "amount" || inferredType === "amount") && (!discountAmount || discountAmount <= 0) && maxDiscount > 0) {
-            discountAmount = maxDiscount;
-          }
-          return {
-            ...v,
-            discountPercent,
-            discountAmount,
-            maxDiscount,
-            minOrderAmount,
-            quantity,
-            discountType: inferredType,
-            deleted: Boolean(v?.deleted),
-          };
-        });
+        state.error = null;
+        state.allVouchers = (action.payload || []).map(normalizeVoucherData);
       })
       .addCase(fetchAllVouchers.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || action.error.message;
       })
 
-      // Create voucher
+      // ================================
+      // Create Voucher (Admin)
+      // ================================
+      .addCase(createNewVoucher.pending, (state) => {
+        state.createLoading = true;
+        state.createError = null;
+      })
       .addCase(createNewVoucher.fulfilled, (state, action) => {
-        const parseNumberSafe = (val) => {
-          if (val === null || val === undefined) return 0;
-          if (typeof val === "number") return val;
-          if (typeof val === "string") {
-            const cleaned = val.replace(/[^0-9.-]/g, "");
-            const num = Number(cleaned);
-            return isFinite(num) ? num : 0;
-          }
-          const num = Number(val);
-          return isFinite(num) ? num : 0;
-        };
-        const v = action.payload || {};
-        const discountPercent = parseNumberSafe(v.discountPercent);
-        let discountAmount = parseNumberSafe(v.discountAmount);
-        const maxDiscount = parseNumberSafe(v.maxDiscount);
-        const minOrderAmount = parseNumberSafe(v.minOrderAmount);
-        const quantity = parseNumberSafe(v.quantity);
-        const inferredType = v.discountType || (discountPercent > 0 ? "percent" : "amount");
-        if ((v?.discountType === "amount" || inferredType === "amount") && (!discountAmount || discountAmount <= 0) && maxDiscount > 0) {
-          discountAmount = maxDiscount;
+        state.createLoading = false;
+        state.createError = null;
+        const normalizedVoucher = normalizeVoucherData(action.payload);
+        if (normalizedVoucher) {
+          state.allVouchers.push(normalizedVoucher);
         }
-        state.allVouchers.push({
-          ...v,
-          discountPercent,
-          discountAmount,
-          maxDiscount,
-          minOrderAmount,
-          quantity,
-          discountType: inferredType,
-          deleted: Boolean(v.deleted),
-        });
+      })
+      .addCase(createNewVoucher.rejected, (state, action) => {
+        state.createLoading = false;
+        state.createError = action.payload || action.error.message;
       })
 
-      // Update voucher
+      // ================================
+      // Update Voucher (Admin)
+      // ================================
+      .addCase(updateExistingVoucher.pending, (state) => {
+        state.updateLoading = true;
+        state.updateError = null;
+      })
       .addCase(updateExistingVoucher.fulfilled, (state, action) => {
-        const parseNumberSafe = (val) => {
-          if (val === null || val === undefined) return 0;
-          if (typeof val === "number") return val;
-          if (typeof val === "string") {
-            const cleaned = val.replace(/[^0-9.-]/g, "");
-            const num = Number(cleaned);
-            return isFinite(num) ? num : 0;
+        state.updateLoading = false;
+        state.updateError = null;
+        const normalizedPayload = normalizeVoucherData(action.payload);
+        if (normalizedPayload) {
+          const index = state.allVouchers.findIndex((v) => v.id === normalizedPayload.id);
+          if (index !== -1) {
+            state.allVouchers[index] = normalizedPayload;
           }
-          const num = Number(val);
-          return isFinite(num) ? num : 0;
-        };
-        const payload = action.payload || {};
-        const discountPercent = parseNumberSafe(payload.discountPercent);
-        let discountAmount = parseNumberSafe(payload.discountAmount);
-        const maxDiscount = parseNumberSafe(payload.maxDiscount);
-        const minOrderAmount = parseNumberSafe(payload.minOrderAmount);
-        const quantity = parseNumberSafe(payload.quantity);
-        const inferredType = payload.discountType || (discountPercent > 0 ? "percent" : "amount");
-        if ((payload?.discountType === "amount" || inferredType === "amount") && (!discountAmount || discountAmount <= 0) && maxDiscount > 0) {
-          discountAmount = maxDiscount;
-        }
-
-        const index = state.allVouchers.findIndex((v) => v.id === payload.id);
-        if (index !== -1) {
-          state.allVouchers[index] = {
-            ...payload,
-            discountPercent,
-            discountAmount,
-            maxDiscount,
-            minOrderAmount,
-            quantity,
-            discountType: inferredType,
-            deleted: Boolean(payload.deleted),
-          };
         }
       })
+      .addCase(updateExistingVoucher.rejected, (state, action) => {
+        state.updateLoading = false;
+        state.updateError = action.payload || action.error.message;
+      })
 
-      // Delete voucher
+      // ================================
+      // Delete Voucher (Admin)
+      // ================================
+      .addCase(removeVoucher.pending, (state) => {
+        state.deleteLoading = true;
+        state.deleteError = null;
+      })
       .addCase(removeVoucher.fulfilled, (state, action) => {
+        state.deleteLoading = false;
+        state.deleteError = null;
+        const voucherId = action.payload;
         state.allVouchers = state.allVouchers.map((v) =>
-          v.id === action.meta.arg ? { ...v, deleted: true } : v
+          v.id === voucherId ? { ...v, deleted: true } : v
         );
       })
+      .addCase(removeVoucher.rejected, (state, action) => {
+        state.deleteLoading = false;
+        state.deleteError = action.payload || action.error.message;
+      })
 
+      // ================================
+      // Fetch Vouchers by User ID (Admin)
+      // ================================
+      .addCase(fetchVouchersByUserId.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchVouchersByUserId.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        state.userSpecificVouchers = action.payload || [];
+      })
+      .addCase(fetchVouchersByUserId.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+
+      // ================================
+      // Admin Add Voucher to User
+      // ================================
+      .addCase(adminAddVoucherToUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(adminAddVoucherToUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        // Optionally update userSpecificVouchers if needed
+      })
+      .addCase(adminAddVoucherToUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+
+      // ================================
+      // Admin Remove Voucher from User
+      // ================================
+      .addCase(adminRemoveVoucherFromUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(adminRemoveVoucherFromUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        const { voucherId } = action.payload;
+        state.userSpecificVouchers = state.userSpecificVouchers.filter(v => v.id !== voucherId);
+      })
+      .addCase(adminRemoveVoucherFromUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
+      })
+
+      // ================================
+      // Fetch Collectible Vouchers (User)
+      // ================================
+      .addCase(fetchCollectibleVouchers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(fetchCollectibleVouchers.fulfilled, (state, action) => {
-        state.collectibleVouchers = action.payload;
+        state.loading = false;
+        state.error = null;
+        state.collectibleVouchers = action.payload || [];
+      })
+      .addCase(fetchCollectibleVouchers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
       })
 
+      // ================================
+      // Fetch User Vouchers
+      // ================================
+      .addCase(fetchUserVouchers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(fetchUserVouchers.fulfilled, (state, action) => {
-        state.userVouchers = action.payload;
+        state.loading = false;
+        state.error = null;
+        state.userVouchers = action.payload || [];
+      })
+      .addCase(fetchUserVouchers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
       })
 
+      // ================================
+      // Fetch Unused Vouchers (User)
+      // ================================
+      .addCase(fetchUnusedVouchers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(fetchUnusedVouchers.fulfilled, (state, action) => {
-        state.unusedVouchers = action.payload;
+        state.loading = false;
+        state.error = null;
+        state.unusedVouchers = action.payload || [];
+      })
+      .addCase(fetchUnusedVouchers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
       })
 
+      // ================================
+      // Fetch Used Vouchers (User)
+      // ================================
+      .addCase(fetchUsedVouchers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(fetchUsedVouchers.fulfilled, (state, action) => {
-        state.usedVouchers = action.payload;
+        state.loading = false;
+        state.error = null;
+        state.usedVouchers = action.payload || [];
+      })
+      .addCase(fetchUsedVouchers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error.message;
       })
 
+      // ================================
+      // Apply Voucher (User)
+      // ================================
+      .addCase(userApplyVoucher.pending, (state) => {
+        state.applyLoading = true;
+        state.applyError = null;
+      })
       .addCase(userApplyVoucher.fulfilled, (state, action) => {
+        state.applyLoading = false;
+        state.applyError = null;
+        state.appliedVoucher = action.payload;
+      })
+      .addCase(userApplyVoucher.rejected, (state, action) => {
+        state.applyLoading = false;
+        state.applyError = action.payload || action.error.message;
+        state.appliedVoucher = null;
       })
 
+      // ================================
+      // Collect Voucher (User)
+      // ================================
+      .addCase(userCollectVoucher.pending, (state) => {
+        state.collectLoading = true;
+        state.collectError = null;
+      })
       .addCase(userCollectVoucher.fulfilled, (state, action) => {
+        state.collectLoading = false;
+        state.collectError = null;
+        // Optionally remove from collectible vouchers
+        // state.collectibleVouchers = state.collectibleVouchers.filter(v => v.code !== action.meta.arg.voucherCode);
+      })
+      .addCase(userCollectVoucher.rejected, (state, action) => {
+        state.collectLoading = false;
+        state.collectError = action.payload || action.error.message;
       });
   },
 });
+
+export const { 
+  clearErrors, 
+  clearAppliedVoucher, 
+  resetUserVouchers 
+} = voucherSlice.actions;
 
 export default voucherSlice.reducer;

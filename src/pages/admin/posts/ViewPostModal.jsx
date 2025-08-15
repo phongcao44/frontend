@@ -9,7 +9,7 @@ import { UploadIcon, X } from "lucide-react";
 import { POST_CATEGORIES } from "../../../constants/postCategories";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import DOMPurify from "dompurify"; // Thêm DOMPurify để làm sạch HTML
+import DOMPurify from "dompurify";
 
 export default function ViewPostModal({
   show,
@@ -20,9 +20,10 @@ export default function ViewPostModal({
   setMode,
 }) {
   const dispatch = useDispatch();
-  const quillRef = useRef(null); // Ref cho ReactQuill để tránh findDOMNode
+  const quillRef = useRef(null);
   const isAdd = mode === "add";
   const isEdit = mode === "edit";
+  const [isSubmitting, setIsSubmitting] = useState(false); // Trạng thái gửi dữ liệu
 
   const [editData, setEditData] = useState({
     title: "",
@@ -40,7 +41,7 @@ export default function ViewPostModal({
       ["bold", "italic", "underline", "strike"],
       [{ list: "ordered" }, { list: "bullet" }],
       ["link", "image"],
-      ["clean"], // Xóa định dạng
+      ["clean"],
     ],
   };
 
@@ -93,12 +94,34 @@ export default function ViewPostModal({
     }));
   };
 
+  // Kiểm tra xem tất cả các trường bắt buộc đã được điền chưa
+  const isFormValid = () => {
+    if (isAdd) {
+      return (
+        editData.title.trim() &&
+        editData.description.trim() &&
+        editData.content.trim() &&
+        editData.location &&
+        editData.image
+      );
+    } else if (isEdit) {
+      return (
+        editData.title.trim() &&
+        editData.description.trim() &&
+        editData.content.trim() &&
+        editData.location
+      );
+    }
+    return false;
+  };
+
   const handleSave = () => {
-    // Kiểm tra dữ liệu đầu vào
-    if (!editData.title.trim() || !editData.content.trim()) {
-      alert("Vui lòng điền tiêu đề và nội dung!");
+    if (!isFormValid()) {
+      alert("Vui lòng điền đầy đủ tất cả các trường bắt buộc!");
       return;
     }
+
+    setIsSubmitting(true); // Vô hiệu hóa nút khi bắt đầu gửi
 
     const formData = new FormData();
     formData.append("title", editData.title);
@@ -109,11 +132,19 @@ export default function ViewPostModal({
     formData.append("description", editData.description);
     formData.append("location", editData.location);
 
-    if (isAdd) {
-      dispatch(createAdminPost(formData)).then(() => onClose());
-    } else if (isEdit && post?.id) {
-      dispatch(updateAdminPost({ id: post.id, formData })).then(() => onClose());
-    }
+    const action = isAdd
+      ? dispatch(createAdminPost(formData))
+      : isEdit && post?.id
+      ? dispatch(updateAdminPost({ id: post.id, formData }))
+      : Promise.resolve();
+
+    action
+      .then(() => {
+        onClose(post?.id || null); // Truyền ID bài viết mới nếu là thêm mới
+      })
+      .finally(() => {
+        setIsSubmitting(false); // Kích hoạt lại nút sau khi gửi xong
+      });
   };
 
   const cancelEdit = () => {
@@ -122,7 +153,6 @@ export default function ViewPostModal({
 
   if (!show) return null;
 
-  // Làm sạch nội dung HTML trước khi render
   const sanitizedContent = DOMPurify.sanitize(editData.content);
 
   return (
@@ -145,7 +175,9 @@ export default function ViewPostModal({
         </div>
 
         <div className="mb-4">
-          <label className="block mb-1 font-medium">Ảnh</label>
+          <label className="block mb-1 font-medium">
+            Ảnh {isAdd && <span className="text-red-500">*</span>}
+          </label>
           {isAdd || isEdit ? (
             editData.imageUrl ? (
               <div className="relative inline-block">
@@ -187,7 +219,9 @@ export default function ViewPostModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <p className="text-sm font-medium text-gray-500">Tiêu đề</p>
+            <p className="text-sm font-medium text-gray-500">
+              Tiêu đề <span className="text-red-500">*</span>
+            </p>
             {isAdd || isEdit ? (
               <input
                 type="text"
@@ -201,7 +235,9 @@ export default function ViewPostModal({
             )}
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Mục bài viết</p>
+            <p className="text-sm font-medium text-gray-500">
+              Mục bài viết <span className="text-red-500">*</span>
+            </p>
             {isAdd || isEdit ? (
               <select
                 name="location"
@@ -248,7 +284,9 @@ export default function ViewPostModal({
         </div>
 
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-500">Mô tả</p>
+          <p className="text-sm font-medium text-gray-500">
+            Mô tả <span className="text-red-500">*</span>
+          </p>
           {isAdd || isEdit ? (
             <textarea
               name="description"
@@ -262,7 +300,9 @@ export default function ViewPostModal({
         </div>
 
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-500">Nội dung</p>
+          <p className="text-sm font-medium text-gray-500">
+            Nội dung <span className="text-red-500">*</span>
+          </p>
           {isAdd || isEdit ? (
             <ReactQuill
               ref={quillRef}
@@ -286,14 +326,19 @@ export default function ViewPostModal({
             <>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                disabled={!editData.title.trim() || !editData.content.trim()}
+                className={`px-4 py-2 text-white rounded ${
+                  isFormValid() && !isSubmitting
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+                disabled={!isFormValid() || isSubmitting}
               >
-                Lưu
+                {isSubmitting ? "Đang lưu..." : "Lưu"}
               </button>
               <button
                 onClick={cancelEdit}
                 className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                disabled={isSubmitting}
               >
                 Hủy
               </button>

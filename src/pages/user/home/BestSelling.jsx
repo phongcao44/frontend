@@ -5,18 +5,42 @@ import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import ProductCard from "./ProductCard";
-import { loadTopBestSellingProducts } from "../../../redux/slices/productSlice";
+import { loadTopSellingProductsPaginate } from "../../../redux/slices/productSlice";
 
 // Custom icons component to replace Ant Design icons
 const LeftOutlined = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M15 18L9 12L15 6"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
 const RightOutlined = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M9 18L15 12L9 6"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
@@ -27,13 +51,16 @@ const Spinner = () => (
 
 const BestSelling = () => {
   const dispatch = useDispatch();
-  const { topBestSelling, loading } = useSelector((state) => state.products);
+  const { topSellingPaginated, loading } = useSelector((state) => state.products);
   const prevRef = useRef(null);
   const nextRef = useRef(null);
 
   useEffect(() => {
-    dispatch(loadTopBestSellingProducts());
+    dispatch(loadTopSellingProductsPaginate({ page: 0, limit: 10 }));
   }, [dispatch]);
+
+  // Extract products from paginated response
+  const products = topSellingPaginated?.content || [];
 
   return (
     <div className="py-10 px-5 bg-white">
@@ -78,10 +105,10 @@ const BestSelling = () => {
               <Spinner />
             </div>
           </div>
-        ) : topBestSelling.length > 0 ? (
+        ) : products.length > 0 ? (
           <>
             <Swiper
-              loop={topBestSelling.length > 4}
+              loop={products.length > 4}
               spaceBetween={20}
               slidesPerView={4}
               navigation={{
@@ -102,7 +129,7 @@ const BestSelling = () => {
                 1024: { slidesPerView: 4 },
               }}
             >
-              {topBestSelling.map((product) => (
+              {products.map((product) => (
                 <SwiperSlide key={product.id}>
                   <ProductCard product={product} />
                 </SwiperSlide>
@@ -131,7 +158,7 @@ const BestSelling = () => {
               onClick={() => {
                 window.location.href = "/products";
               }}
-              >
+            >
               Explore other products
             </button>
           </div>

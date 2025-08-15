@@ -137,7 +137,12 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(getCart.fulfilled, (state, action) => {
-        state.cart = action.payload || { items: [] }; // Đảm bảo cart luôn có items
+        // Đảm bảo cart luôn có mảng items
+        const payloadCart = action.payload || {};
+        state.cart = {
+          ...payloadCart,
+          items: Array.isArray(payloadCart?.items) ? payloadCart.items : [],
+        };
         state.loading = false;
       })
       .addCase(getCart.rejected, (state, action) => {
@@ -151,12 +156,18 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(addItemToCart.fulfilled, (state, action) => {
-        const { cartItem } = action.payload;
-        if (!state.cart) {
+        const { cartItem } = action.payload || {};
+        // Đảm bảo state.cart tồn tại và có mảng items
+        if (!state.cart || typeof state.cart !== "object") {
           state.cart = { items: [] };
         }
-        console.log(state.cart)
-        state.cart.items.push(cartItem); // Thêm cartItem vào mảng items
+        if (!Array.isArray(state.cart.items)) {
+          state.cart.items = [];
+        }
+        // Chỉ push khi cartItem hợp lệ để tránh lỗi
+        if (cartItem) {
+          state.cart.items.push(cartItem);
+        }
         state.loading = false;
       })
       .addCase(addItemToCart.rejected, (state, action) => {
@@ -170,7 +181,11 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(updateCartItemQuantity.fulfilled, (state, action) => {
-        state.cart = action.payload || { items: [] };
+        const payloadCart = action.payload || {};
+        state.cart = {
+          ...payloadCart,
+          items: Array.isArray(payloadCart?.items) ? payloadCart.items : [],
+        };
         state.loading = false;
       })
       .addCase(updateCartItemQuantity.rejected, (state, action) => {
@@ -184,7 +199,11 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(removeItemFromCart.fulfilled, (state, action) => {
-        state.cart = action.payload || { items: [] };
+        const payloadCart = action.payload || {};
+        state.cart = {
+          ...payloadCart,
+          items: Array.isArray(payloadCart?.items) ? payloadCart.items : [],
+        };
         state.loading = false;
       })
       .addCase(removeItemFromCart.rejected, (state, action) => {

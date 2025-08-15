@@ -20,7 +20,6 @@ import {
   fetchFlashSaleVariantDetails,
 } from "../../../redux/slices/flashSaleSlice";
 import FlashSaleForm from "./FlashSaleForm";
-import FlashSaleItemManagement from "./FlashSaleItemManagement";
 import Pagination from "../../../components/Pagination";
 import { useNavigate } from "react-router-dom";
 
