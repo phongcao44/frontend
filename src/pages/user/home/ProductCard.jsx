@@ -61,7 +61,6 @@ const ProductCard = ({ product, onRemove }) => {
 
   // Map fields
   const productId = id;
-  // Ensure finalPrice is at least 1 VND
   const finalPrice = Math.max(
     1,
     flashSale
@@ -77,16 +76,30 @@ const ProductCard = ({ product, onRemove }) => {
     flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
       ? displayOriginalPrice - discountOverrideByFlashSale
       : null;
-  const image = imageUrl || "/public/assets/images/error.jpg";
-  const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
+  
+  // Optimize image URL for Cloudinary
+  const baseImageUrl = imageUrl || "/public/assets/images/error.jpg";
+  const optimizedImageUrl = baseImageUrl.includes("cloudinary.com")
+    ? `${baseImageUrl.replace(
+        "/upload/",
+        "/upload/w_400,h_400,c_fill,f_auto,q_auto/"
+      )}`
+    : baseImageUrl;
+  const lqipImageUrl = baseImageUrl.includes("cloudinary.com")
+    ? `${baseImageUrl.replace(
+        "/upload/",
+        "/upload/w_20,e_blur:2000,q_auto/"
+      )}`
+    : baseImageUrl;
 
+  const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
   const discountLabel = discountPercentage
     ? `-${discountPercentage}%`
     : discountAmount
     ? `- ${(discountAmount || 0).toLocaleString("vi-VN")}đ`
     : null;
 
-  // Xử lý lỗi ảnh
+  // Handle image error
   const handleImageError = (e) => {
     e.target.src = "/public/assets/images/error.jpg";
   };
@@ -149,9 +162,17 @@ const ProductCard = ({ product, onRemove }) => {
       >
         <div className="relative w-full pt-[100%]">
           <img
-            src={image}
+            src={lqipImageUrl}
             alt={name || "Product"}
             className="absolute top-0 left-0 w-full h-full object-cover"
+            loading="lazy"
+            onError={handleImageError}
+          />
+          <img
+            src={optimizedImageUrl}
+            alt={name || "Product"}
+            className="absolute top-0 left-0 w-full h-full object-cover"
+            loading="lazy"
             onError={handleImageError}
           />
           {showDiscountLabel && discountLabel && (

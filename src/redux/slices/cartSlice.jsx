@@ -9,10 +9,8 @@ import {
   checkoutCart,
   checkoutByCartItem,
   checkoutSelectedItems,
+  checkoutSelectedItemsPreview,
 } from "../../services/cartService";
-import axios from "axios";
-import Cookies from "js-cookie";
-
 
 export const getCart = createAsyncThunk("cart/getCart", async (_, thunkAPI) => {
   try {
@@ -27,7 +25,7 @@ export const addItemToCart = createAsyncThunk(
   async (payload, thunkAPI) => {
     try {
       const response = await addToCart(payload);
-      return { cartItem: response, payload }; // Trả về cả cartItem và payload gốc
+      return { cartItem: response, payload };
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
@@ -91,44 +89,43 @@ export const checkoutSingleCartItem = createAsyncThunk(
 
 export const checkoutSelectedItemsThunk = createAsyncThunk(
   "cart/checkoutSelectedItems",
-  async (payload, { rejectWithValue }) => {
+  async (payload, thunkAPI) => {
     try {
-      const token = Cookies.get("access_token");  // Lấy token từ cookie
-
-      const res = await axios.post(
-        "http://localhost:8080/api/v1/user/carts/checkout/selected",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,  // Gán token vào header
-          },
-          withCredentials: true,
-        }
-      );
-      return res.data;
+      return await checkoutSelectedItems(payload);
     } catch (err) {
-      console.error("🔥 Checkout API error:", err);
-
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Lỗi không xác định";
-
-      return rejectWithValue({ message });
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
   }
 );
 
-
+export const checkoutSelectedItemsPreviewThunk = createAsyncThunk(
+  "cart/checkoutSelectedItemsPreview",
+  async (payload, thunkAPI) => {
+    try {
+      return await checkoutSelectedItemsPreview(payload);
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
 
 const cartSlice = createSlice({
   name: "cart",
   initialState: {
-    cart: { items: [] }, // Khởi tạo cart với mảng items
+    cart: { items: [] },
+    preview: null,
+    selectedItems: [], // Added to store selected cartItemIds
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    setSelectedItems: (state, action) => {
+      state.selectedItems = action.payload; // Cập nhật selectedItems
+    },
+    clearPreview: (state) => {
+      state.preview = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       // === getCart ===
@@ -137,7 +134,6 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(getCart.fulfilled, (state, action) => {
-        // Đảm bảo cart luôn có mảng items
         const payloadCart = action.payload || {};
         state.cart = {
           ...payloadCart,
@@ -157,14 +153,12 @@ const cartSlice = createSlice({
       })
       .addCase(addItemToCart.fulfilled, (state, action) => {
         const { cartItem } = action.payload || {};
-        // Đảm bảo state.cart tồn tại và có mảng items
         if (!state.cart || typeof state.cart !== "object") {
           state.cart = { items: [] };
         }
         if (!Array.isArray(state.cart.items)) {
           state.cart.items = [];
         }
-        // Chỉ push khi cartItem hợp lệ để tránh lỗi
         if (cartItem) {
           state.cart.items.push(cartItem);
         }
@@ -204,6 +198,9 @@ const cartSlice = createSlice({
           ...payloadCart,
           items: Array.isArray(payloadCart?.items) ? payloadCart.items : [],
         };
+        state.selectedItems = state.selectedItems.filter(
+          (id) => !state.cart.items.every((item) => item.cartItemId !== id)
+        ); 
         state.loading = false;
       })
       .addCase(removeItemFromCart.rejected, (state, action) => {
@@ -218,6 +215,7 @@ const cartSlice = createSlice({
       })
       .addCase(clearUserCart.fulfilled, (state) => {
         state.cart = { items: [] };
+        state.selectedItems = []; // Clear selected items
         state.loading = false;
       })
       .addCase(clearUserCart.rejected, (state, action) => {
@@ -232,6 +230,7 @@ const cartSlice = createSlice({
       })
       .addCase(checkoutUserCart.fulfilled, (state) => {
         state.cart = { items: [] };
+        state.selectedItems = []; // Clear selected items
         state.loading = false;
       })
       .addCase(checkoutUserCart.rejected, (state, action) => {
@@ -246,6 +245,7 @@ const cartSlice = createSlice({
       })
       .addCase(checkoutSingleCartItem.fulfilled, (state) => {
         state.cart = { items: [] };
+        state.selectedItems = []; // Clear selected items
         state.loading = false;
       })
       .addCase(checkoutSingleCartItem.rejected, (state, action) => {
@@ -260,13 +260,29 @@ const cartSlice = createSlice({
       })
       .addCase(checkoutSelectedItemsThunk.fulfilled, (state) => {
         state.cart = { items: [] };
+        state.selectedItems = []; // Clear selected items
         state.loading = false;
       })
       .addCase(checkoutSelectedItemsThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // === checkoutSelectedItemsPreview ===
+      .addCase(checkoutSelectedItemsPreviewThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(checkoutSelectedItemsPreviewThunk.fulfilled, (state, action) => {
+        state.preview = action.payload || null;
+        state.loading = false;
+      })
+      .addCase(checkoutSelectedItemsPreviewThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
   },
 });
 
-export default cartSlice.reducer; 
+export const { setSelectedItems, clearPreview } = cartSlice.actions;
+export default cartSlice.reducer;

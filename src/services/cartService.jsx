@@ -96,3 +96,13 @@ export const checkoutSelectedItems = async (orderPayload) => {
     throw err;
   }
 };
+
+export const checkoutSelectedItemsPreview = async (orderPayload) => {
+  try {
+    const res = await axiosInstance.post("/user/carts/checkout/selected/preview", orderPayload);
+    return res.data;
+  } catch (err) {
+    console.error("Checkout Selected Items Preview failed:", err);
+    throw err;
+  }
+};

@@ -68,8 +68,6 @@ const WishList = () => {
   const justForYouPrevRef = useRef(null);
   const justForYouNextRef = useRef(null);
 
-  console.log("Wishlist items:", wishlistItems);
-
   // Fetch wishlist on mount
   useEffect(() => {
     dispatch(getUserWishlist());
@@ -273,7 +271,7 @@ const WishList = () => {
         )}
 
         {/* Just For You Section */}
-        <div className="mb-8 mt-12">
+        {/* <div className="mb-8 mt-12">
           <div className="flex items-center mb-8">
             <div className="w-5 h-10 bg-red-500 rounded mr-4"></div>
             <span className="text-red-500 text-base font-semibold">
@@ -303,7 +301,7 @@ const WishList = () => {
             </div>
           </div>
 
-          {/* Just For You Slider */}
+         
           {loading ? (
             <div className="text-center py-20 px-5">
               <div className="flex justify-center">
@@ -356,7 +354,7 @@ const WishList = () => {
               </button>
             </div>
           )}
-        </div>
+        </div> */}
         
       </div>
     </div>

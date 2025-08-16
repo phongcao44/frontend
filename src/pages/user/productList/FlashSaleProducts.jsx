@@ -14,6 +14,53 @@ function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
 
+// Skeleton loading component cho products
+function ProductSkeleton() {
+  return (
+    <div className="p-2">
+      <div className="bg-white rounded-md shadow-sm overflow-hidden skeleton-pulse">
+        <div className="relative w-full pt-[100%]">
+          <div className="absolute top-0 left-0 w-full h-full bg-gray-200 animate-pulse"></div>
+          <div className="absolute top-2 left-2 bg-gray-200 rounded text-xs font-bold px-2 py-1 animate-pulse w-12 h-6"></div>
+          <div className="absolute top-2 right-2 flex flex-col gap-2">
+            <div className="bg-gray-200 rounded-full w-8 h-8 animate-pulse"></div>
+            <div className="bg-gray-200 rounded-full w-8 h-8 animate-pulse"></div>
+          </div>
+        </div>
+        <div className="p-4 min-h-[120px] space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <div className="flex space-x-1">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="w-3 h-3 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+              <div className="h-3 bg-gray-200 rounded w-8 animate-pulse"></div>
+            </div>
+            <div className="h-3 bg-gray-200 rounded w-16 animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Skeleton loading cho categories
+function CategorySkeleton() {
+  return (
+    <div className="flex flex-wrap justify-center gap-3 mb-8">
+      {[...Array(6)].map((_, index) => (
+        <div
+          key={index}
+          className="h-10 w-24 bg-gray-200 rounded-full animate-pulse"
+        ></div>
+      ))}
+    </div>
+  );
+}
+
 function FlashSaleTimer({ endTime }) {
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
@@ -89,36 +136,68 @@ function FlashSaleProducts() {
   const { activeFlashSale, flashSaleItemsPaginated, loading, error } = useSelector(
     (state) => state.flashSale
   );
-  const { parentList } = useSelector((state) => state.category);
+  const { parentList, loading: categoryLoading } = useSelector((state) => state.category);
   const { brandsPaginated, loading: brandsLoading, error: brandsError } = useSelector(
     (state) => state.products
   );
 
-  // State management for filters and pagination
+  // State management for filters, pagination, and transitions
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedPriceRange, setSelectedPriceRange] = useState(
-    query.get("priceRange") || "all"
-  );
-  const [selectedDiscount, setSelectedDiscount] = useState(
-    query.get("discount") || "all"
-  );
+  const [selectedPriceRange, setSelectedPriceRange] = useState(query.get("priceRange") || "all");
+  const [selectedDiscount, setSelectedDiscount] = useState(query.get("discount") || "all");
   const [selectedBrand, setSelectedBrand] = useState(query.get("brand") || "all");
-  const [selectedRating, setSelectedRating] = useState(
-    query.get("rating") || "all"
-  );
+  const [selectedRating, setSelectedRating] = useState(query.get("rating") || "all");
   const [activeFilter, setActiveFilter] = useState(query.get("categoryId") || null);
   const [sortBy, setSortBy] = useState(query.get("sortBy") || "discount-high");
   const [page, setPage] = useState(parseInt(query.get("page")) || 0);
   const [limit] = useState(10);
-  const [isProductListLoading, setIsProductListLoading] = useState(false);
-
-  // Temporary filter states
-  const [tempPriceRange, setTempPriceRange] = useState(
-    query.get("priceRange") || "all"
-  );
+  const [tempPriceRange, setTempPriceRange] = useState(query.get("priceRange") || "all");
   const [tempDiscount, setTempDiscount] = useState(query.get("discount") || "all");
   const [tempBrand, setTempBrand] = useState(query.get("brand") || "all");
   const [tempRating, setTempRating] = useState(query.get("rating") || "all");
+  const [isProductListLoading, setIsProductListLoading] = useState(false);
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+
+  // Filter options
+  const brands = [
+    { id: "all", name: "Tất cả thương hiệu" },
+    ...(brandsPaginated?.data?.content || []).map((brandName) => ({
+      id: brandName,
+      name: brandName,
+    })),
+  ];
+
+  const priceRanges = [
+    { id: "all", label: "Tất cả giá", min: null, max: null },
+    { id: "under-100", label: "Dưới 100K", min: 0, max: 100000 },
+    { id: "100-500", label: "100K - 500K", min: 100000, max: 500000 },
+    { id: "500-1000", label: "500K - 1 triệu", min: 500000, max: 1000000 },
+    { id: "1000-3000", label: "1 - 3 triệu", min: 1000000, max: 3000000 },
+    { id: "above-3000", label: "Trên 3 triệu", min: 3000000, max: null },
+  ];
+
+  const discountRanges = [
+    { id: "all", label: "Tất cả giảm giá", min: null, max: null },
+    { id: "0-10", label: "0% - 10%", min: 0, max: 10 },
+    { id: "10-25", label: "10% - 25%", min: 10, max: 25 },
+    { id: "25-40", label: "25% - 40%", min: 25, max: 40 },
+    { id: "40-60", label: "40% - 60%", min: 40, max: 60 },
+    { id: "60+", label: "Trên 60%", min: 60, max: null },
+  ];
+
+  const ratingOptions = [
+    { id: "all", label: "Tất cả đánh giá", value: 0 },
+    { id: "4plus", label: "4 sao trở lên", value: 4 },
+    { id: "3plus", label: "3 sao trở lên", value: 3 },
+    { id: "2plus", label: "2 sao trở lên", value: 2 },
+  ];
+
+  const sortOptions = [
+    { value: "price-low", label: "Giá thấp đến cao" },
+    { value: "price-high", label: "Giá cao đến thấp" },
+    { value: "newest", label: "Mới nhất" },
+    { value: "discount-high", label: "Giảm giá cao nhất" },
+  ];
 
   // Cập nhật URL khi trạng thái thay đổi
   useEffect(() => {
@@ -192,6 +271,11 @@ function FlashSaleProducts() {
     const loadActiveFlashSale = async () => {
       try {
         setIsProductListLoading(true);
+        setIsPageTransitioning(true);
+
+        // Add a small delay for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300));
+
         const res = await dispatch(fetchActiveFlashSale()).unwrap();
         if (res?.id) {
           const { sortBy: apiSortBy, orderBy } = getSortParams(sortBy);
@@ -219,15 +303,16 @@ function FlashSaleProducts() {
             orderBy,
           };
 
-          const result = await dispatch(
+          await dispatch(
             fetchFlashSaleItemsPaginated({ flashSaleId: res.id, params })
           ).unwrap();
-          console.log("Flash sale items loaded:", result);
         }
       } catch (err) {
         console.error("Failed to load flash sale:", err);
       } finally {
         setIsProductListLoading(false);
+        // Add a small delay before hiding transition effect
+        setTimeout(() => setIsPageTransitioning(false), 200);
       }
     };
 
@@ -251,6 +336,7 @@ function FlashSaleProducts() {
     setSelectedBrand(tempBrand);
     setSelectedRating(tempRating);
     setPage(0);
+    setShowFilters(false);
   };
 
   // Reset filters
@@ -268,57 +354,32 @@ function FlashSaleProducts() {
     setPage(0);
   };
 
-  // Filter options
-  const brands = [
-    { id: "all", name: "Tất cả thương hiệu" },
-    ...(brandsPaginated?.data?.content || []).map((brandName) => ({
-      id: brandName,
-      name: brandName,
-    })),
-  ];
-
-  const priceRanges = [
-    { id: "all", label: "Tất cả giá", min: null, max: null },
-    { id: "under-100", label: "Dưới 100K", min: 0, max: 100000 },
-    { id: "100-500", label: "100K - 500K", min: 100000, max: 500000 },
-    { id: "500-1000", label: "500K - 1 triệu", min: 500000, max: 1000000 },
-    { id: "1000-3000", label: "1 - 3 triệu", min: 1000000, max: 3000000 },
-    { id: "above-3000", label: "Trên 3 triệu", min: 3000000, max: null },
-  ];
-
-  const discountRanges = [
-    { id: "all", label: "Tất cả giảm giá", min: null, max: null },
-    { id: "0-10", label: "0% - 10%", min: 0, max: 10 },
-    { id: "10-25", label: "10% - 25%", min: 10, max: 25 },
-    { id: "25-40", label: "25% - 40%", min: 25, max: 40 },
-    { id: "40-60", label: "40% - 60%", min: 40, max: 60 },
-    { id: "60+", label: "Trên 60%", min: 60, max: null },
-  ];
-
-  const ratingOptions = [
-    { id: "all", label: "Tất cả đánh giá", value: 0 },
-    { id: "4plus", label: "4 sao trở lên", value: 4 },
-    { id: "3plus", label: "3 sao trở lên", value: 3 },
-    { id: "2plus", label: "2 sao trở lên", value: 2 },
-  ];
-
   // Pagination controls
   const handlePreviousPage = () => {
     if (page > 0) {
-      console.log("Going to previous page, current page:", page);
       setIsProductListLoading(true);
       setPage(page - 1);
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleNextPage = () => {
     if (!flashSaleItemsPaginated?.last) {
-      console.log("Going to next page, current page:", page);
       setIsProductListLoading(true);
       setPage(page + 1);
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       alert("Bạn đang ở trang cuối cùng!");
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    setIsProductListLoading(true);
+    setPage(newPage);
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Prepare products for display
@@ -332,6 +393,18 @@ function FlashSaleProducts() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb */}
+        <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">
+          <span
+            className="hover:text-red-600 cursor-pointer transition-colors"
+            onClick={() => navigate("/")}
+          >
+            Trang chủ
+          </span>
+          <i className="fas fa-chevron-right text-xs"></i>
+          <span className="text-gray-900">Flash Sale</span>
+        </nav>
+
         {/* Flash Sale Timer */}
         <FlashSaleTimer endTime={flashSaleEndTime} />
 
@@ -367,47 +440,59 @@ function FlashSaleProducts() {
         </div>
 
         {/* Category Pills */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          <button
-            onClick={() => {
-              setActiveFilter(null);
-              setPage(0);
-            }}
-            className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
-              activeFilter === null
-                ? "bg-red-600 text-white shadow-md"
-                : "bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:text-red-600"
-            }`}
-          >
-            Tất cả
-          </button>
-          {parentList?.map((category) => (
+        {categoryLoading ? (
+          <CategorySkeleton />
+        ) : (
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
             <button
-              key={category.id}
               onClick={() => {
-                setActiveFilter(category.id);
+                setActiveFilter(null);
                 setPage(0);
               }}
-              className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
-                activeFilter === category.id
-                  ? "bg-red-600 text-white shadow-md"
-                  : "bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:text-red-600"
+              className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer transform hover:scale-105 ${
+                activeFilter === null
+                  ? "bg-red-600 text-white shadow-md scale-105"
+                  : "bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:text-red-600 hover:shadow-md"
               }`}
             >
-              {category.name}
+              Tất cả
             </button>
-          ))}
-        </div>
+            {parentList?.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  setActiveFilter(category.id);
+                  setPage(0);
+                }}
+                className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer transform hover:scale-105 ${
+                  activeFilter === category.id
+                    ? "bg-red-600 text-white shadow-md scale-105"
+                    : "bg-white text-gray-700 border border-gray-200 hover:border-red-300 hover:text-red-600 hover:shadow-md"
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Filters and Sort */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500 gap-4">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-red-300 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap"
+              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-red-300 hover:text-red-600 transition-all duration-200 cursor-pointer whitespace-nowrap transform hover:scale-105"
             >
               <i className="fas fa-filter text-sm"></i>
               <span>Bộ lọc</span>
+              {(tempPriceRange !== "all" ||
+                tempDiscount !== "all" ||
+                tempBrand !== "all" ||
+                tempRating !== "all") && (
+                <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full animate-pulse">
+                  Đã lọc
+                </span>
+              )}
             </button>
             <div className="text-sm text-gray-600 flex items-center space-x-2">
               <i className="fas fa-fire text-red-500"></i>
@@ -425,19 +510,20 @@ function FlashSaleProducts() {
                 setSortBy(e.target.value);
                 setPage(0);
               }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition-all duration-200 hover:border-red-300"
             >
-              <option value="price-low">Giá thấp đến cao</option>
-              <option value="price-high">Giá cao đến thấp</option>
-              <option value="newest">Mới nhất</option>
-              <option value="discount-high">Giảm giá cao nhất</option>
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="mb-8">
+          <div className="mb-8 animate-in slide-in-from-top-2 duration-300">
             <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-red-500">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -446,7 +532,7 @@ function FlashSaleProducts() {
                 </h2>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="text-gray-600 hover:text-red-600 transition-colors"
+                  className="text-gray-600 hover:text-red-600 transition-colors duration-200 transform hover:scale-110"
                 >
                   <i className="fas fa-times text-xl"></i>
                 </button>
@@ -460,26 +546,7 @@ function FlashSaleProducts() {
                   </h3>
                   {brandsLoading ? (
                     <div className="flex justify-center items-center py-4">
-                      <svg
-                        className="animate-spin h-6 w-6 text-red-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500"></div>
                     </div>
                   ) : brandsError ? (
                     <div className="text-red-500 text-sm py-2">
@@ -495,9 +562,9 @@ function FlashSaleProducts() {
                         <button
                           key={brand.id}
                           onClick={() => setTempBrand(brand.id)}
-                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                             tempBrand === brand.id
-                              ? "bg-red-50 text-red-600 font-medium border border-red-200"
+                              ? "bg-red-50 text-red-600 font-medium border border-red-200 shadow-sm"
                               : "text-gray-600 hover:bg-red-50 hover:text-red-600"
                           }`}
                         >
@@ -519,9 +586,9 @@ function FlashSaleProducts() {
                       <button
                         key={range.id}
                         onClick={() => setTempPriceRange(range.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempPriceRange === range.id
-                            ? "bg-red-50 text-red-600 font-medium border border-red-200"
+                            ? "bg-red-50 text-red-600 font-medium border border-red-200 shadow-sm"
                             : "text-gray-600 hover:bg-red-50 hover:text-red-600"
                         }`}
                       >
@@ -542,9 +609,9 @@ function FlashSaleProducts() {
                       <button
                         key={discount.id}
                         onClick={() => setTempDiscount(discount.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempDiscount === discount.id
-                            ? "bg-red-50 text-red-600 font-medium border border-red-200"
+                            ? "bg-red-50 text-red-600 font-medium border border-red-200 shadow-sm"
                             : "text-gray-600 hover:bg-red-50 hover:text-red-600"
                         }`}
                       >
@@ -565,9 +632,9 @@ function FlashSaleProducts() {
                       <button
                         key={option.id}
                         onClick={() => setTempRating(option.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempRating === option.id
-                            ? "bg-red-50 text-red-600 font-medium border border-red-200"
+                            ? "bg-red-50 text-red-600 font-medium border border-red-200 shadow-sm"
                             : "text-gray-600 hover:bg-red-50 hover:text-red-600"
                         }`}
                       >
@@ -582,13 +649,13 @@ function FlashSaleProducts() {
               <div className="mt-6 flex justify-end space-x-4">
                 <button
                   onClick={handleResetFilters}
-                  className="px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer"
+                  className="px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-red-300 transition-all duration-200 cursor-pointer transform hover:scale-105"
                 >
                   Xóa bộ lọc
                 </button>
                 <button
                   onClick={handleApplyFilters}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 cursor-pointer transform hover:scale-105 shadow-md hover:shadow-lg"
                 >
                   Áp dụng
                 </button>
@@ -597,39 +664,18 @@ function FlashSaleProducts() {
           </div>
         )}
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
+        {/* Products Grid with Loading States */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12 product-grid ${
+          isPageTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+        } transition-all duration-300`}>
           {isProductListLoading ? (
-            <div className="col-span-full text-center py-12">
-              <div className="flex justify-center items-center">
-                <svg
-                  className="animate-spin h-8 w-8 text-red-500"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              </div>
-              <p className="text-gray-600 mt-4">Đang tải sản phẩm...</p>
-            </div>
+            // Show skeleton loading for products
+            [...Array(10)].map((_, index) => (
+              <ProductSkeleton key={index} />
+            ))
           ) : error ? (
-            <div className="col-span-full text-center py-12">
-              <div className="text-red-400 mb-4">
-                <i className="fas fa-exclamation-circle text-4xl"></i>
-              </div>
+            <div className="col-span-full text-center py-12 text-red-500">
+              <i className="fas fa-exclamation-circle text-4xl mb-4"></i>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Lỗi khi tải sản phẩm
               </h3>
@@ -639,20 +685,30 @@ function FlashSaleProducts() {
                   handleResetFilters();
                   dispatch(fetchActiveFlashSale());
                 }}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
               >
                 Thử lại
               </button>
             </div>
           ) : productsContent.length > 0 ? (
-            productsContent.map((item) => (
-              <div key={item.id} className="relative">
+            productsContent.map((item, index) => (
+              <div key={item.id} className="relative product-card product-fade-in">
+                {/* Flash Sale Badge */}
+                {index < 3 && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center">
+                      <i className="fas fa-bolt mr-1"></i>
+                      #{index + 1}
+                    </div>
+                  </div>
+                )}
                 <ProductCard
                   product={{
                     ...item,
                     price: item.lowestPrice,
                     discount: item.discountedPrice,
                     originalPrice: item.originalPrice,
+                    flashSale: true,
                   }}
                 />
               </div>
@@ -668,7 +724,7 @@ function FlashSaleProducts() {
               <p className="text-gray-500 mb-4">Hãy thử quay lại sau</p>
               <button
                 onClick={handleResetFilters}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
               >
                 Làm mới
               </button>
@@ -678,34 +734,137 @@ function FlashSaleProducts() {
 
         {/* Pagination Controls */}
         {totalPages > 1 && !isProductListLoading && (
-          <div className="flex justify-center items-center space-x-4 mb-12">
+          <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-12">
+            {/* Previous Button */}
             <button
               onClick={handlePreviousPage}
-              disabled={flashSaleItemsPaginated?.first}
-              className={`px-6 py-3 rounded-lg text-base font-medium transition-colors z-10 ${
-                flashSaleItemsPaginated?.first
+              disabled={currentPage === 0}
+              className={`px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                currentPage === 0
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-red-500 text-white hover:bg-red-600 shadow-md hover:shadow-lg"
               }`}
               aria-label="Go to previous page"
             >
+              <i className="fas fa-chevron-left mr-2"></i>
               Trang trước
             </button>
-            <span className="text-base text-gray-600">
-              Trang {currentPage + 1} / {totalPages}
-            </span>
+
+            {/* Page Numbers */}
+            <div className="flex items-center space-x-2">
+              {(() => {
+                const pageRange = 5;
+                const startPage = Math.max(0, currentPage - Math.floor(pageRange / 2));
+                const endPage = Math.min(totalPages - 1, startPage + pageRange - 1);
+                const pages = [];
+
+                const adjustedStartPage = Math.max(0, endPage - pageRange + 1);
+
+                if (adjustedStartPage > 0) {
+                  pages.push(
+                    <button
+                      key={0}
+                      onClick={() => handlePageChange(0)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                        currentPage === 0
+                          ? "bg-red-500 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md"
+                      }`}
+                      aria-label="Go to page 1"
+                    >
+                      1
+                    </button>
+                  );
+                }
+
+                if (adjustedStartPage > 1) {
+                  pages.push(
+                    <span key="start-ellipsis" className="text-gray-600">
+                      ...
+                    </span>
+                  );
+                }
+
+                for (let i = adjustedStartPage; i <= endPage; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      onClick={() => handlePageChange(i)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                        currentPage === i
+                          ? "bg-red-500 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md"
+                      }`}
+                      aria-label={`Go to page ${i + 1}`}
+                    >
+                      {i + 1}
+                    </button>
+                  );
+                }
+
+                if (endPage < totalPages - 2) {
+                  pages.push(
+                    <span key="end-ellipsis" className="text-gray-600">
+                      ...
+                    </span>
+                  );
+                }
+
+                if (endPage < totalPages - 1) {
+                  pages.push(
+                    <button
+                      key={totalPages - 1}
+                      onClick={() => handlePageChange(totalPages - 1)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                        currentPage === totalPages - 1
+                          ? "bg-red-500 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:shadow-md"
+                      }`}
+                      aria-label={`Go to page ${totalPages}`}
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+
+                return pages;
+              })()}
+            </div>
+
+            {/* Next Button */}
             <button
               onClick={handleNextPage}
-              disabled={flashSaleItemsPaginated?.last}
-              className={`px-6 py-3 rounded-lg text-base font-medium transition-colors z-10 ${
-                flashSaleItemsPaginated?.last
+              disabled={currentPage >= totalPages - 1}
+              className={`px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                currentPage >= totalPages - 1
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-red-500 text-white hover:bg-red-600 shadow-md hover:shadow-lg"
               }`}
               aria-label="Go to next page"
             >
               Trang sau
+              <i className="fas fa-chevron-right ml-2"></i>
             </button>
+
+            {/* Go to Page Input */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Đi đến trang:</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={page + 1}
+                onChange={(e) => {
+                  const inputPage = parseInt(e.target.value) - 1;
+                  if (!isNaN(inputPage) && inputPage >= 0 && inputPage < totalPages) {
+                    handlePageChange(inputPage);
+                  }
+                }}
+                className="w-16 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-center transition-all duration-200"
+                aria-label="Enter page number"
+              />
+              <span className="text-sm text-gray-600">/ {totalPages}</span>
+            </div>
           </div>
         )}
 

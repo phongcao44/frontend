@@ -83,9 +83,9 @@ const AccountDropdown = () => {
         aria-label={t("accountMenu.account")}
       >
         <FontAwesomeIcon icon={faUser} className="w-6 h-6 text-black" />
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+        {/* <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
           1
-        </span>
+        </span> */}
       </div>
 
       {isOpen && (

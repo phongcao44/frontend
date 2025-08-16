@@ -10,6 +10,52 @@ function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
 
+// Skeleton loading component cho products
+function ProductSkeleton() {
+  return (
+    <div className="p-2">
+      <div className="bg-white rounded-md shadow-sm overflow-hidden skeleton-pulse">
+        <div className="relative w-full pt-[100%]">
+          <div className="absolute top-0 left-0 w-full h-full bg-gray-200 animate-pulse"></div>
+          <div className="absolute top-2 right-2 flex flex-col gap-2">
+            <div className="bg-gray-200 rounded-full w-8 h-8 animate-pulse"></div>
+            <div className="bg-gray-200 rounded-full w-8 h-8 animate-pulse"></div>
+          </div>
+        </div>
+        <div className="p-4 min-h-[120px] space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <div className="flex space-x-1">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="w-3 h-3 bg-gray-200 rounded animate-pulse"></div>
+                ))}
+              </div>
+              <div className="h-3 bg-gray-200 rounded w-8 animate-pulse"></div>
+            </div>
+            <div className="h-3 bg-gray-200 rounded w-16 animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Skeleton loading cho categories
+function CategorySkeleton() {
+  return (
+    <div className="flex flex-wrap justify-center gap-3 mb-8">
+      {[...Array(6)].map((_, index) => (
+        <div
+          key={index}
+          className="h-10 w-24 bg-gray-200 rounded-full animate-pulse"
+        ></div>
+      ))}
+    </div>
+  );
+}
+
 function BestSellingProducts() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -19,27 +65,58 @@ function BestSellingProducts() {
   const paginatedProducts = useSelector((state) => state.products.topSellingPaginated);
   const productsLoading = useSelector((state) => state.products.loading);
   const productsError = useSelector((state) => state.products.error);
-  const { parentList } = useSelector((state) => state.category);
+  const { parentList, loading: categoryLoading } = useSelector((state) => state.category);
   const { brandsPaginated, loading: brandsLoading, error: brandsError } = useSelector(
     (state) => state.products
   );
 
-  // State management for filters and pagination
+  // State management for filters, pagination, and transitions
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPriceRange, setSelectedPriceRange] = useState(query.get("priceRange") || "all");
   const [selectedRating, setSelectedRating] = useState(query.get("rating") || "all");
   const [selectedBrand, setSelectedBrand] = useState(query.get("brand") || "all");
   const [activeFilter, setActiveFilter] = useState(query.get("categoryId") || "all");
   const [sortBy, setSortBy] = useState(query.get("sortBy") || "soldQuantity");
-  const [page, setPage] = useState(parseInt(query.get("page")) || 0);
+  const [page, setPage] = useState(parseInt(query.get("page") || 0));
   const [limit] = useState(12);
-
-  // Temporary filter states
   const [tempPriceRange, setTempPriceRange] = useState(query.get("priceRange") || "all");
   const [tempRating, setTempRating] = useState(query.get("rating") || "all");
   const [tempBrand, setTempBrand] = useState(query.get("brand") || "all");
   const [tempCategory, setTempCategory] = useState(query.get("categoryId") || "all");
   const [isProductListLoading, setIsProductListLoading] = useState(false);
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+
+  // Filter options
+  const brands = [
+    { id: "all", name: "Tất cả thương hiệu" },
+    ...(brandsPaginated?.data?.content || []).map((brandName) => ({
+      id: brandName,
+      name: brandName,
+    })),
+  ];
+
+  const priceRanges = [
+    { id: "all", label: "Tất cả giá", min: null, max: null },
+    { id: "under-500", label: "Dưới 500K", min: 0, max: 500000 },
+    { id: "500-1000", label: "500K - 1 triệu", min: 500000, max: 1000000 },
+    { id: "1000-2000", label: "1 - 2 triệu", min: 1000000, max: 2000000 },
+    { id: "above-2000", label: "Trên 2 triệu", min: 2000000, max: null },
+  ];
+
+  const ratingOptions = [
+    { id: "all", label: "Tất cả đánh giá", value: 0 },
+    { id: "5star", label: "5 sao", value: 5 },
+    { id: "4plus", label: "4 sao trở lên", value: 4 },
+    { id: "3plus", label: "3 sao trở lên", value: 3 },
+  ];
+
+  const sortOptions = [
+    { value: "soldQuantity", label: "Bán chạy nhất" },
+    { value: "createdAt", label: "Mới nhất" },
+    { value: "price-asc", label: "Giá thấp đến cao" },
+    { value: "price-desc", label: "Giá cao đến thấp" },
+    { value: "averageRating", label: "Đánh giá cao nhất" },
+  ];
 
   // Cập nhật URL khi trạng thái thay đổi
   useEffect(() => {
@@ -84,6 +161,11 @@ function BestSellingProducts() {
     const loadProducts = async () => {
       try {
         setIsProductListLoading(true);
+        setIsPageTransitioning(true);
+
+        // Add a small delay for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300));
+
         const selectedPrice = priceRanges.find((r) => r.id === selectedPriceRange) || priceRanges[0];
         const selectedRatingOption = ratingOptions.find((r) => r.id === selectedRating) || ratingOptions[0];
 
@@ -104,6 +186,8 @@ function BestSellingProducts() {
         console.error("Failed to load top-selling products:", err);
       } finally {
         setIsProductListLoading(false);
+        // Add a small delay before hiding transition effect
+        setTimeout(() => setIsPageTransitioning(false), 200);
       }
     };
 
@@ -133,6 +217,7 @@ function BestSellingProducts() {
     setSelectedBrand(tempBrand);
     setActiveFilter(tempCategory);
     setPage(0);
+    setShowFilters(false);
   };
 
   const handleResetFilters = () => {
@@ -152,6 +237,8 @@ function BestSellingProducts() {
     if (page > 0) {
       setIsProductListLoading(true);
       setPage(page - 1);
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -159,42 +246,19 @@ function BestSellingProducts() {
     if (!paginatedProducts?.last) {
       setIsProductListLoading(true);
       setPage(page + 1);
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       alert("Bạn đang ở trang cuối cùng!");
     }
   };
 
-  // Filter options
-  const brands = [
-    { id: "all", name: "Tất cả thương hiệu" },
-    ...(brandsPaginated?.data?.content || []).map((brandName) => ({
-      id: brandName,
-      name: brandName,
-    })),
-  ];
-
-  const priceRanges = [
-    { id: "all", label: "Tất cả giá", min: null, max: null },
-    { id: "under-500", label: "Dưới 500K", min: 0, max: 500000 },
-    { id: "500-1000", label: "500K - 1 triệu", min: 500000, max: 1000000 },
-    { id: "1000-2000", label: "1 - 2 triệu", min: 1000000, max: 2000000 },
-    { id: "above-2000", label: "Trên 2 triệu", min: 2000000, max: null },
-  ];
-
-  const ratingOptions = [
-    { id: "all", label: "Tất cả đánh giá", value: 0 },
-    { id: "5star", label: "5 sao", value: 5 },
-    { id: "4plus", label: "4 sao trở lên", value: 4 },
-    { id: "3plus", label: "3 sao trở lên", value: 3 },
-  ];
-
-  const sortOptions = [
-    { value: "soldQuantity", label: "Bán chạy nhất" },
-    { value: "createdAt", label: "Mới nhất" },
-    { value: "price-asc", label: "Giá thấp đến cao" },
-    { value: "price-desc", label: "Giá cao đến thấp" },
-    { value: "averageRating", label: "Đánh giá cao nhất" },
-  ];
+  const handlePageChange = (newPage) => {
+    setIsProductListLoading(true);
+    setPage(newPage);
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const breadcrumbItems = [
     { name: "Trang chủ", slug: "/" },
@@ -218,7 +282,7 @@ function BestSellingProducts() {
                 className={
                   index === breadcrumbItems.length - 1
                     ? "text-gray-900"
-                    : "hover:text-orange-600 cursor-pointer"
+                    : "hover:text-orange-600 cursor-pointer transition-colors"
                 }
                 onClick={() => navigate(item.slug)}
               >
@@ -244,46 +308,50 @@ function BestSellingProducts() {
         </div>
 
         {/* Category Pills */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          <button
-            onClick={() => {
-              setActiveFilter("all");
-              setTempCategory("all");
-              setPage(0);
-            }}
-            className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
-              activeFilter === "all"
-                ? "bg-orange-600 text-white shadow-md"
-                : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600"
-            }`}
-          >
-            Tất cả
-          </button>
-          {parentList?.map((category) => (
+        {categoryLoading ? (
+          <CategorySkeleton />
+        ) : (
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
             <button
-              key={category.id}
               onClick={() => {
-                setActiveFilter(category.id);
-                setTempCategory(category.id);
+                setActiveFilter("all");
+                setTempCategory("all");
                 setPage(0);
               }}
-              className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer !rounded-button ${
-                activeFilter === category.id
-                  ? "bg-orange-600 text-white shadow-md"
-                  : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600"
+              className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer transform hover:scale-105 ${
+                activeFilter === "all"
+                  ? "bg-orange-600 text-white shadow-md scale-105"
+                  : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600 hover:shadow-md"
               }`}
             >
-              {category.name}
+              Tất cả
             </button>
-          ))}
-        </div>
+            {parentList?.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  setActiveFilter(category.id);
+                  setTempCategory(category.id);
+                  setPage(0);
+                }}
+                className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer transform hover:scale-105 ${
+                  activeFilter === category.id
+                    ? "bg-orange-600 text-white shadow-md scale-105"
+                    : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600 hover:shadow-md"
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Filter and Sort Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500 gap-4">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 hover:text-orange-600 transition-colors cursor-pointer whitespace-nowrap"
+              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 hover:text-orange-600 transition-all duration-200 cursor-pointer whitespace-nowrap transform hover:scale-105"
             >
               <i className="fas fa-filter text-sm"></i>
               <span>Bộ lọc</span>
@@ -291,7 +359,7 @@ function BestSellingProducts() {
                 tempRating !== "all" ||
                 tempBrand !== "all" ||
                 tempCategory !== "all") && (
-                <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">
+                <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full animate-pulse">
                   Đã lọc
                 </span>
               )}
@@ -315,7 +383,7 @@ function BestSellingProducts() {
                 setSortBy(e.target.value);
                 setPage(0);
               }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer transition-all duration-200 hover:border-orange-300"
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -328,7 +396,7 @@ function BestSellingProducts() {
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="mb-8">
+          <div className="mb-8 animate-in slide-in-from-top-2 duration-300">
             <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -337,7 +405,7 @@ function BestSellingProducts() {
                 </h2>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="text-gray-600 hover:text-orange-600 transition-colors"
+                  className="text-gray-600 hover:text-orange-600 transition-colors duration-200 transform hover:scale-110"
                 >
                   <i className="fas fa-times text-xl"></i>
                 </button>
@@ -352,9 +420,9 @@ function BestSellingProducts() {
                   <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                     <button
                       onClick={() => setTempCategory("all")}
-                      className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                      className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                         tempCategory === "all"
-                          ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                          ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                           : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                       }`}
                     >
@@ -364,9 +432,9 @@ function BestSellingProducts() {
                       <button
                         key={category.id}
                         onClick={() => setTempCategory(category.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempCategory === category.id
-                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                             : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                         }`}
                       >
@@ -378,32 +446,13 @@ function BestSellingProducts() {
 
                 {/* Brand Filter */}
                 <div className="space-y-3">
-                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                  <h3 className="font-medium text-gray-900 flex items-center gap- two">
                     <i className="fas fa-copyright text-orange-500"></i>
                     Thương hiệu
                   </h3>
                   {brandsLoading ? (
                     <div className="flex justify-center items-center py-4">
-                      <svg
-                        className="animate-spin h-6 w-6 text-orange-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
                     </div>
                   ) : brandsError ? (
                     <div className="text-orange-500 text-sm py-2">
@@ -419,9 +468,9 @@ function BestSellingProducts() {
                         <button
                           key={brand.id}
                           onClick={() => setTempBrand(brand.id)}
-                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                             tempBrand === brand.id
-                              ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                              ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                               : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                           }`}
                         >
@@ -443,9 +492,9 @@ function BestSellingProducts() {
                       <button
                         key={range.id}
                         onClick={() => setTempPriceRange(range.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempPriceRange === range.id
-                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                             : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                         }`}
                       >
@@ -466,9 +515,9 @@ function BestSellingProducts() {
                       <button
                         key={option.id}
                         onClick={() => setTempRating(option.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempRating === option.id
-                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                             : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                         }`}
                       >
@@ -483,13 +532,13 @@ function BestSellingProducts() {
               <div className="mt-6 flex justify-end space-x-4">
                 <button
                   onClick={handleResetFilters}
-                  className="px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 transition-colors cursor-pointer"
+                  className="px_az-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 transition-all duration-200 cursor-pointer transform hover:scale-105"
                 >
                   Xóa bộ lọc
                 </button>
                 <button
                   onClick={handleApplyFilters}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 cursor-pointer transform hover:scale-105 shadow-md hover:shadow-lg"
                 >
                   Áp dụng
                 </button>
@@ -498,46 +547,29 @@ function BestSellingProducts() {
           </div>
         )}
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
+        {/* Products Grid with Loading States */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12 product-grid ${
+          isPageTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+        } transition-all duration-300`}>
           {isProductListLoading ? (
-            <div className="col-span-full text-center py-12">
-              <svg
-                className="animate-spin h-8 w-8 text-orange-500 mx-auto"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <p className="text-gray-600 mt-4">Đang tải...</p>
-            </div>
+            // Show skeleton loading for products
+            [...Array(12)].map((_, index) => (
+              <ProductSkeleton key={index} />
+            ))
           ) : productsError ? (
             <div className="col-span-full text-center py-12 text-orange-500">
               <i className="fas fa-exclamation-circle text-4xl mb-4"></i>
               <p>Lỗi: {productsError}</p>
               <button
                 onClick={handleResetFilters}
-                className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 transform hover:scale-105"
               >
                 Làm mới
               </button>
             </div>
           ) : productsContent.length > 0 ? (
             productsContent.map((productData, index) => (
-              <div key={productData.id} className="relative">
+              <div key={productData.id} className="relative product-card product-fade-in">
                 {/* Best Seller Badge */}
                 {index < 3 && (
                   <div className="absolute top-2 left-2 z-10">
@@ -569,7 +601,7 @@ function BestSellingProducts() {
               <p className="text-gray-500 mb-4">Hãy thử thay đổi bộ lọc</p>
               <button
                 onClick={handleResetFilters}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 transform hover:scale-105"
               >
                 Xóa bộ lọc
               </button>
@@ -583,11 +615,11 @@ function BestSellingProducts() {
             {/* Previous Button */}
             <button
               onClick={handlePreviousPage}
-              disabled={paginatedProducts?.first}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                paginatedProducts?.first
+              disabled={currentPage === 0}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                currentPage === 0
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-orange-600 text-white hover:bg-orange-700"
+                  : "bg-orange-600 text-white hover:bg-orange-700 shadow-md hover:shadow-lg"
               }`}
               aria-label="Go to previous page"
             >
@@ -598,27 +630,22 @@ function BestSellingProducts() {
             {/* Page Numbers */}
             <div className="flex items-center space-x-2">
               {(() => {
-                const pageRange = 5; // Number of page buttons to show
+                const pageRange = 5;
                 const startPage = Math.max(0, currentPage - Math.floor(pageRange / 2));
                 const endPage = Math.min(totalPages - 1, startPage + pageRange - 1);
                 const pages = [];
 
-                // Adjust startPage if nearing the end
                 const adjustedStartPage = Math.max(0, endPage - pageRange + 1);
 
-                // First page
                 if (adjustedStartPage > 0) {
                   pages.push(
                     <button
                       key={0}
-                      onClick={() => {
-                        setIsProductListLoading(true);
-                        setPage(0);
-                      }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handlePageChange(0)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                         currentPage === 0
-                          ? "bg-orange-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                          ? "bg-orange-600 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md"
                       }`}
                       aria-label="Go to page 1"
                     >
@@ -627,7 +654,6 @@ function BestSellingProducts() {
                   );
                 }
 
-                // Ellipsis for skipped pages
                 if (adjustedStartPage > 1) {
                   pages.push(
                     <span key="start-ellipsis" className="text-gray-600">
@@ -636,19 +662,15 @@ function BestSellingProducts() {
                   );
                 }
 
-                // Page numbers
                 for (let i = adjustedStartPage; i <= endPage; i++) {
                   pages.push(
                     <button
                       key={i}
-                      onClick={() => {
-                        setIsProductListLoading(true);
-                        setPage(i);
-                      }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handlePageChange(i)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                         currentPage === i
-                          ? "bg-orange-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                          ? "bg-orange-600 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md"
                       }`}
                       aria-label={`Go to page ${i + 1}`}
                     >
@@ -657,7 +679,6 @@ function BestSellingProducts() {
                   );
                 }
 
-                // Ellipsis for remaining pages
                 if (endPage < totalPages - 2) {
                   pages.push(
                     <span key="end-ellipsis" className="text-gray-600">
@@ -666,19 +687,15 @@ function BestSellingProducts() {
                   );
                 }
 
-                // Last page
                 if (endPage < totalPages - 1) {
                   pages.push(
                     <button
                       key={totalPages - 1}
-                      onClick={() => {
-                        setIsProductListLoading(true);
-                        setPage(totalPages - 1);
-                      }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handlePageChange(totalPages - 1)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                         currentPage === totalPages - 1
-                          ? "bg-orange-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                          ? "bg-orange-600 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md"
                       }`}
                       aria-label={`Go to page ${totalPages}`}
                     >
@@ -694,11 +711,11 @@ function BestSellingProducts() {
             {/* Next Button */}
             <button
               onClick={handleNextPage}
-              disabled={paginatedProducts?.last}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                paginatedProducts?.last
+              disabled={currentPage >= totalPages - 1}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                currentPage >= totalPages - 1
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-orange-600 text-white hover:bg-orange-700"
+                  : "bg-orange-600 text-white hover:bg-orange-700 shadow-md hover:shadow-lg"
               }`}
               aria-label="Go to next page"
             >
@@ -717,11 +734,10 @@ function BestSellingProducts() {
                 onChange={(e) => {
                   const inputPage = parseInt(e.target.value) - 1;
                   if (!isNaN(inputPage) && inputPage >= 0 && inputPage < totalPages) {
-                    setIsProductListLoading(true);
-                    setPage(inputPage);
+                    handlePageChange(inputPage);
                   }
                 }}
-                className="w-16 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-center"
+                className="w-16 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-center transition-all duration-200"
                 aria-label="Enter page number"
               />
               <span className="text-sm text-gray-600">/ {totalPages}</span>

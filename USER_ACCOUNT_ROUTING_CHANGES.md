@@ -61,3 +61,5 @@
 2. Click "Chỉnh sửa thông tin" để chuyển đến `/user/edit-profile`
 3. Sau khi lưu hoặc hủy, sẽ tự động chuyển về `/user/profile`
 4. Navigation sidebar vẫn hoạt động bình thường cho tất cả các trang khác
+
+

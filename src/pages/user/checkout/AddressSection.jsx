@@ -21,11 +21,7 @@ const AddressSection = ({ formData, setFormData, setError }) => {
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
 
-  const {
-    addresses,
-    loading,
-    error: reduxError,
-  } = useSelector((state) => state.address);
+  const { addresses, loading, error: reduxError } = useSelector((state) => state.address);
 
   useEffect(() => {
     dispatch(getAddresses())
@@ -89,7 +85,6 @@ const AddressSection = ({ formData, setFormData, setError }) => {
 
   const handleAddAddress = async (payload) => {
     try {
-      console.log(payload);
       const result = await dispatch(createAddress(payload)).unwrap();
       await dispatch(getAddresses());
       await Swal.fire({
@@ -100,8 +95,8 @@ const AddressSection = ({ formData, setFormData, setError }) => {
       });
       return result;
     } catch (err) {
-      console.error(err);
-      Swal.fire("Thêm thất bại!", "", "error");
+      console.error("Error adding address:", err);
+      Swal.fire("Thêm thất bại!", err.message || "An error occurred.", "error");
       throw err;
     }
   };
@@ -112,7 +107,7 @@ const AddressSection = ({ formData, setFormData, setError }) => {
       showDenyButton: true,
       showCancelButton: true,
       confirmButtonText: "Lưu",
-      denyButtonText: `Không lưu`,
+      denyButtonText: "Không lưu",
     });
 
     if (result.isConfirmed) {
@@ -136,8 +131,8 @@ const AddressSection = ({ formData, setFormData, setError }) => {
           useSavedAddress: true,
         });
       } catch (err) {
-        console.error(err);
-        Swal.fire("Sửa thất bại!", "", "error");
+        console.error("Error editing address:", err);
+        Swal.fire("Sửa thất bại!", err.message || "An error occurred.", "error");
       }
     } else if (result.isDenied) {
       Swal.fire("Chưa lưu thay đổi", "", "info");
@@ -163,8 +158,8 @@ const AddressSection = ({ formData, setFormData, setError }) => {
           handleClearSelection();
         }
       } catch (err) {
-        console.error(err);
-        Swal.fire("Xoá thất bại!", "", "error");
+        console.error("Error deleting address:", err);
+        Swal.fire("Xoá thất bại!", err.message || "An error occurred.", "error");
       }
     }
   };
@@ -183,30 +178,27 @@ const AddressSection = ({ formData, setFormData, setError }) => {
   };
 
   const handleSelectAddress = (address) => {
-  try {
-    setSelectedAddressId(address.addressId.toString());
-    setUseSavedAddress(true);
-    setFormData({
-      addressId: address.addressId.toString(),
-      recipientName: address.recipientName || "",
-      phone: address.phone || "",
-      fullAddress: address.fullAddress || "",
-      province: address.provinceName || "",
-      district: address.districtName || "",
-      ward: address.wardName || "",
-      useSavedAddress: true,
-    });
-    if (onAddressSelect) {
-      onAddressSelect(address.addressId.toString());
+    try {
+      setSelectedAddressId(address.addressId.toString());
+      setUseSavedAddress(true);
+      setFormData({
+        addressId: address.addressId.toString(),
+        recipientName: address.recipientName || "",
+        phone: address.phone || "",
+        fullAddress: address.fullAddress || "",
+        province: address.provinceName || "",
+        district: address.districtName || "",
+        ward: address.wardName || "",
+        useSavedAddress: true,
+      });
+      setShowAddressModal(false);
+      setIsAddingNewAddress(false);
+      setIsEditingAddress(false);
+    } catch (err) {
+      console.error("Error selecting address:", err);
+      setError("An error occurred while selecting the address.");
     }
-    setShowAddressModal(false);
-    setIsAddingNewAddress(false);
-    setIsEditingAddress(false);
-  } catch (err) {
-    console.error("Error selecting address:", err);
-    setError("An error occurred while selecting the address.");
-  }
-};
+  };
 
   const handleClearSelection = () => {
     try {

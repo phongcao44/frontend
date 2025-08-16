@@ -52,7 +52,10 @@ export default function AddressBook() {
       // Call API to set deleted = true
       await dispatch(removeAddress(id)).unwrap();
 
-      // Success toast like the screenshot
+      // Fetch updated addresses to ensure sync with backend
+      await dispatch(getAddresses());
+
+      // Success toast
       await Swal.fire({
         icon: "success",
         title: "Thành công!",
@@ -64,7 +67,7 @@ export default function AddressBook() {
       });
     } catch (error) {
       // Revert by refetching
-      dispatch(getAddresses());
+      await dispatch(getAddresses());
       await Swal.fire({
         icon: "error",
         title: "Lỗi!",
