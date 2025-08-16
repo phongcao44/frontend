@@ -81,9 +81,8 @@ export default function useFlashSaleItem(id) {
       console.log("Debounced search triggered with value:", value);
       setProductSearchTerm(value);
       setProductPage(0);
-      if (value.trim()) {
-        setAllProducts([]);
-      }
+      // Luôn làm mới danh sách khi thay đổi từ khóa (kể cả khi trống)
+      setAllProducts([]);
     }, 300),
     []
   );
@@ -94,8 +93,28 @@ export default function useFlashSaleItem(id) {
     debouncedSearch(value);
   };
 
-  const handleProductSearchChange = (inputValue) => {
-    debouncedProductSearch(inputValue);
+  const handleProductSearchChange = (inputValue, { action } = {}) => {
+    // Nhấn nút Clear (x): reset ngay danh sách để hiển thị tất cả sản phẩm
+    if (action === "clear") {
+      setProductSearchTerm("");
+      setProductPage(0);
+      setAllProducts([]);
+      return;
+    }
+
+    // Chỉ xử lý khi người dùng thực sự gõ
+    if (action !== "input-change") return;
+
+    const val = (inputValue ?? "").trim();
+    // Xoá hết ký tự: reset ngay lập tức để hiện lại tất cả sản phẩm
+    if (val === "") {
+      setProductSearchTerm("");
+      setProductPage(0);
+      setAllProducts([]);
+      return;
+    }
+    // Gõ bình thường: debounce tìm kiếm
+    debouncedProductSearch(val);
   };
 
   // Load products when page/search changes
@@ -185,16 +204,15 @@ export default function useFlashSaleItem(id) {
     label: p.name || `ID ${p.id}`,
   }));
 
+ const scrollThrottleRef = useRef(0);
  const handleMenuScrollToBottom = () => {
-  console.log("Scroll to bottom triggered", { productsLoading, allProductsLength: allProducts.length, totalProducts });
-  if (productsLoading || allProducts.length >= totalProducts) {
-    console.log("Scroll blocked due to loading or max products reached");
-    return;
-  }
-  setProductPage((prev) => {
-    console.log("Increasing productPage to", prev + 1);
-    return prev + 1;
-  });
+  const now = Date.now();
+  // Throttle: chặn gọi liên tục trong 300ms
+  if (now - scrollThrottleRef.current < 300) return;
+  scrollThrottleRef.current = now;
+
+  if (productsLoading || allProducts.length >= totalProducts) return;
+  setProductPage((prev) => prev + 1);
 };
 
   const validateAddForm = () => {
@@ -246,11 +264,11 @@ export default function useFlashSaleItem(id) {
       Swal.fire("Lỗi", "Số lượng phải lớn hơn 0", "error");
       return false;
     }
-    const soldQuantity = parseInt(editForm.soldQuantity);
-    if (soldQuantity < 0) {
-      Swal.fire("Lỗi", "Số lượng đã bán không được âm", "error");
-      return false;
-    }
+    // Lấy soldQuantity gốc từ item đang chỉnh sửa (không cho phép chỉnh)
+    const originalItem = Array.isArray(flashSaleVariantDetails)
+      ? flashSaleVariantDetails.find((it) => it.id === editingItemId)
+      : null;
+    const soldQuantity = parseInt(originalItem?.soldQuantity || 0);
     if (quantity < soldQuantity) {
       Swal.fire("Lỗi", "Số lượng tổng không được nhỏ hơn số lượng đã bán", "error");
       return false;
@@ -311,12 +329,17 @@ export default function useFlashSaleItem(id) {
   const handleEditSubmit = (e) => {
     e.preventDefault();
     if (!validateEditForm()) return;
+    // Lấy soldQuantity gốc từ item đang chỉnh sửa để đảm bảo không bị thay đổi
+    const originalItem = Array.isArray(flashSaleVariantDetails)
+      ? flashSaleVariantDetails.find((it) => it.id === editingItemId)
+      : null;
+    const originalSold = parseInt(originalItem?.soldQuantity || 0);
     const payload = {
       flashSaleId: parseInt(id),
       productId: parseInt(editForm.productId),
       variantId: parseInt(editForm.variantId),
       quantity: parseInt(editForm.quantity),
-      soldQuantity: parseInt(editForm.soldQuantity),
+      soldQuantity: originalSold,
       price: parseFloat(editForm.discountValue),
       discountType: editForm.discountType,
     };

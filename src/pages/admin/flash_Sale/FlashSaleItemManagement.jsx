@@ -99,8 +99,19 @@ export default function FlashSaleItemManagement({ onBack }) {
     debouncedSearch(value);
   };
 
-  const handleProductSearchChange = (inputValue) => {
-    debouncedProductSearch(inputValue);
+  const handleProductSearchChange = (inputValue, { action } = {}) => {
+    // Chỉ tìm kiếm khi người dùng thực sự gõ vào ô input của Select
+    if (action === "input-change") {
+      debouncedProductSearch(inputValue);
+      return;
+    }
+    // Khi clear hoặc input rỗng: reset để hiển thị lại toàn bộ danh sách
+    if (action === "clear" || inputValue === "") {
+      setProductSearchTerm("");
+      setProductPage(0);
+      setAllProducts([]); // useEffect sẽ fetch lại trang 0
+      return;
+    }
   };
 
   // Tải danh sách sản phẩm
@@ -523,7 +534,19 @@ export default function FlashSaleItemManagement({ onBack }) {
                 options={productOptions}
                 value={productOptions.find((option) => option.value === form.productId) || null}
                 onChange={(selected) => {
-                  const newProductId = selected ? parseInt(selected.value) : 0;
+                  // X bấm clear -> selected = null
+                  if (!selected) {
+                    setForm({
+                      ...form,
+                      productId: 0,
+                      variantId: 0,
+                      discountValue: "",
+                    });
+                    // Reset list để hiển thị lại tất cả sản phẩm
+                    handleProductSearchChange("", { action: "clear" });
+                    return;
+                  }
+                  const newProductId = parseInt(selected.value);
                   setForm({
                     ...form,
                     productId: newProductId,
@@ -537,11 +560,36 @@ export default function FlashSaleItemManagement({ onBack }) {
                   }
                 }}
                 onInputChange={handleProductSearchChange}
+                onMenuOpen={() => {
+                  // Nếu danh sách đang rỗng, làm mới ngay để menu có dữ liệu
+                  if (!productsLoading && allProducts.length === 0) {
+                    // Cách an toàn: gọi API trực tiếp cho trang 0
+                    const params = { page: 0, limit: itemsPerPage };
+                    dispatch(loadProductsPaginate(params))
+                      .unwrap()
+                      .then((result) => {
+                        const newProducts = Array.isArray(result?.data?.content)
+                          ? result.data.content
+                          : [];
+                        setAllProducts(newProducts);
+                        setTotalProducts(result?.data?.totalElements || 0);
+                      })
+                      .catch(() => {
+                        // noop, lỗi sẽ hiển thị qua productsError nếu có
+                      });
+                  }
+                }}
                 placeholder="Chọn hoặc tìm kiếm sản phẩm"
                 isClearable
-                isDisabled={productsLoading}
                 isLoading={productsLoading}
                 onMenuScrollToBottom={handleMenuScrollToBottom}
+                closeMenuOnScroll={false}
+                menuShouldScrollIntoView={false}
+                menuShouldBlockScroll={true}
+                menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                styles={{
+                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                }}
                 className="basic-single"
                 classNamePrefix="select"
                 noOptionsMessage={() => "Không tìm thấy sản phẩm"}
@@ -1002,7 +1050,7 @@ export default function FlashSaleItemManagement({ onBack }) {
                   type="number"
                   value={safe(editForm.soldQuantity)}
                   disabled
-                  className="border border-gray-300 rounded-lg px-3 py-2 w-full bg-gray-100"
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full bg-gray-100 font-semibold text-gray-800"
                 />
               </div>
               <div className="flex space-x-2">

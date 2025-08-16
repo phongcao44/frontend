@@ -124,25 +124,36 @@ export default function ProductManagement() {
 
     if (result.isConfirmed) {
       try {
+        // Determine next page before reload to avoid empty page
+        const currentCount = paginated?.data?.content?.length || 0;
+        const nextPage = currentCount - 1 <= 0 && currentPage > 0 ? currentPage - 1 : currentPage;
+
         await dispatch(removeProduct(id)).unwrap();
         await Swal.fire("Đã xóa!", "Sản phẩm đã được xóa.", "success");
-        // Refresh the product list
-        const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
-        const { priceMin, priceMax } = getPriceRange(selectedPriceRange);
-        const minRating = ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
+        // Show full list again: reset filters and search, go to page 0
+        setSearchTerm("");
+        setDebouncedSearchTerm("");
+        setStatusFilter("");
+        setSelectedBrand("all");
+        setSelectedPriceRange("");
+        setSelectedRating("0");
+        setSelectedSubcategoryId(null);
+        setCurrentPage(0);
+
+        const { sortBy: apiSortBy, orderBy } = mapSortBy("price");
 
         dispatch(loadProductsPaginate({
-          page: currentPage,
+          page: 0,
           limit: itemsPerPage,
           sortBy: apiSortBy,
           orderBy,
-          categoryId: selectedSubcategoryId || id,
-          status: statusFilter === "true" ? "IN_STOCK" : statusFilter === "false" ? "OUT_OF_STOCK" : null,
-          brandName: selectedBrand === "all" ? null : selectedBrand,
-          priceMin: priceMin || null,
-          priceMax: priceMax || null,
-          minRating: minRating === 0 ? null : minRating,
-          keyword: debouncedSearchTerm || null
+          categoryId: null,
+          status: null,
+          brandName: null,
+          priceMin: null,
+          priceMax: null,
+          minRating: null,
+          keyword: null
         }));
       } catch (err) {
         await Swal.fire(

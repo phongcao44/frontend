@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
-import Select from "react-select";
+import React, { useRef } from "react";
+import Select, { components } from "react-select";
 import Swal from "sweetalert2";
 
 export default function FlashSaleItemForm({
@@ -15,6 +16,48 @@ export default function FlashSaleItemForm({
   flashSaleVariantDetails,
   flashSaleLoading,
 }) {
+  // Lưu và khôi phục vị trí cuộn của menu để tránh bị "nhảy về đầu" khi options thay đổi
+  const menuListElRef = useRef(null);
+  const savedScrollTopRef = useRef(0);
+
+  // Custom MenuList: phát hiện kéo thanh cuộn (drag scrollbar) để load thêm
+  const MenuList = (menuProps) => {
+    const handleScroll = (e) => {
+      const el = e.currentTarget;
+      // Near bottom threshold to prefetch
+      const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 16;
+      // Lưu lại vị trí cuộn hiện tại
+      savedScrollTopRef.current = el.scrollTop;
+      if (nearBottom) {
+        // Gọi handler từ props của form (đã có throttle trong hook)
+        handleMenuScrollToBottom && handleMenuScrollToBottom();
+      }
+    };
+
+    // Kế thừa UI gốc của react-select và chỉ thêm onScroll
+    return (
+      <components.MenuList
+        {...menuProps}
+        innerRef={(el) => {
+          // Lưu element để có thể khôi phục scrollTop sau mỗi lần render
+          if (el) {
+            menuListElRef.current = el;
+            // Khôi phục vị trí cuộn nếu có giá trị đã lưu
+            if (typeof savedScrollTopRef.current === "number") {
+              el.scrollTop = savedScrollTopRef.current;
+            }
+          }
+        }}
+        innerProps={{
+          ...menuProps.innerProps,
+          onScroll: (e) => {
+            menuProps.innerProps?.onScroll?.(e);
+            handleScroll(e);
+          },
+        }}
+      />
+    );
+  };
   const formatVND = (price) =>
     new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -41,6 +84,8 @@ export default function FlashSaleItemForm({
         variantId: 0,
         discountValue: "",
       }));
+      // Quan trọng: reset danh sách để dropdown hiển thị lại tất cả sản phẩm sau khi bấm X
+      handleProductSearchChange("", { action: "clear" });
       return;
     }
 
@@ -51,9 +96,13 @@ export default function FlashSaleItemForm({
       discountValue: "",
     }));
 
-    // Clear search term only if a valid product is selected
+    // Reset danh sách theo ngữ cảnh
+    // - Nếu chọn sản phẩm hợp lệ: xoá input để tránh giữ từ khoá cũ
+    // - Nếu clear (newProductId = 0): yêu cầu reset đầy đủ để hiển thị lại toàn bộ sản phẩm
     if (newProductId) {
       handleProductSearchChange("");
+    } else {
+      handleProductSearchChange("", { action: "clear" });
     }
   };
 
@@ -91,17 +140,30 @@ export default function FlashSaleItemForm({
             value={productOptions.find((option) => option.value === form.productId) || null}
             onChange={handleProductChange}
             onInputChange={handleProductSearchChange}
+            components={{ MenuList }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
             placeholder="Chọn hoặc tìm kiếm sản phẩm"
             isClearable
             isSearchable
-            isDisabled={productsLoading || flashSaleLoading}
+            isDisabled={flashSaleLoading}
             isLoading={productsLoading}
             onMenuScrollToBottom={handleMenuScrollToBottom}
+            closeMenuOnScroll={false}
+            menuShouldScrollIntoView={false}
+            menuShouldBlockScroll={true}
+            menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+            blurInputOnSelect={false}
             className="basic-single z-50"
             classNamePrefix="select"
             noOptionsMessage={() => "Không tìm thấy sản phẩm"}
             loadingMessage={() => "Đang tải sản phẩm..."}
             styles={{
+              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
               menu: (provided) => ({
                 ...provided,
                 zIndex: 9999,
