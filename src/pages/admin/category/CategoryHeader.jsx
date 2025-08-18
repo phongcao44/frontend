@@ -1,7 +1,20 @@
-import { RefreshCw, Download, Plus } from "lucide-react";
-import { handleDownloadExcel } from "../../../services/handleDownloadExcel";
+import { useState } from "react";
+import { RefreshCw, Plus } from "lucide-react";
 
-const CategoryHeader = ({ onRefresh, onAdd, loadingFlatList, loading }) => {
+const CategoryHeader = ({ onRefresh, onAdd, loading }) => {
+  const [spinning, setSpinning] = useState(false);
+
+  const handleRefreshClick = () => {
+    if (!spinning) {
+      setSpinning(true);
+      // chạy event luôn
+      onRefresh?.();
+
+      // reset trạng thái sau khi animation xong (1s)
+      setTimeout(() => setSpinning(false), 1000);
+    }
+  };
+
   return (
     <div className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -16,20 +29,16 @@ const CategoryHeader = ({ onRefresh, onAdd, loadingFlatList, loading }) => {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={onRefresh}
+              onClick={handleRefreshClick}
               className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
-              disabled={loadingFlatList}
             >
               <RefreshCw
-                className={`h-5 w-5 ${loadingFlatList ? "animate-spin" : ""}`}
+                className={`h-5 w-5 transition-transform duration-1000 ${
+                  spinning ? "rotate-[360deg]" : ""
+                }`}
               />
             </button>
-            <button
-              onClick={handleDownloadExcel}
-              className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
-            >
-              <Download className="h-5 w-5" />
-            </button>
+
             <button
               onClick={onAdd}
               className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105"

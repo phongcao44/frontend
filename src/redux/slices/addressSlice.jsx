@@ -121,7 +121,6 @@ const addressSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // GET DISTRICTS
       .addCase(getDistricts.pending, (state) => {
         state.loading = true;
@@ -135,7 +134,6 @@ const addressSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // GET WARDS
       .addCase(getWards.pending, (state) => {
         state.loading = true;
@@ -149,7 +147,6 @@ const addressSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // GET ALL ADDRESSES
       .addCase(getAddresses.pending, (state) => {
         state.loading = true;
@@ -163,7 +160,6 @@ const addressSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // CREATE
       .addCase(createAddress.pending, (state) => {
         state.loading = true;
@@ -177,7 +173,6 @@ const addressSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // UPDATE
       .addCase(editAddress.pending, (state) => {
         state.loading = true;
@@ -196,7 +191,6 @@ const addressSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // DELETE
       .addCase(removeAddress.pending, (state) => {
         state.loading = true;
@@ -211,6 +205,17 @@ const addressSlice = createSlice({
       .addCase(removeAddress.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Clear user addresses on logout
+      .addCase('auth/logout/fulfilled', (state) => {
+        state.addresses = [];
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase('auth/logout/rejected', (state) => {
+        state.addresses = [];
+        state.loading = false;
+        state.error = null;
       });
   },
 });

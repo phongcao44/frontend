@@ -24,6 +24,11 @@ const CategoryManagement = () => {
     level1Count,
     level2Count,
     level3Count,
+    // Global stats independent of filters
+    statsTotalCategories,
+    statsLevel1Count,
+    statsLevel2Count,
+    statsLevel3Count,
     isModalVisible,
     modalMode,
     formData,
@@ -55,10 +60,10 @@ const CategoryManagement = () => {
       
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         <CategoryStats
-          totalCategories={totalCategories}
-          level1Count={level1Count}
-          level2Count={level2Count}
-          level3Count={level3Count}
+          totalCategories={statsTotalCategories}
+          level1Count={statsLevel1Count}
+          level2Count={statsLevel2Count}
+          level3Count={statsLevel3Count}
         />
 
         <CategoryFilter

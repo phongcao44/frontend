@@ -58,25 +58,27 @@ const Spinner = () => (
 const WishList = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const {
-    items: wishlistItems,
-    loading,
-    error,
-  } = useSelector((state) => state.wishlist);
+  const { items: wishlistItems, loading, error } = useSelector((state) => state.wishlist);
+  const { isLoggedIn } = useSelector((state) => state.auth); // Use isLoggedIn to match authSlice.js
   const wishlistPrevRef = useRef(null);
   const wishlistNextRef = useRef(null);
-  const justForYouPrevRef = useRef(null);
-  const justForYouNextRef = useRef(null);
 
-  // Fetch wishlist on mount
+  // Fetch wishlist on mount only if logged in
   useEffect(() => {
-    dispatch(getUserWishlist());
-  }, [dispatch]);
+    if (isLoggedIn) {
+      dispatch(getUserWishlist());
+    }
+  }, [dispatch, isLoggedIn]);
 
   // Remove item from wishlist
   const handleRemoveFromWishlist = async (item) => {
+    if (!isLoggedIn) {
+      navigate("/login");
+      return;
+    }
+
     try {
-      await Swal.fire({
+      const result = await Swal.fire({
         title: "Xác nhận xóa",
         text: "Bạn có chắc chắn muốn xóa sản phẩm này khỏi danh sách yêu thích?",
         icon: "warning",
@@ -85,26 +87,18 @@ const WishList = () => {
         cancelButtonColor: "#d33",
         confirmButtonText: "Xóa",
         cancelButtonText: "Hủy",
-      }).then(async (result) => {
-        if (result.isConfirmed) {
-          try {
-            await dispatch(removeProductFromWishlist(item.wishlistId)).unwrap();
-            Swal.fire(
-              "Đã xóa!",
-              "Sản phẩm đã được xóa khỏi danh sách yêu thích.",
-              "success"
-            );
-          } catch (err) {
-            console.error("Error removing from wishlist:", err);
-            Swal.fire(
-              "Lỗi!",
-              err?.message ||
-                "Không thể xóa sản phẩm khỏi danh sách yêu thích.",
-              "error"
-            );
-          }
-        }
       });
+
+      if (result.isConfirmed) {
+        await dispatch(removeProductFromWishlist(item.wishlistId)).unwrap();
+        Swal.fire(
+          "Đã xóa!",
+          "Sản phẩm đã được xóa khỏi danh sách yêu thích.",
+          "success"
+        );
+        // Refetch wishlist to ensure UI updates
+        dispatch(getUserWishlist());
+      }
     } catch (err) {
       console.error("Error removing from wishlist:", err);
       Swal.fire(
@@ -117,6 +111,11 @@ const WishList = () => {
 
   // Add item to cart
   const handleAddToCart = async (item) => {
+    if (!isLoggedIn) {
+      navigate("/login");
+      return;
+    }
+
     try {
       const variantId = item.product.variants?.[0]?.id;
       if (!variantId) {
@@ -149,33 +148,61 @@ const WishList = () => {
     navigate(`/product/${item.product.id}`);
   };
 
-  if (loading) {
+  // Handle unauthenticated state
+  if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="flex justify-center">
-            <Spinner />
+      <div className="min-h-screen bg-white py-10 px-5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-20 px-5">
+            <h4 className="text-xl font-medium mb-4">
+              Bạn chưa đăng nhập. Vui lòng đăng nhập để xem danh sách yêu thích.
+            </h4>
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200"
+              onClick={() => navigate("/login")}
+              aria-label="Đăng nhập"
+            >
+              Đăng nhập
+            </button>
           </div>
-          <p className="text-gray-500 mt-2">Đang tải danh sách yêu thích...</p>
         </div>
       </div>
     );
   }
 
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white py-10 px-5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-20 px-5">
+            <div className="flex justify-center">
+              <Spinner />
+            </div>
+            <p className="text-gray-500 mt-2">Đang tải danh sách yêu thích...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Có lỗi xảy ra
-          </h3>
-          <p className="text-gray-500 mb-6">{error}</p>
-          <button
-            onClick={() => dispatch(getUserWishlist())}
-            className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200"
-          >
-            Thử lại
-          </button>
+      <div className="min-h-screen bg-white py-10 px-5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-20 px-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Có lỗi xảy ra
+            </h3>
+            <p className="text-gray-500 mb-6">{error}</p>
+            <button
+              onClick={() => dispatch(getUserWishlist())}
+              className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200"
+            >
+              Thử lại
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -269,93 +296,6 @@ const WishList = () => {
             ))}
           </Swiper>
         )}
-
-        {/* Just For You Section */}
-        {/* <div className="mb-8 mt-12">
-          <div className="flex items-center mb-8">
-            <div className="w-5 h-10 bg-red-500 rounded mr-4"></div>
-            <span className="text-red-500 text-base font-semibold">
-              This Month
-            </span>
-          </div>
-
-          <div className="flex items-center mb-10 flex-wrap gap-4">
-            <div className="flex items-center justify-between w-full">
-              <h2 className="text-4xl font-semibold m-0">Just For You</h2>
-              <div className="flex gap-2">
-                <button
-                  ref={justForYouPrevRef}
-                  className="w-10 h-10 rounded-full border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors duration-200"
-                  aria-label="Scroll left"
-                >
-                  <LeftOutlined />
-                </button>
-                <button
-                  ref={justForYouNextRef}
-                  className="w-10 h-10 rounded-full border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors duration-200"
-                  aria-label="Scroll right"
-                >
-                  <RightOutlined />
-                </button>
-              </div>
-            </div>
-          </div>
-
-         
-          {loading ? (
-            <div className="text-center py-20 px-5">
-              <div className="flex justify-center">
-                <Spinner />
-              </div>
-            </div>
-          ) : wishlistItems.length > 0 ? (
-            <Swiper
-              loop={wishlistItems.length > 4}
-              spaceBetween={20}
-              slidesPerView={4}
-              navigation={{
-                prevEl: justForYouPrevRef.current,
-                nextEl: justForYouNextRef.current,
-              }}
-              onInit={(swiper) => {
-                swiper.params.navigation.prevEl = justForYouPrevRef.current;
-                swiper.params.navigation.nextEl = justForYouNextRef.current;
-                swiper.navigation.init();
-                swiper.navigation.update();
-              }}
-              modules={[Navigation]}
-              breakpoints={{
-                0: { slidesPerView: 1 },
-                640: { slidesPerView: 2 },
-                768: { slidesPerView: 3 },
-                1024: { slidesPerView: 4 },
-              }}
-            >
-              {wishlistItems.map((item) => (
-                <SwiperSlide key={item.wishlistId}>
-                  <ProductCard
-                    product={item.product}
-                    showRemove={false}
-                    onAddToCart={() => handleAddToCart(item)}
-                    onClick={() => handleProductClick(item)}
-                  />
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          ) : (
-            <div className="text-center py-20 px-5">
-              <h4 className="text-xl font-medium mb-4">No items available!</h4>
-              <button
-                className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200"
-                onClick={() => navigate("/products")}
-                aria-label="Explore products"
-              >
-                Explore Products
-              </button>
-            </div>
-          )}
-        </div> */}
-        
       </div>
     </div>
   );

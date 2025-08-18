@@ -12,6 +12,7 @@ import {
   checkoutSelectedItemsPreview,
 } from "../../services/cartService";
 
+// === Thunks ===
 export const getCart = createAsyncThunk("cart/getCart", async (_, thunkAPI) => {
   try {
     return await fetchCart();
@@ -36,7 +37,8 @@ export const updateCartItemQuantity = createAsyncThunk(
   "cart/updateCartItemQuantity",
   async ({ cartItemId, quantity }, thunkAPI) => {
     try {
-      return await updateCartItem(cartItemId, quantity);
+      const response = await updateCartItem(cartItemId, quantity);
+      return { cartItemId, quantity, updatedItem: response };
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
@@ -47,7 +49,8 @@ export const removeItemFromCart = createAsyncThunk(
   "cart/removeItemFromCart",
   async (cartItemId, thunkAPI) => {
     try {
-      return await removeCartItem(cartItemId);
+      await removeCartItem(cartItemId);
+      return cartItemId;
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
     }
@@ -109,18 +112,21 @@ export const checkoutSelectedItemsPreviewThunk = createAsyncThunk(
   }
 );
 
+// === Slice ===
 const cartSlice = createSlice({
   name: "cart",
   initialState: {
-    cart: { items: [] },
+    cart: { items: [], subtotal: 0, discount: 0, grandTotal: 0 },
     preview: null,
-    selectedItems: [], // Added to store selected cartItemIds
+    selectedItems: [],
     loading: false,
+    itemLoading: {},
     error: null,
+    optimisticUpdates: {},
   },
   reducers: {
     setSelectedItems: (state, action) => {
-      state.selectedItems = action.payload; // Cập nhật selectedItems
+      state.selectedItems = action.payload;
     },
     clearPreview: (state) => {
       state.preview = null;
@@ -137,7 +143,10 @@ const cartSlice = createSlice({
         const payloadCart = action.payload || {};
         state.cart = {
           ...payloadCart,
-          items: Array.isArray(payloadCart?.items) ? payloadCart.items : [],
+          items: Array.isArray(payloadCart.items) ? payloadCart.items : [],
+          subtotal: payloadCart.subtotal || 0,
+          discount: payloadCart.discount || 0,
+          grandTotal: payloadCart.grandTotal || 0,
         };
         state.loading = false;
       })
@@ -154,13 +163,16 @@ const cartSlice = createSlice({
       .addCase(addItemToCart.fulfilled, (state, action) => {
         const { cartItem } = action.payload || {};
         if (!state.cart || typeof state.cart !== "object") {
-          state.cart = { items: [] };
+          state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
         }
         if (!Array.isArray(state.cart.items)) {
           state.cart.items = [];
         }
         if (cartItem) {
           state.cart.items.push(cartItem);
+          state.cart.subtotal += cartItem.totalPrice || 0;
+          state.cart.discount += (cartItem.discountAmount || 0) * (cartItem.quantity || 1);
+          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
         }
         state.loading = false;
       })
@@ -170,41 +182,121 @@ const cartSlice = createSlice({
       })
 
       // === updateCartItemQuantity ===
-      .addCase(updateCartItemQuantity.pending, (state) => {
-        state.loading = true;
+      .addCase(updateCartItemQuantity.pending, (state, action) => {
+        const { cartItemId, quantity } = action.meta.arg;
+        state.itemLoading[cartItemId] = true;
+        const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
+        if (item) {
+          state.optimisticUpdates[cartItemId] = {
+            quantity: item.quantity,
+            discountedPrice: item.discountedPrice,
+            totalPrice: item.totalPrice,
+            discountAmount: item.discountAmount,
+            flags: item.flags,
+          };
+          item.quantity = quantity;
+          // Tạm tính giá dựa trên logic flash sale
+          const unitPrice = quantity <= 15 ? 253000 : (item.originalPrice || 460000);
+          item.discountedPrice = unitPrice;
+          item.totalPrice = unitPrice * quantity;
+          item.flags = quantity <= 15 ? ["FLASH_APPLIED"] : [];
+          item.discountAmount = quantity <= 15 ? 207000 : 0;
+          // Cập nhật tổng giỏ hàng
+          state.cart.subtotal = state.cart.items.reduce(
+            (sum, i) => sum + (i.totalPrice || 0),
+            0
+          );
+          state.cart.discount = state.cart.items.reduce(
+            (sum, i) => sum + (i.discountAmount || 0) * (i.quantity || 1),
+            0
+          );
+          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
+        }
         state.error = null;
       })
       .addCase(updateCartItemQuantity.fulfilled, (state, action) => {
-        const payloadCart = action.payload || {};
-        state.cart = {
-          ...payloadCart,
-          items: Array.isArray(payloadCart?.items) ? payloadCart.items : [],
-        };
-        state.loading = false;
+        const { cartItemId, updatedItem } = action.payload;
+        const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
+        if (item && updatedItem) {
+          // Cập nhật từ API
+          item.quantity = updatedItem.quantity || item.quantity;
+          item.discountedPrice = updatedItem.discountedPrice || item.discountedPrice;
+          item.totalPrice = updatedItem.totalPrice || item.totalPrice;
+          item.discountAmount = updatedItem.discountAmount || item.discountAmount;
+          item.flags = updatedItem.flags || item.flags;
+          // Cập nhật tổng giỏ hàng
+          state.cart.subtotal = state.cart.items.reduce(
+            (sum, i) => sum + (i.totalPrice || 0),
+            0
+          );
+          state.cart.discount = state.cart.items.reduce(
+            (sum, i) => sum + (i.discountAmount || 0) * (i.quantity || 1),
+            0
+          );
+          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
+        }
+        delete state.itemLoading[cartItemId];
+        delete state.optimisticUpdates[cartItemId];
       })
       .addCase(updateCartItemQuantity.rejected, (state, action) => {
-        state.loading = false;
+        const { cartItemId } = action.meta.arg;
+        const prevState = state.optimisticUpdates[cartItemId];
+        const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
+        if (item && prevState) {
+          item.quantity = prevState.quantity;
+          item.discountedPrice = prevState.discountedPrice;
+          item.totalPrice = prevState.totalPrice;
+          item.discountAmount = prevState.discountAmount;
+          item.flags = prevState.flags;
+          // Khôi phục tổng giỏ hàng
+          state.cart.subtotal = state.cart.items.reduce(
+            (sum, i) => sum + (i.totalPrice || 0),
+            0
+          );
+          state.cart.discount = state.cart.items.reduce(
+            (sum, i) => sum + (i.discountAmount || 0) * (i.quantity || 1),
+            0
+          );
+          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
+        }
+        delete state.itemLoading[cartItemId];
+        delete state.optimisticUpdates[cartItemId];
         state.error = action.payload;
       })
 
       // === removeItemFromCart ===
-      .addCase(removeItemFromCart.pending, (state) => {
-        state.loading = true;
+      .addCase(removeItemFromCart.pending, (state, action) => {
+        const cartItemId = action.meta.arg;
+        state.itemLoading[cartItemId] = true;
+        const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
+        if (item) {
+          state.optimisticUpdates[cartItemId] = { ...item };
+          state.cart.subtotal -= item.totalPrice || 0;
+          state.cart.discount -= (item.discountAmount || 0) * (item.quantity || 1);
+          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
+        }
+        state.cart.items = state.cart.items.filter(
+          (item) => item.cartItemId !== cartItemId
+        );
+        state.selectedItems = state.selectedItems.filter((id) => id !== cartItemId);
         state.error = null;
       })
       .addCase(removeItemFromCart.fulfilled, (state, action) => {
-        const payloadCart = action.payload || {};
-        state.cart = {
-          ...payloadCart,
-          items: Array.isArray(payloadCart?.items) ? payloadCart.items : [],
-        };
-        state.selectedItems = state.selectedItems.filter(
-          (id) => !state.cart.items.every((item) => item.cartItemId !== id)
-        ); 
-        state.loading = false;
+        const cartItemId = action.payload;
+        delete state.itemLoading[cartItemId];
+        delete state.optimisticUpdates[cartItemId];
       })
       .addCase(removeItemFromCart.rejected, (state, action) => {
-        state.loading = false;
+        const cartItemId = action.meta.arg;
+        const prevItem = state.optimisticUpdates[cartItemId];
+        if (prevItem) {
+          state.cart.items.push(prevItem);
+          state.cart.subtotal += prevItem.totalPrice || 0;
+          state.cart.discount += (prevItem.discountAmount || 0) * (prevItem.quantity || 1);
+          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
+        }
+        delete state.itemLoading[cartItemId];
+        delete state.optimisticUpdates[cartItemId];
         state.error = action.payload;
       })
 
@@ -214,8 +306,8 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(clearUserCart.fulfilled, (state) => {
-        state.cart = { items: [] };
-        state.selectedItems = []; // Clear selected items
+        state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
+        state.selectedItems = [];
         state.loading = false;
       })
       .addCase(clearUserCart.rejected, (state, action) => {
@@ -229,8 +321,8 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(checkoutUserCart.fulfilled, (state) => {
-        state.cart = { items: [] };
-        state.selectedItems = []; // Clear selected items
+        state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
+        state.selectedItems = [];
         state.loading = false;
       })
       .addCase(checkoutUserCart.rejected, (state, action) => {
@@ -244,8 +336,8 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(checkoutSingleCartItem.fulfilled, (state) => {
-        state.cart = { items: [] };
-        state.selectedItems = []; // Clear selected items
+        state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
+        state.selectedItems = [];
         state.loading = false;
       })
       .addCase(checkoutSingleCartItem.rejected, (state, action) => {
@@ -259,8 +351,8 @@ const cartSlice = createSlice({
         state.error = null;
       })
       .addCase(checkoutSelectedItemsThunk.fulfilled, (state) => {
-        state.cart = { items: [] };
-        state.selectedItems = []; // Clear selected items
+        state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
+        state.selectedItems = [];
         state.loading = false;
       })
       .addCase(checkoutSelectedItemsThunk.rejected, (state, action) => {
@@ -280,6 +372,24 @@ const cartSlice = createSlice({
       .addCase(checkoutSelectedItemsPreviewThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // === Clear cart on logout ===
+      .addCase("auth/logout/fulfilled", (state) => {
+        state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
+        state.preview = null;
+        state.selectedItems = [];
+        state.loading = false;
+        state.itemLoading = {};
+        state.error = null;
+      })
+      .addCase("auth/logout/rejected", (state) => {
+        state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
+        state.preview = null;
+        state.selectedItems = [];
+        state.loading = false;
+        state.itemLoading = {};
+        state.error = null;
       });
   },
 });

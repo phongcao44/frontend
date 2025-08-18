@@ -17,7 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { loadPaginatedOrders } from "../../redux/slices/orderSlice";
+import { loadPaginatedOrders, loadOrderStatistics } from "../../redux/slices/orderSlice";
 import { useNavigate } from "react-router-dom";
 import Pagination from "../../components/Pagination";
 import { getStatusColor, translateStatus } from "../../utils/orderUtils";
@@ -57,6 +57,7 @@ export default function OrderManagement() {
   const totalElements = useSelector(
     (state) => state.order.list?.totalElements || 0
   );
+  const statistics = useSelector((state) => state.order.statistics || null);
 
   // Debounced function to handle search
   const debouncedSearch = useCallback(
@@ -125,6 +126,10 @@ export default function OrderManagement() {
   ]);
 
   useEffect(() => {
+    dispatch(loadOrderStatistics());
+  }, [dispatch]);
+
+  useEffect(() => {
     console.log("Orders:", orders);
     console.log("Total elements:", totalElements);
     console.log("Total pages:", totalPages);
@@ -148,10 +153,10 @@ export default function OrderManagement() {
   };
 
   const tabs = [
-    { name: "Tất cả đơn hàng", count: totalElements },
+    { name: "Tất cả đơn hàng", count: statistics?.totalOrders ?? totalElements },
     {
       name: "Chưa thanh toán",
-      count: orders.filter((o) => o.payment?.status === "PENDING").length,
+      count: statistics?.totalPendingOrders ?? 0,
     },
   ];
 
@@ -168,6 +173,7 @@ export default function OrderManagement() {
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
+    dispatch(loadOrderStatistics());
   };
 
   const formatDate = (dateString) => {
@@ -195,21 +201,7 @@ export default function OrderManagement() {
     return true;
   });
 
-  const totalRevenue = validOrders
-  .filter(order => order.status === "DELIVERED")
-  .reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
-  const completedOrders = validOrders.filter(
-    (o) => o.status === "DELIVERED"
-  ).length;
-  const pendingOrders = validOrders.filter(
-    (o) => o.status === "PENDING"
-  ).length;
-  const todayOrders = validOrders.filter((o) => {
-    if (!o.createdAt) return false;
-    const orderDate = new Date(o.createdAt);
-    const today = new Date();
-    return orderDate.toDateString() === today.toDateString();
-  }).length;
+  // Legacy computed metrics retained here for reference (now using statistics from API)
 
   const statusOptions = [
     { value: "", label: "Tất cả trạng thái" },
@@ -310,7 +302,7 @@ export default function OrderManagement() {
                   Tổng đơn hàng
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {totalElements}
+                  {statistics?.totalOrders ?? 0}
                 </p>
               </div>
             </div>
@@ -321,11 +313,9 @@ export default function OrderManagement() {
                 <DollarSign className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">
-                  Tổng doanh thu
-                </p>
+                <p className="text-sm font-medium text-gray-600">Tổng doanh thu</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(totalRevenue)}
+                  {formatCurrency(statistics?.totalRevenue ?? 0)}
                 </p>
               </div>
             </div>
@@ -338,7 +328,7 @@ export default function OrderManagement() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Chờ xử lý</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {pendingOrders}
+                  {statistics?.totalPendingOrders ?? 0}
                 </p>
               </div>
             </div>
@@ -351,11 +341,12 @@ export default function OrderManagement() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Hôm nay</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {todayOrders}
+                  {statistics?.totalOrdersToday ?? 0}
                 </p>
               </div>
             </div>
           </div>
+          
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">

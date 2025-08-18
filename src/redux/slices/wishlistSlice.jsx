@@ -34,7 +34,7 @@ export const removeProductFromWishlist = createAsyncThunk(
   'wishlist/removeFromWishlist',
   async (wishlistId, { rejectWithValue, dispatch }) => {
     try {
-      console.log(wishlistId)
+      console.log(wishlistId);
       await removeFromWishlist(wishlistId);
       // Refresh wishlist after removing
       const response = await fetchUserWishlist();
@@ -72,7 +72,6 @@ const wishlistSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // Add to wishlist
       .addCase(addProductToWishlist.pending, (state) => {
         state.loading = true;
@@ -86,7 +85,6 @@ const wishlistSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       // Remove from wishlist
       .addCase(removeProductFromWishlist.pending, (state) => {
         state.loading = true;
@@ -99,9 +97,20 @@ const wishlistSlice = createSlice({
       .addCase(removeProductFromWishlist.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Clear wishlist on logout
+      .addCase('auth/logout/fulfilled', (state) => {
+        state.items = [];
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase('auth/logout/rejected', (state) => {
+        state.items = [];
+        state.loading = false;
+        state.error = null;
       });
   },
 });
 
 export const { clearWishlistError } = wishlistSlice.actions;
-export default wishlistSlice.reducer; 
+export default wishlistSlice.reducer;
