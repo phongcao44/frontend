@@ -216,7 +216,7 @@ export default function ProfilePage() {
               </label>
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
                 <span className="text-2xl font-bold text-gray-900">
-                  {userDetail?.userPoint?.totalPoints?.toLocaleString('vi-VN') || 0}
+                  {(userDetail?.address?.[0]?.user?.userPoint?.totalPoints ?? 0).toLocaleString('vi-VN')}
                 </span>
                 <span className="text-gray-600 ml-2">điểm</span>
               </div>
@@ -229,7 +229,7 @@ export default function ProfilePage() {
               </label>
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
                 <span className="text-2xl font-bold text-gray-900">
-                  {userDetail?.userPoint?.rankPoints?.toLocaleString('vi-VN') || 0}
+                  {(userDetail?.address?.[0]?.user?.userPoint?.rankPoints ?? 0).toLocaleString('vi-VN')}
                 </span>
                 <span className="text-gray-600 ml-2">điểm</span>
               </div>

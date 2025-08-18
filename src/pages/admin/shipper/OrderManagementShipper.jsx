@@ -160,9 +160,9 @@ export default function OrderManagement() {
   };
 
   const tabs = [
-    { name: "vị trí đơn hàng", count: totalElements },
+    { name: "Vị Trí Đơn Hàng", count: totalElements },
     {
-      name: "quản lý shipper",
+      name: "Quản Lý Shipper",
       count: orders.filter((o) => o.payment?.status === "PENDING").length,
     },
   ];
