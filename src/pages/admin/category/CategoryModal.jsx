@@ -20,6 +20,11 @@ const CategoryModal = ({
   const [errors, setErrors] = useState({});
   const fileInputRef = useRef(null);
 
+  // Reset errors when modalMode or isVisible changes
+  useEffect(() => {
+    setErrors({});
+  }, [modalMode, isVisible]);
+
   useEffect(() => {
     if (formData.image && typeof formData.image === "string") {
       setImagePreview(formData.image);
@@ -67,28 +72,47 @@ const CategoryModal = ({
   const validateForm = () => {
     const newErrors = {};
     
-    // Check required fields
+    // Check required fields for name
     if (!formData.name?.trim()) {
       newErrors.name = "Tên danh mục không được để trống";
     } else if (formData.name.trim().length < 2) {
       newErrors.name = "Tên danh mục phải có ít nhất 2 ký tự";
     } else {
-      // Check for duplicate category name
-      const isDuplicate = categories.some(
-        (cat) => 
-          cat.name.toLowerCase() === formData.name.trim().toLowerCase() &&
-          cat.id !== (editingCategory?.id || null)
-      );
-      if (isDuplicate) {
-        newErrors.name = "Tên danh mục đã tồn tại";
+      // Check for valid characters (letters, numbers, spaces, &, -)
+      const validNamePattern = /^[a-zA-Z0-9\s\u00C0-\u1EF9&-]*$/;
+      if (!validNamePattern.test(formData.name.trim())) {
+        newErrors.name = "Tên danh mục chỉ được chứa chữ, số, khoảng trắng, & hoặc -";
+      } else {
+        // Check for duplicate category name
+        const isDuplicate = categories.some(
+          (cat) => 
+            cat.name.toLowerCase() === formData.name.trim().toLowerCase() &&
+            cat.id !== (editingCategory?.id || null)
+        );
+        if (isDuplicate) {
+          newErrors.name = "Tên danh mục đã tồn tại";
+        }
       }
     }
 
+    // Check required fields for description
     if (!formData.description?.trim()) {
       newErrors.description = "Mô tả không được để trống";
+    } else {
+      // Check for valid characters and length (10 to 5000) using provided regex
+      const validDescriptionPattern = /^[\p{L}\p{N}\s.,!?:;()"%'\-\/]{10,5000}$/u;
+      if (!validDescriptionPattern.test(formData.description.trim())) {
+        newErrors.description = "Mô tả phải từ 10 đến 5000 ký tự và chỉ chứa chữ, số, khoảng trắng, hoặc các ký tự ., ! ? : ; ( ) \" % ' - /";
+      } else {
+        // Check for HTML tags
+        const hasHTML = /<[a-z][\s\S]*>/i.test(formData.description);
+        if (hasHTML) {
+          newErrors.description = "Mô tả không được chứa thẻ HTML";
+        }
+      }
     }
 
-    if (modalMode === "add" && !formData.image) {
+    if (!formData.image) {
       newErrors.image = "Vui lòng chọn một hình ảnh";
     }
 
@@ -131,9 +155,7 @@ const CategoryModal = ({
       fileInputRef.current.value = null;
     }
     setInputKey((prev) => prev + 1);
-    if (modalMode === "add") {
-      setErrors((prev) => ({ ...prev, image: "Vui lòng chọn một hình ảnh" }));
-    }
+    setErrors((prev) => ({ ...prev, image: "Vui lòng chọn một hình ảnh" }));
   };
 
   const handleParentIdLevel1Change = (e) => {

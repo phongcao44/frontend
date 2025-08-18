@@ -1,16 +1,14 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import Cookies from "js-cookie";
 import AddressSection from "./AddressSection";
-import { calculateShippingFee } from "../../../services/shippingFeeService";
-import { getCart, checkoutSelectedItemsThunk, checkoutSelectedItemsPreviewThunk } from "../../../redux/slices/cartSlice";
+import { getCart, checkoutSelectedItemsThunk, checkoutSelectedItemsPreviewThunk, setSelectedItems } from "../../../redux/slices/cartSlice";
 import { createCodPayment, createVnpayPayment } from "../../../services/paymentService";
 import api from "../../../services/api";
 import { setUser, fetchUserInfo } from "../../../redux/slices/authSlice";
-import { fetchUserVouchers } from "../../../redux/slices/voucherSlice";
 
 const CheckoutPage = () => {
   const dispatch = useDispatch();
@@ -34,16 +32,20 @@ const CheckoutPage = () => {
   });
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [selectedVoucher, setSelectedVoucher] = useState(null);
-  const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [error, setError] = useState(null);
   const [usedPoints, setUsedPoints] = useState(0);
+  const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [shippingFee, setShippingFee] = useState(0);
   const [filteredVouchers, setFilteredVouchers] = useState([]);
   const [availableVouchers, setAvailableVouchers] = useState([]);
   const [userPoints, setUserPoints] = useState(0);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [isLoadingVouchers, setIsLoadingVouchers] = useState(false);
+
+  // Refs to prevent repeated preview dispatches / navigations
+  const lastPreviewKeyRef = useRef("");
+  const previewDebounceRef = useRef(null);
+  const warnedNoSelectionRef = useRef(false);
 
   // Lấy preview từ navigation state nếu có
   const initialPreview = location.state?.preview;
@@ -54,6 +56,27 @@ const CheckoutPage = () => {
     dispatch(getCart());
   }, [dispatch]);
 
+  // Khôi phục selectedItems từ localStorage khi mount
+  useEffect(() => {
+    const savedSelectedItems = localStorage.getItem("selectedItems");
+    if (savedSelectedItems) {
+      const parsedItems = JSON.parse(savedSelectedItems);
+      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+        dispatch(setSelectedItems(parsedItems));
+      }
+    }
+  }, [dispatch]);
+
+  // Đồng bộ selectedItems với localStorage khi thay đổi
+  useEffect(() => {
+    if (selectedItems.length > 0) {
+      localStorage.setItem("selectedItems", JSON.stringify(selectedItems));
+    } else {
+      localStorage.removeItem("selectedItems");
+    }
+  }, [selectedItems]);
+
+  // Cập nhật formData khi user thay đổi
   useEffect(() => {
     const points = user?.address?.[0]?.user?.userPoint?.totalPoints || 0;
     setUserPoints(points);
@@ -64,27 +87,71 @@ const CheckoutPage = () => {
         useSavedAddress: true,
       }));
     }
-  }, [user]);
+  }, [user, formData.addressId, setFormData]);
 
-  console.log(selectedItems)
+  // Tạo danh sách id item trong cart để làm dependency ổn định
+  const cartItemIdsInCart = useMemo(
+    () => (cart?.items?.map((i) => i.cartItemId) || []),
+    [cart?.items]
+  );
 
-  // Gọi preview khi địa chỉ hoặc sản phẩm được chọn thay đổi
+  // Gọi preview khi địa chỉ, voucher, điểm thưởng, ghi chú, phương thức thanh toán hoặc selectedItems thay đổi
   useEffect(() => {
-    if (cart?.items?.length > 0 && formData.addressId && selectedItems.length > 0) {
+    // Dọn dẹp debounce trước đó nếu dependencies đổi
+    if (previewDebounceRef.current) {
+      clearTimeout(previewDebounceRef.current);
+      previewDebounceRef.current = null;
+    }
+
+    if (cartItemIdsInCart.length > 0 && formData.addressId && selectedItems.length > 0) {
+      const validSelectedItems = selectedItems.filter((id) =>
+        cartItemIdsInCart.includes(id)
+      );
+
+      if (validSelectedItems.length === 0) {
+        setError("Không có sản phẩm hợp lệ để thanh toán.");
+        if (!warnedNoSelectionRef.current) {
+          warnedNoSelectionRef.current = true;
+          navigate("/cart", { state: { error: "Vui lòng chọn sản phẩm để thanh toán." } });
+        }
+        return;
+      }
+
+      const sortedIds = [...validSelectedItems].sort((a, b) => a - b);
       const payload = {
         addressId: formData.addressId,
-        paymentMethod: "COD",
-        cartItemIds: selectedItems,
-        voucherId: 0,
-        usedPoints: 0,
-        note: "",
+        paymentMethod,
+        cartItemIds: sortedIds,
+        voucherId: selectedVoucher?.id || 0,
+        usedPoints: usedPoints || 0,
+        note: note || "",
       };
-      dispatch(checkoutSelectedItemsPreviewThunk(payload));
-    } else if (cart?.items?.length > 0 && selectedItems.length === 0) {
+
+      const previewKey = JSON.stringify(payload);
+      if (previewKey === lastPreviewKeyRef.current) {
+        return; // Không gọi lại nếu payload không đổi
+      }
+
+      // Debounce để tránh gọi API liên tục (đặc biệt khi đang gõ note)
+      previewDebounceRef.current = setTimeout(() => {
+        lastPreviewKeyRef.current = previewKey;
+        dispatch(checkoutSelectedItemsPreviewThunk(payload));
+      }, 300);
+    } else if (cartItemIdsInCart.length > 0 && selectedItems.length === 0) {
       setError("Vui lòng chọn ít nhất một sản phẩm để thanh toán.");
-      navigate("/cart", { state: { error: "Vui lòng chọn sản phẩm để thanh toán." } });
+      if (!warnedNoSelectionRef.current) {
+        warnedNoSelectionRef.current = true;
+        navigate("/cart", { state: { error: "Vui lòng chọn sản phẩm để thanh toán." } });
+      }
     }
-  }, [dispatch, cart, selectedItems, formData.addressId, navigate]);
+
+    return () => {
+      if (previewDebounceRef.current) {
+        clearTimeout(previewDebounceRef.current);
+        previewDebounceRef.current = null;
+      }
+    };
+  }, [formData.addressId, selectedVoucher?.id, usedPoints, note, paymentMethod, selectedItems, cartItemIdsInCart, dispatch, navigate]);
 
   // Đặt preview ban đầu từ navigation state
   useEffect(() => {
@@ -121,12 +188,12 @@ const CheckoutPage = () => {
 
   // Lọc các voucher hợp lệ
   useEffect(() => {
-    if (availableVouchers.length > 0 && preview?.totalAmount > 0) {
+    if (availableVouchers.length > 0 && preview?.subtotalBeforeDiscount > 0) {
       const validVouchers = availableVouchers.filter(
         (voucher) =>
           voucher.active &&
           new Date(voucher.endDate) > new Date() &&
-          preview.totalAmount >= (voucher.minOrderAmount || 0)
+          preview.subtotalBeforeDiscount >= (voucher.minOrderAmount || 0)
       );
       setFilteredVouchers(
         validVouchers.filter(
@@ -138,36 +205,12 @@ const CheckoutPage = () => {
     }
   }, [availableVouchers, preview]);
 
-  // Đặt phí vận chuyển từ preview hoặc tính lại
-  useEffect(() => {
-    if (preview?.shippingFee) {
-      setShippingFee(preview.shippingFee);
-    } else if (formData.addressId) {
-      const fetchShippingFee = async () => {
-        try {
-          const fee = await calculateShippingFee(formData.addressId);
-          setShippingFee(fee.total);
-        } catch (err) {
-          console.error("Tính phí vận chuyển thất bại", err);
-          setShippingFee(0);
-          setError("Không thể tính phí vận chuyển. Vui lòng kiểm tra địa chỉ.");
-        }
-      };
-      fetchShippingFee();
-    } else {
-      setShippingFee(0);
-    }
-  }, [preview, formData.addressId]);
-
-  // Tính tổng
-  const totalCartPrice = preview?.items?.reduce(
-    (sum, item) => sum + (item.priceAtTime * item.quantity || 0),
-    0
-  ) || 0;
-
-  const pointsDiscount = usedPoints;
-  const totalAfterDiscounts = Math.max(0, totalCartPrice - voucherDiscount - pointsDiscount);
-  const totalWithShipping = totalAfterDiscounts + shippingFee;
+  // Tính tổng từ preview
+  const totalCartPrice = preview?.subtotalBeforeDiscount || 0;
+  const voucherDiscount = preview?.discountAmount || 0;
+  const pointsDiscount = preview?.usedPoints || 0;
+  const totalWithShipping = preview?.totalAmount || 0;
+  const shippingFee = preview?.shippingFee || 0;
 
   // Tùy chọn điểm thưởng cho dropdown
   const getPointOptions = () => {
@@ -190,24 +233,12 @@ const CheckoutPage = () => {
   // Xử lý chọn voucher
   const handleSelectVoucher = (voucher) => {
     setSelectedVoucher(voucher);
-    let discount = 0;
-
-    if (voucher.discountPercent && voucher.discountPercent > 0) {
-      const percent = parseFloat(voucher.discountPercent);
-      const maxDiscount = parseFloat(voucher.maxDiscount || totalCartPrice);
-      discount = Math.min((totalCartPrice * percent) / 100, maxDiscount);
-    } else if (voucher.discountAmount && voucher.discountAmount > 0) {
-      discount = Math.min(parseFloat(voucher.discountAmount), totalCartPrice);
-    }
-
-    setVoucherDiscount(discount);
     setShowVoucherModal(false);
     Swal.fire("Voucher đã chọn", "Sẽ áp dụng khi thanh toán", "info");
   };
 
   const handleRemoveVoucher = () => {
     setSelectedVoucher(null);
-    setVoucherDiscount(0);
   };
 
   // Xử lý submit thanh toán
@@ -245,6 +276,7 @@ const CheckoutPage = () => {
         cartItemIds: selectedItems,
         voucherId: selectedVoucher?.id || 0,
         usedPoints,
+        note: note || "",
       };
 
       const result = await dispatch(checkoutSelectedItemsThunk(payload)).unwrap();
@@ -263,6 +295,10 @@ const CheckoutPage = () => {
         const totalPoints = updatedUser?.address?.[0]?.user?.userPoint?.totalPoints || 0;
         setUserPoints(totalPoints);
       }
+
+      // Xóa selectedItems khỏi localStorage sau khi thanh toán thành công
+      localStorage.removeItem("selectedItems");
+      dispatch(setSelectedItems([]));
 
       setIsSubmitting(false);
 
@@ -396,8 +432,13 @@ const CheckoutPage = () => {
                           </div>
                           <div className="text-sm">
                             <span className="text-gray-700">
-                              {(item.priceAtTime).toLocaleString("vi-VN")} ₫
+                              {item.priceAtTime.toLocaleString("vi-VN")} ₫
                             </span>
+                            {item.originalPrice && item.originalPrice !== item.priceAtTime && (
+                              <span className="text-gray-500 line-through text-sm ml-2">
+                                {item.originalPrice.toLocaleString("vi-VN")} ₫
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -421,6 +462,18 @@ const CheckoutPage = () => {
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Mã giảm giá & Điểm thưởng</h3>
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ghi chú cho đơn hàng
+                    </label>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      rows={3}
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Voucher khả dụng ({filteredVouchers.length})
@@ -479,7 +532,7 @@ const CheckoutPage = () => {
                         ))}
                       </select>
                     </div>
-                    {usedPoints > 0 && (
+                    {pointsDiscount > 0 && (
                       <div className="text-sm text-green-600 mt-1">
                         Tiết kiệm: {pointsDiscount.toLocaleString("vi-VN")} ₫
                       </div>
@@ -541,7 +594,7 @@ const CheckoutPage = () => {
                 onClick={handleSubmit}
                 className="w-full py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:bg-gray-300"
                 disabled={
-                  preview?.items?.length === 0 ||
+                  !preview?.items?.length ||
                   !formData.useSavedAddress ||
                   !formData.addressId ||
                   isSubmitting ||

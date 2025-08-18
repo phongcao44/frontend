@@ -78,7 +78,7 @@ const ProductCard = ({ product, onRemove }) => {
       : null;
   
   // Optimize image URL for Cloudinary
-  const baseImageUrl = imageUrl || "/public/assets/images/error.jpg";
+  const baseImageUrl = imageUrl || "/assets/images/error.jpg";
   const optimizedImageUrl = baseImageUrl.includes("cloudinary.com")
     ? `${baseImageUrl.replace(
         "/upload/",
@@ -101,7 +101,7 @@ const ProductCard = ({ product, onRemove }) => {
 
   // Handle image error
   const handleImageError = (e) => {
-    e.target.src = "/public/assets/images/error.jpg";
+    e.target.src = "/assets/images/error.jpg";
   };
 
   const handleNavigate = (e) => {

@@ -23,6 +23,7 @@ import {
   editProduct,
   removeProduct,
   loadProductById,
+  clearProductDetail,
 } from "../../../../redux/slices/productSlice";
 import { addProductVariant } from "../../../../redux/slices/productVariantSlice";
 import {
@@ -30,6 +31,7 @@ import {
   getProductSpecificationById,
   editProductSpecification,
   removeProductSpecification,
+  clearCurrentProductSpecification,
 } from "../../../../redux/slices/productSpecificationSlice";
 import {
   getProductImagesByProduct,
@@ -58,6 +60,7 @@ const ProductForm = () => {
     specifications: [],
   });
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -106,13 +109,30 @@ const ProductForm = () => {
 
   useEffect(() => {
     if (productId) {
+      // Clear stale detail/spec and reset local images before fetching
+      dispatch(clearProductDetail());
+      dispatch(clearCurrentProductSpecification());
+      setFileList([]);
+      // Reset form fields to avoid showing previous product's data while loading
+      form.resetFields();
+
+      // Fetch fresh data for the current product
       dispatch(loadProductById(productId));
       dispatch(getProductSpecificationById(productId));
       dispatch(getProductImagesByProduct(productId));
     } else {
-      // Reset fileList when creating a new product
+      // Creating a new product: reset local state and clear redux detail/spec
       setFileList([]);
+      dispatch(clearProductDetail());
+      dispatch(clearCurrentProductSpecification());
     }
+
+    return () => {
+      // Cleanup on unmount to prevent leaking previous product's data
+      dispatch(clearProductDetail());
+      dispatch(clearCurrentProductSpecification());
+      setFileList([]);
+    };
   }, [dispatch, productId]);
 
   useEffect(() => {
@@ -246,6 +266,7 @@ const ProductForm = () => {
 
   const handleSubmit = useCallback(
     async (values) => {
+      if (isSubmitting) return;
       if (!formData.variants.length) {
         message.error("Vui lòng thêm ít nhất một biến thể sản phẩm");
         return;
@@ -270,6 +291,7 @@ const ProductForm = () => {
       };
 
       try {
+        setIsSubmitting(true);
         const productResponse = await dispatch(
           addProduct(productData)
         ).unwrap();
@@ -317,13 +339,17 @@ const ProductForm = () => {
         navigate("/admin/products");
       } catch (err) {
         message.error("Thêm sản phẩm thất bại!");
+      } finally {
+        setIsSubmitting(false);
       }
     },
-    [dispatch, navigate, formData, shippingEnabled, fileList]
+    [dispatch, navigate, formData, shippingEnabled, fileList, isSubmitting]
   );
 
   const handleUpdate = useCallback(async () => {
     try {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
       const values = await form.validateFields();
       const currentSpecs = form.getFieldValue("specs") || [];
       if (!formData.variants.length) {
@@ -413,11 +439,18 @@ const ProductForm = () => {
         }
       }
 
+      // Refresh detail/spec/images so UI reflects latest server state without page reload
+      dispatch(loadProductById(productId));
+      dispatch(getProductSpecificationById(productId));
+      dispatch(getProductImagesByProduct(productId));
+
       message.success("Cập nhật sản phẩm thành công");
     } catch (err) {
       message.error(
         `Cập nhật sản phẩm thất bại: ${err.message || "Không xác định"}`
       );
+    } finally {
+      setIsSubmitting(false);
     }
   }, [
     dispatch,
@@ -428,6 +461,7 @@ const ProductForm = () => {
     stableSpecificationData,
     stableProductImages,
     fileList,
+    isSubmitting,
   ]);
 
   const handleDelete = useCallback(async () => {

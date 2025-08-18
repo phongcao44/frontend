@@ -8,8 +8,8 @@ const ProductSpecificationEditor = ({ form, specifications = [], onChange }) => 
   useEffect(() => {
     const normalizedSpecs = specifications.map((spec) => ({
       id: spec.id,
-      key: spec.key || spec.name || spec.specKey,
-      value: spec.value || spec.specValue,
+      key: spec.key || spec.name || spec.specKey || "",
+      value: spec.value || spec.specValue || "",
     }));
     form.setFieldsValue({ specs: normalizedSpecs });
     onChange(normalizedSpecs);
@@ -22,6 +22,55 @@ const ProductSpecificationEditor = ({ form, specifications = [], onChange }) => 
         spec.key?.trim().toLowerCase() === newKey?.trim().toLowerCase() &&
         newKey !== ""
     );
+  };
+
+  const validateKey = (_, value) => {
+    if (!value || !value.trim()) {
+      return Promise.reject(new Error("Tên thông số không được để trống"));
+    }
+    if (value.trim().length < 2 || value.trim().length > 50) {
+      return Promise.reject(new Error("Tên thông số phải từ 2 đến 50 ký tự"));
+    }
+    const validKeyPattern = /^[a-zA-Z0-9\s\-\&\/\(\)\.\u00C0-\u1EF9]*$/;
+    if (!validKeyPattern.test(value.trim())) {
+      return Promise.reject(
+        new Error(
+          "Tên thông số chỉ được chứa chữ, số, khoảng trắng, hoặc các ký tự -, &, /, (, ), ."
+        )
+      );
+    }
+    const hasHTML = /<[a-z][\s\S]*>/i.test(value);
+    if (hasHTML) {
+      return Promise.reject(new Error("Tên thông số không được chứa thẻ HTML"));
+    }
+    const specs = form.getFieldValue("specs") || [];
+    const currentIndex = _.field.split(".")[1];
+    if (checkForDuplicateKey(specs, value, Number(currentIndex))) {
+      return Promise.reject(new Error("Tên thông số đã tồn tại"));
+    }
+    return Promise.resolve();
+  };
+
+  const validateValue = (_, value) => {
+    if (!value || !value.trim()) {
+      return Promise.reject(new Error("Giá trị không được để trống"));
+    }
+    if (value.trim().length < 2 || value.trim().length > 500) {
+      return Promise.reject(new Error("Giá trị phải từ 2 đến 500 ký tự"));
+    }
+    const validValuePattern = /^[a-zA-Z0-9\s\-\&\/\(\)\.\%\:\,\u00C0-\u1EF9]*$/;
+    if (!validValuePattern.test(value.trim())) {
+      return Promise.reject(
+        new Error(
+          "Giá trị chỉ được chứa chữ, số, khoảng trắng, hoặc các ký tự -, &, /, (, ), ., %, :, ,"
+        )
+      );
+    }
+    const hasHTML = /<[a-z][\s\S]*>/i.test(value);
+    if (hasHTML) {
+      return Promise.reject(new Error("Giá trị không được chứa thẻ HTML"));
+    }
+    return Promise.resolve();
   };
 
   return (
@@ -47,41 +96,36 @@ const ProductSpecificationEditor = ({ form, specifications = [], onChange }) => 
                 <Form.Item
                   {...restField}
                   name={[name, "key"]}
-                  rules={[
-                    { required: true, message: "Nhập tên thông số" },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        const specs = getFieldValue("specs") || [];
-                        if (
-                          checkForDuplicateKey(specs, value, name)
-                        ) {
-                          return Promise.reject(
-                            new Error("Tên thông số đã tồn tại")
-                          );
-                        }
-                        return Promise.resolve();
-                      },
-                    }),
-                  ]}
+                  rules={[{ validator: validateKey }]}
                 >
                   <Input
                     placeholder="Tên thông số (VD: Màn hình)"
-                    onChange={() => {
-                      const updatedSpecs = form.getFieldValue("specs") || [];
-                      onChange(updatedSpecs);
+                    onChange={async () => {
+                      try {
+                        await form.validateFields([["specs", name, "key"]]);
+                        const updatedSpecs = form.getFieldValue("specs") || [];
+                        onChange(updatedSpecs);
+                      } catch (error) {
+                        // Skip onChange if validation fails
+                      }
                     }}
                   />
                 </Form.Item>
                 <Form.Item
                   {...restField}
                   name={[name, "value"]}
-                  rules={[{ required: true, message: "Nhập giá trị" }]}
+                  rules={[{ validator: validateValue }]}
                 >
                   <Input
                     placeholder="Giá trị (VD: AMOLED 6.5 inch)"
-                    onChange={() => {
-                      const updatedSpecs = form.getFieldValue("specs") || [];
-                      onChange(updatedSpecs);
+                    onChange={async () => {
+                      try {
+                        await form.validateFields([["specs", name, "value"]]);
+                        const updatedSpecs = form.getFieldValue("specs") || [];
+                        onChange(updatedSpecs);
+                      } catch (error) {
+                        // Skip onChange if validation fails
+                      }
                     }}
                   />
                 </Form.Item>
@@ -101,9 +145,7 @@ const ProductSpecificationEditor = ({ form, specifications = [], onChange }) => 
             <Button
               type="dashed"
               onClick={async () => {
-                const currentSpecs = form.getFieldValue("specs") || [];
                 const newSpec = { key: "", value: "" };
-
                 add(newSpec);
                 await form.validateFields(["specs"]).catch(() => {});
                 const updatedSpecs = form.getFieldValue("specs") || [];

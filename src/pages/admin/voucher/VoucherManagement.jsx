@@ -57,6 +57,7 @@ export default function VoucherManagement() {
     dispatch(fetchAllVouchers());
   }, [dispatch]);
 
+  
   const filteredVouchers = allVouchers
     .filter((v) => !v?.deleted)
     .filter(
@@ -176,12 +177,11 @@ export default function VoucherManagement() {
     return "N/A";
   };
 
-  const totalVouchers = filteredVouchers.length;
-  const activeVouchers = filteredVouchers.filter((v) => v.active).length;
-  const expiredVouchers = filteredVouchers.filter(
-    (v) => new Date(v.endDate) < new Date()
-  ).length;
-  const collectibleVouchers = filteredVouchers.filter((v) => v.collectible).length;
+  // Global stats (fixed, independent of filters)
+  const totalVouchers = allVouchers.filter((v) => !v?.deleted).length;
+  const activeVouchers = allVouchers.filter((v) => !v?.deleted && v.active).length;
+  const expiredVouchers = allVouchers.filter((v) => !v?.deleted && new Date(v.endDate) < new Date()).length;
+  const collectibleVouchers = allVouchers.filter((v) => !v?.deleted && v.collectible).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">

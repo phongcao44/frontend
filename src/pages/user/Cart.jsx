@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getCart,
@@ -15,69 +15,180 @@ const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { cart, selectedItems, loading, error } = useSelector((state) => state.cart);
+  const { cart, loading, itemLoading, error } = useSelector(
+    (state) => state.cart
+  );
   const { addresses } = useSelector((state) => state.address);
+  const { user } = useSelector((state) => state.auth);
 
+  // Sử dụng Redux state thay vì local state
+  const selectedItems = useSelector((state) => state.cart.selectedItems || []);
+
+  // Helper functions cho localStorage
+  const saveSelectedItemsToStorage = (items) => {
+    try {
+      if (Array.isArray(items) && items.length > 0) {
+        localStorage.setItem("selectedItems", JSON.stringify(items));
+      } else {
+        localStorage.removeItem("selectedItems");
+      }
+    } catch (err) {
+      console.error("Error saving selectedItems to localStorage:", err);
+    }
+  };
+
+  const loadSelectedItemsFromStorage = () => {
+    try {
+      const savedSelectedItems = localStorage.getItem("selectedItems");
+      if (savedSelectedItems) {
+        const parsedItems = JSON.parse(savedSelectedItems);
+        if (Array.isArray(parsedItems)) {
+          return parsedItems;
+        }
+      }
+    } catch (err) {
+      console.error("Error parsing selectedItems from localStorage:", err);
+    }
+    return [];
+  };
+
+  // Load cart và addresses
   useEffect(() => {
     dispatch(getCart());
     dispatch(getAddresses());
+  }, [dispatch, user]);
+
+  // Initialize selectedItems from localStorage khi component mount
+  useEffect(() => {
+    // Chỉ load từ localStorage nếu selectedItems trong Redux chưa có giá trị
+    if (!selectedItems.length) {
+      const savedItems = loadSelectedItemsFromStorage();
+      if (savedItems.length > 0) {
+        dispatch(setSelectedItems(savedItems));
+      }
+    }
   }, [dispatch]);
 
+  // Sync selectedItems với localStorage mỗi khi selectedItems thay đổi
   useEffect(() => {
-    // Initialize selectedItems in Redux only if it's empty and cart items exist
-    if (cart?.items?.length > 0 && selectedItems.length === 0) {
-      const initialSelected = cart.items.map((item) => item.cartItemId);
-      dispatch(setSelectedItems(initialSelected));
+    saveSelectedItemsToStorage(selectedItems);
+  }, [selectedItems]);
+
+  // Validate và clean up selectedItems khi cart items thay đổi
+  useEffect(() => {
+    if (loading || !cart?.items) return; // Không xử lý khi đang loading hoặc cart chưa sẵn sàng
+
+    const validItems = selectedItems.filter((id) =>
+      cart.items.some((item) => item.cartItemId === id)
+    );
+
+    // Chỉ dispatch nếu selectedItems có thay đổi
+    if (validItems.length !== selectedItems.length ||
+        validItems.some((id, index) => id !== selectedItems[index])) {
+      dispatch(setSelectedItems(validItems));
     }
-  }, [cart, selectedItems, dispatch]);
+  }, [cart?.items, loading, selectedItems, dispatch]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("Cart state:", {
+      cartItems: cart?.items,
+      selectedItems,
+      isAllSelected: cart?.items?.length > 0 && selectedItems.length === cart?.items?.length,
+      loading,
+      cartItemsLength: cart?.items?.length,
+    });
+  }, [cart?.items, selectedItems, loading]);
 
   const handleQuantityChange = async (cartItemId, delta) => {
-    if (!selectedItems.includes(cartItemId)) return;
+    if (!selectedItems.includes(cartItemId) || itemLoading[cartItemId]) return;
 
     const item = cart.items.find((item) => item.cartItemId === cartItemId);
     const newQty = (item.quantity || 0) + delta;
 
-    if (newQty <= 0) {
-      await dispatch(removeItemFromCart(cartItemId));
-    } else {
-      await dispatch(updateCartItemQuantity({ cartItemId, quantity: newQty }));
+    if (newQty < 1) {
+      try {
+        await dispatch(removeItemFromCart(cartItemId)).unwrap();
+      } catch (err) {
+        Swal.fire(
+          "Lỗi",
+          err.payload?.message || "Xóa sản phẩm thất bại, vui lòng thử lại.",
+          "error"
+        );
+      }
+      return;
+    }
+
+    if (newQty > item.stockQuantity) {
+      Swal.fire("Thông báo", "Số lượng vượt quá tồn kho.", "warning");
+      return;
+    }
+
+    try {
+      await dispatch(
+        updateCartItemQuantity({ cartItemId, quantity: newQty })
+      ).unwrap();
+    } catch (err) {
+      Swal.fire(
+        "Lỗi",
+        err.payload?.message || "Cập nhật số lượng thất bại, vui lòng thử lại.",
+        "error"
+      );
     }
   };
 
   const handleRemoveItem = async (cartItemId) => {
-    await dispatch(removeItemFromCart(cartItemId));
+    if (itemLoading[cartItemId]) return;
+
+    try {
+      await dispatch(removeItemFromCart(cartItemId)).unwrap();
+    } catch (err) {
+      Swal.fire(
+        "Lỗi",
+        err.payload?.message || "Xóa sản phẩm thất bại, vui lòng thử lại.",
+        "error"
+      );
+    }
   };
 
   const handleSelectItem = (cartItemId) => {
-    dispatch(
-      setSelectedItems(
-        selectedItems.includes(cartItemId)
-          ? selectedItems.filter((id) => id !== cartItemId)
-          : [...selectedItems, cartItemId]
-      )
-    );
+    // Ensure the cartItemId exists in cart.items
+    if (!cart?.items?.some((item) => item.cartItemId === cartItemId)) {
+      console.warn(`Invalid cartItemId ${cartItemId} selected`);
+      return;
+    }
+
+    const newSelectedItems = selectedItems.includes(cartItemId)
+      ? selectedItems.filter((id) => id !== cartItemId)
+      : [...selectedItems, cartItemId];
+    
+    console.log("Selecting/Deselecting item:", { cartItemId, newSelectedItems });
+    dispatch(setSelectedItems(newSelectedItems));
   };
 
   const handleSelectAll = () => {
-    dispatch(
-      setSelectedItems(
-        selectedItems.length === cart?.items?.length
-          ? []
-          : cart.items.map((item) => item.cartItemId)
-      )
-    );
+    if (!cart?.items?.length) {
+      console.log("No items to select");
+      return;
+    }
+
+    const allItemIds = cart.items.map((item) => item.cartItemId);
+    const isAllSelected = selectedItems.length === allItemIds.length;
+
+    console.log("handleSelectAll triggered", {
+      selectedItemsLength: selectedItems.length,
+      cartItemsLength: cart?.items?.length,
+      cartItems: allItemIds,
+    });
+
+    if (isAllSelected) {
+      console.log("Deselecting all items");
+      dispatch(setSelectedItems([]));
+    } else {
+      console.log("Selecting all items:", allItemIds);
+      dispatch(setSelectedItems(allItemIds));
+    }
   };
-
-  const subtotal =
-    cart?.items?.reduce((sum, item) => {
-      if (selectedItems.includes(item.cartItemId)) {
-        return sum + (item.totalPrice || 0);
-      }
-      return sum;
-    }, 0) || 0;
-
-  const shippingFee = 0;
-  const total = subtotal + shippingFee;
 
   const handleProceedToCheckout = async () => {
     if (selectedItems.length === 0) {
@@ -93,17 +204,18 @@ const Cart = () => {
 
     try {
       const payload = {
-        addressId: addresses[0].addressId, // TODO: Allow user to select address
-        paymentMethod: "COD", // TODO: Allow user to select payment method
+        addressId: addresses[0].addressId,
+        paymentMethod: "COD",
         cartItemIds: selectedItems,
         voucherId: 0,
         usedPoints: 0,
         note: "",
       };
+      console.log("Proceeding to checkout with selectedItems:", selectedItems);
       const result = await dispatch(checkoutSelectedItemsPreviewThunk(payload)).unwrap();
       navigate("/checkout", { state: { preview: result } });
     } catch (err) {
-      console.error("Xem trước thanh toán thất bại:", err);
+      console.error("Checkout preview failed:", err);
       Swal.fire("Lỗi", err.message || "Không thể tải thông tin xem trước đơn hàng.", "error");
     }
   };
@@ -126,6 +238,8 @@ const Cart = () => {
     return variants.join(" | ") || "";
   };
 
+  const isAllSelected = cart?.items?.length > 0 && selectedItems.length === cart?.items?.length;
+
   return (
     <div className="min-h-screen bg-white py-8">
       <div className="max-w-7xl mx-auto px-4">
@@ -147,12 +261,12 @@ const Cart = () => {
             <div className="font-medium flex items-center">
               <input
                 type="checkbox"
-                checked={cart?.items?.length > 0 && selectedItems.length === cart.items.length}
+                checked={isAllSelected}
                 onChange={handleSelectAll}
                 className="h-5 w-5 text-red-500 mr-2"
-                disabled={loading}
+                disabled={loading || !cart?.items?.length}
               />
-              Chọn tất cả
+              {isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
             </div>
             <div className="font-medium">Sản phẩm</div>
             <div className="font-medium">Giá</div>
@@ -175,7 +289,7 @@ const Cart = () => {
                     checked={selectedItems.includes(item.cartItemId)}
                     onChange={() => handleSelectItem(item.cartItemId)}
                     className="h-5 w-5 text-red-500"
-                    disabled={loading}
+                    disabled={loading || itemLoading[item.cartItemId]}
                   />
                 </div>
                 <div className="flex items-center space-x-4">
@@ -196,24 +310,26 @@ const Cart = () => {
                   </div>
                 </div>
                 <div className="text-black">
-                  {item.discountedPrice && item.discountedPrice !== item.originalPrice ? (
-                    <div className="flex flex-col">
-                      <span className="text-red-500 font-medium">
-                        {(item.discountedPrice || 0).toLocaleString("vi-VN")} ₫
-                      </span>
+                  <div className="flex flex-col">
+                    <span className="text-red-500 font-medium">
+                      {(item.discountedPrice || item.originalPrice || 0).toLocaleString("vi-VN")} ₫
+                    </span>
+                    {item.discountedPrice !== item.originalPrice && (
                       <span className="text-gray-500 line-through text-sm">
                         {(item.originalPrice || 0).toLocaleString("vi-VN")} ₫
                       </span>
-                    </div>
-                  ) : (
-                    <span>{(item.originalPrice || 0).toLocaleString("vi-VN")} ₫</span>
-                  )}
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, -1)}
                     className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    disabled={loading || !selectedItems.includes(item.cartItemId)}
+                    disabled={
+                      itemLoading[item.cartItemId] ||
+                      !selectedItems.includes(item.cartItemId) ||
+                      item.quantity <= 1
+                    }
                   >
                     -
                   </button>
@@ -221,7 +337,11 @@ const Cart = () => {
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, 1)}
                     className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    disabled={loading || !selectedItems.includes(item.cartItemId)}
+                    disabled={
+                      itemLoading[item.cartItemId] ||
+                      !selectedItems.includes(item.cartItemId) ||
+                      item.quantity >= item.stockQuantity
+                    }
                   >
                     +
                   </button>
@@ -233,7 +353,7 @@ const Cart = () => {
                   <button
                     onClick={() => handleRemoveItem(item.cartItemId)}
                     className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                    disabled={loading}
+                    disabled={loading || itemLoading[item.cartItemId]}
                   >
                     Xóa
                   </button>
@@ -289,11 +409,15 @@ const Cart = () => {
               <div className="space-y-4">
                 <div className="flex justify-between py-3 border-b">
                   <span>Tạm tính:</span>
-                  <span className="font-medium">{subtotal.toLocaleString("vi-VN")} ₫</span>
+                  <span className="font-medium">{(cart.subtotal || 0).toLocaleString("vi-VN")} ₫</span>
+                </div>
+                <div className="flex justify-between py-3 border-b">
+                  <span>Giảm giá:</span>
+                  <span className="font-medium">{(cart.discount || 0).toLocaleString("vi-VN")} ₫</span>
                 </div>
                 <div className="flex justify-between py-3 text-lg font-medium">
                   <span>Tổng cộng:</span>
-                  <span className="text-red-500">{total.toLocaleString("vi-VN")} ₫</span>
+                  <span className="text-red-500">{(cart.grandTotal || 0).toLocaleString("vi-VN")} ₫</span>
                 </div>
               </div>
               <button

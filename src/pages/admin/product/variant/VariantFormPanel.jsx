@@ -36,12 +36,18 @@ export default function VariantFormPanel({
 }) {
   const dispatch = useDispatch();
   const barcodeRef = useRef(null);
+  const [errors, setErrors] = useState({});
 
   const [colorModalVisible, setColorModalVisible] = useState(false);
   const [sizeModalVisible, setSizeModalVisible] = useState(false);
 
   const [newColor, setNewColor] = useState({ name: "", hexCode: "#000000" });
   const [newSize, setNewSize] = useState({ name: "", description: "" });
+
+  // Reset errors when isEditMode or variantForm changes
+  useEffect(() => {
+    setErrors({});
+  }, [isEditMode, variantForm]);
 
   // Generate barcode display when barcode value exists
   useEffect(() => {
@@ -111,10 +117,36 @@ export default function VariantFormPanel({
   const isValidHexColor = (hex) => /^#[0-9A-F]{6}$/i.test(hex);
 
   const validateVariant = () => {
+    const newErrors = {};
+
     // Check if both colorId and sizeId are null
     if (!variantForm.colorId && !variantForm.sizeId) {
       message.warning("Vui lòng chọn ít nhất một màu sắc hoặc kích thước!");
       return false;
+    }
+
+    // Validate price
+    if (variantForm.price === null || variantForm.price === undefined) {
+      newErrors.price = "Vui lòng nhập giá bán!";
+    } else if (isNaN(variantForm.price)) {
+      newErrors.price = "Giá bán phải là số!";
+    } else if (variantForm.price <= 0) {
+      newErrors.price = "Giá bán phải lớn hơn 0!";
+    } else if (variantForm.price > 1000000000) {
+      newErrors.price = "Giá bán không được vượt quá 1 tỷ đồng!";
+    }
+
+    // Validate stock
+    if (variantForm.stock === null || variantForm.stock === undefined) {
+      newErrors.stock = "Vui lòng nhập số lượng tồn!";
+    } else if (isNaN(variantForm.stock)) {
+      newErrors.stock = "Số lượng tồn phải là số!";
+    } else if (variantForm.stock < 0) {
+      newErrors.stock = "Số lượng tồn không được âm!";
+    } else if (!Number.isInteger(variantForm.stock)) {
+      newErrors.stock = "Số lượng tồn phải là số nguyên!";
+    } else if (variantForm.stock > 1000000) {
+      newErrors.stock = "Số lượng tồn không được vượt quá 1 triệu!";
     }
 
     // Check for duplicate variant
@@ -128,38 +160,13 @@ export default function VariantFormPanel({
 
     if (duplicate) {
       message.warning("Biến thể với màu và kích thước này đã tồn tại!");
-      return false;
+      newErrors.colorId = "Biến thể trùng lặp!";
+      newErrors.sizeId = "Biến thể trùng lặp!";
     }
 
-    // Validate price
-    if (variantForm.price === null || variantForm.price === undefined) {
-      message.warning("Vui lòng nhập giá bán!");
-      return false;
-    }
-    if (isNaN(variantForm.price) || variantForm.price <= 0) {
-      message.warning("Giá bán phải là số dương lớn hơn 0!");
-      return false;
-    }
-    if (variantForm.price > 1000000000) {
-      message.warning("Giá bán không được vượt quá 1 tỷ đồng!");
-      return false;
-    }
-
-    // Validate stock
-    if (variantForm.stock === null || variantForm.stock === undefined) {
-      message.warning("Vui lòng nhập số lượng tồn!");
-      return false;
-    }
-    if (isNaN(variantForm.stock) || variantForm.stock < 0) {
-      message.warning("Số lượng tồn phải là số không âm!");
-      return false;
-    }
-    if (!Number.isInteger(variantForm.stock)) {
-      message.warning("Số lượng tồn phải là số nguyên!");
-      return false;
-    }
-    if (variantForm.stock > 1000000) {
-      message.warning("Số lượng tồn không được vượt quá 1 triệu!");
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      message.warning("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu!");
       return false;
     }
 
@@ -186,10 +193,14 @@ export default function VariantFormPanel({
         <Title level={5}>Màu sắc</Title>
         <Select
           value={variantForm.colorId}
-          onChange={(value) => onChange("colorId", value)}
+          onChange={(value) => {
+            onChange("colorId", value);
+            setErrors((prev) => ({ ...prev, colorId: null }));
+          }}
           style={{ width: "100%" }}
           placeholder="Chọn màu"
           allowClear
+          status={errors.colorId ? "error" : ""}
         >
           {colors.map((c) => (
             <Option key={c.id} value={c.id}>
@@ -197,6 +208,11 @@ export default function VariantFormPanel({
             </Option>
           ))}
         </Select>
+        {errors.colorId && (
+          <div style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "4px" }}>
+            {errors.colorId}
+          </div>
+        )}
         {!isEditMode && (
           <Button
             type="link"
@@ -214,6 +230,7 @@ export default function VariantFormPanel({
           value={variantForm.sizeId}
           onChange={(value) => {
             onChange("sizeId", value);
+            setErrors((prev) => ({ ...prev, sizeId: null }));
             // In ra sizeId được chọn
             console.log("Size ID được chọn:", value);
             // Tìm và in thông tin chi tiết của size
@@ -226,6 +243,7 @@ export default function VariantFormPanel({
           style={{ width: "100%" }}
           placeholder="Chọn size"
           allowClear
+          status={errors.sizeId ? "error" : ""}
         >
           {sizes.map((s) => (
             <Option key={s.id} value={s.id}>
@@ -233,6 +251,11 @@ export default function VariantFormPanel({
             </Option>
           ))}
         </Select>
+        {errors.sizeId && (
+          <div style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "4px" }}>
+            {errors.sizeId}
+          </div>
+        )}
         {!isEditMode && (
           <Button
             type="link"
@@ -249,7 +272,10 @@ export default function VariantFormPanel({
         <InputNumber
           value={variantForm.price}
           style={{ width: "100%" }}
-          onChange={(value) => onChange("price", value)}
+          onChange={(value) => {
+            onChange("price", value);
+            setErrors((prev) => ({ ...prev, price: null }));
+          }}
           formatter={(value) =>
             `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           }
@@ -257,7 +283,13 @@ export default function VariantFormPanel({
           addonAfter="₫"
           min={0}
           step={1000}
+          status={errors.price ? "error" : ""}
         />
+        {errors.price && (
+          <div style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "4px" }}>
+            {errors.price}
+          </div>
+        )}
       </div>
 
       <div>
@@ -265,11 +297,20 @@ export default function VariantFormPanel({
         <InputNumber
           value={variantForm.stock}
           style={{ width: "100%" }}
-          onChange={(value) => onChange("stock", value)}
+          onChange={(value) => {
+            onChange("stock", value);
+            setErrors((prev) => ({ ...prev, stock: null }));
+          }}
           min={0}
           step={1}
           precision={0} // Ensure integer input
+          status={errors.stock ? "error" : ""}
         />
+        {errors.stock && (
+          <div style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "4px" }}>
+            {errors.stock}
+          </div>
+        )}
       </div>
 
       {/* SKU */}
@@ -278,7 +319,8 @@ export default function VariantFormPanel({
         <Input
           value={variantForm.sku}
           onChange={(e) => onChange("sku", e.target.value)}
-          placeholder="Nhập SKU"
+          placeholder="SKU sẽ được tự động tạo"
+          disabled={true} // Disable SKU input
         />
       </div>
 
@@ -289,7 +331,7 @@ export default function VariantFormPanel({
           value={variantForm.barcode}
           onChange={(e) => onChange("barcode", e.target.value)}
           placeholder="Barcode sẽ được tự động tạo"
-          disabled={!isEditMode} // Disable input if not in edit mode since backend generates it
+          disabled={true} // Disable Barcode input
         />
 
         {/* Barcode Display - Only show when barcode exists */}
