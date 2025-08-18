@@ -10,6 +10,7 @@ import {
   updateUserDetailThunk,
 } from "../../../../redux/slices/userSlice";
 import { loadPaginatedOrders } from "../../../../redux/slices/orderSlice";
+import { fetchVouchersByUserId } from "../../../../redux/slices/voucherSlice";
 import { useParams } from "react-router-dom";
 
 // Static list of all roles (replace with API fetch if needed)
@@ -158,25 +159,20 @@ export default function useUserDetail() {
     }
   }, [userDetail, orders, totalElements]);
 
+  // Lấy vouchers từ Redux store
+  const { userSpecificVouchers = [], loading: voucherLoading, error: voucherError } = useSelector((state) => state.voucher);
+  
+  // Fetch vouchers khi userId thay đổi
+  useEffect(() => {
+    if (userId) {
+      dispatch(fetchVouchersByUserId(userId));
+    }
+  }, [dispatch, userId]);
+  
+  // Chuẩn hóa dữ liệu voucher
   const vouchers = useMemo(
-    () =>
-      normalizeNull([
-        {
-          id: "VOU001",
-          code: "WELCOME20",
-          discount: "20%",
-          usedAt: "2024-12-10",
-          status: "Used",
-        },
-        {
-          id: "VOU002",
-          code: "FREESHIP",
-          discount: "Free Ship",
-          usedAt: "2024-11-28",
-          status: "Used",
-        },
-      ]),
-    []
+    () => normalizeNull(userSpecificVouchers),
+    [userSpecificVouchers]
   );
 
   // Handle pagination change
@@ -453,9 +449,9 @@ export default function useUserDetail() {
     itemsPerPage: pagination.limit,
     pagination,
     vouchers,
-    error: error || reduxError || orderError,
+    error: error || reduxError || orderError || voucherError,
     success,
-    isLoading: isLoading || userLoading || orderLoading,
+    isLoading: isLoading || userLoading || orderLoading || voucherLoading,
     handlers,
     formatDate,
     formatCurrency,

@@ -14,12 +14,13 @@ export default function UserManagement() {
     rankFilter,
     tabs,
     error,
+    statistics, // Keep statistics for tab counts
     handlers,
     pagination,
     filters,
   } = useUserManagement();
 
-  console.log(pagination)
+  console.log(pagination, statistics);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -51,32 +52,48 @@ export default function UserManagement() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
+      {/* Tabs - Sticky with Fixed Counts */}
+      <div className="bg-white border-b border-gray-200 sticky top-[72px] z-10">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.name}
-                onClick={() => handlers.handleTabChange(tab.name)}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
-                  activeTab === tab.name
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+            <button
+              onClick={() => handlers.handleTabChange("Tất cả khách hàng")}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
+                activeTab === "Tất cả khách hàng"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+              }`}
+            >
+              <span>Tất cả khách hàng</span>
+              <span
+                className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                  activeTab === "Tất cả khách hàng"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-600"
                 }`}
               >
-                <span>{tab.name}</span>
-                <span
-                  className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                    activeTab === tab.name
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            ))}
+                {statistics.totalAccounts}
+              </span>
+            </button>
+            <button
+              onClick={() => handlers.handleTabChange("Khách hàng VIP")}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
+                activeTab === "Khách hàng VIP"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+              }`}
+            >
+              <span>Khách hàng VIP</span>
+              <span
+                className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                  activeTab === "Khách hàng VIP"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {statistics.totalKimCuongUsers}
+              </span>
+            </button>
           </div>
         </div>
       </div>

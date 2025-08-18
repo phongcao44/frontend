@@ -96,7 +96,7 @@ export default function OrderManagement() {
         sortBy,
         orderBy,
         status:
-          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+          statusFilter || (activeTab === "Chờ xử lý" ? "PENDING" : ""),
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
@@ -111,7 +111,7 @@ export default function OrderManagement() {
         sortBy,
         orderBy,
         status:
-          statusFilter || (activeTab === "Chưa thanh toán" ? "PENDING" : ""),
+          statusFilter || (activeTab === "Chờ xử lý" ? "PENDING" : ""),
         keyword: searchTerm,
       })
     ).finally(() => setTimeout(() => setIsLoading(false), 500));
@@ -155,7 +155,7 @@ export default function OrderManagement() {
   const tabs = [
     { name: "Tất cả đơn hàng", count: statistics?.totalOrders ?? totalElements },
     {
-      name: "Chưa thanh toán",
+      name: "Chờ xử lý",
       count: statistics?.totalPendingOrders ?? 0,
     },
   ];
@@ -264,7 +264,7 @@ export default function OrderManagement() {
                   setCurrentPage(0);
                   if (tab.name === "Tất cả đơn hàng") {
                     setStatusFilter("");
-                  } else if (tab.name === "Chưa thanh toán") {
+                  } else if (tab.name === "Chờ xử lý") {
                     setStatusFilter("PENDING");
                   }
                 }}
@@ -352,17 +352,19 @@ export default function OrderManagement() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
-              <select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {activeTab !== "Chờ xử lý" && (
+                <select
+                  value={statusFilter}
+                  onChange={handleStatusFilterChange}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <select
                 onChange={(e) => {
                   const [newSortBy, newOrderBy] = e.target.value.split(":");
