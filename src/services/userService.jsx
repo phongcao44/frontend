@@ -16,6 +16,20 @@ export const addUser = async (userData) => {
 };
 
 /**
+ * Get user statistics
+ * @returns {Promise<any>}
+ */
+export const getUserStatistics = async () => {
+  try {
+    const response = await axiosInstance.get("/admin/users/stats");
+    return response.data;
+  } catch (error) {
+    console.error("getUserStatistics error:", error);
+    throw extractApiError(error);
+  }
+};
+
+/**
  * Call API get all users with pagination & filter
  * @param {Object} params - { page, size, sortBy, orderBy, keyword, status }
  * @returns {Promise<any>}

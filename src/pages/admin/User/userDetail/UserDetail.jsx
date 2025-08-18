@@ -1,14 +1,15 @@
 import { useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import useUserDetail from "./useUserDetail";
 import UserProfileCard from "./UserProfileCard";
 import TabContent from "./TabContent";
 import ContactInfo from "./ContactInfo";
 import AddressInfo from "./AddressInfo";
 import Modals from "./Modals";
-import { Key, X } from "lucide-react";
 
 export default function UserDetail() {
+  const navigate = useNavigate();
   const {
     showEmailModal,
     showRoleModal,
@@ -39,7 +40,7 @@ export default function UserDetail() {
   useEffect(() => {
     if (error) {
       toast.error(error, {
-        id: "error-user-detail", // Fixed ID to prevent duplicate toasts
+        id: "error-user-detail", // prevent duplicate
         position: "top-right",
         duration: 3000,
         style: {
@@ -59,7 +60,7 @@ export default function UserDetail() {
     }
     if (success) {
       toast.success(success, {
-        id: "success-user-detail", // Fixed ID to prevent duplicate toasts
+        id: "success-user-detail", // prevent duplicate
         position: "top-right",
         duration: 3000,
         style: {
@@ -91,13 +92,34 @@ export default function UserDetail() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Quản lý người dùng
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Thông tin chi tiết và quản lý tài khoản người dùng
-              </p>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate("/admin/users")}
+                className="flex items-center justify-center p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">
+                  Quản lý người dùng
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Thông tin chi tiết và quản lý tài khoản người dùng
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -160,7 +182,7 @@ export default function UserDetail() {
           handlers={handlers}
         />
       </div>
-      {/* Toast container for react-hot-toast */}
+      {/* Toast container */}
       <Toaster />
     </div>
   );

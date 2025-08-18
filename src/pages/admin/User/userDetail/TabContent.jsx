@@ -376,15 +376,13 @@ export default function TabContent({
                           {voucher?.code || "N/A"}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Sử dụng: {voucher?.usedAt ? formatDate(voucher.usedAt) : "N/A"}
+                          Giảm: {voucher?.discountPercent ? `${voucher.discountPercent}%` : "N/A"}
+                          {voucher?.maxDiscount ? ` (tối đa ${formatCurrency(voucher.maxDiscount)})` : ""}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-green-600">
-                          {voucher?.discount || "N/A"}
-                        </p>
-                        <span className="text-xs text-gray-500">
-                          {voucher?.status || "N/A"}
+                        <span className={`px-2 py-1 text-xs rounded-full ${voucher?.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {voucher?.active ? "Đang hoạt động" : "Không hoạt động"}
                         </span>
                       </div>
                     </div>

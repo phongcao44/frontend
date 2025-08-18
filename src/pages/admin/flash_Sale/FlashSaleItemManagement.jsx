@@ -9,6 +9,11 @@ import {
   X,
   Edit2,
   Trash2,
+  ShoppingBag,
+  Clock,
+  Calendar,
+  DollarSign,
+  Percent,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import Select from "react-select";
@@ -100,6 +105,9 @@ export default function FlashSaleItemManagement({ onBack }) {
   };
 
   const handleProductSearchChange = (inputValue, { action } = {}) => {
+    // Ngăn chặn hành vi mặc định để tránh tải lại trang
+    event && event.preventDefault && event.preventDefault();
+    
     // Chỉ tìm kiếm khi người dùng thực sự gõ vào ô input của Select
     if (action === "input-change") {
       debouncedProductSearch(inputValue);
@@ -483,7 +491,8 @@ export default function FlashSaleItemManagement({ onBack }) {
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="mb-4 sm:mb-0">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+                <ShoppingBag className="h-8 w-8 mr-2 text-blue-600" />
                 Sản phẩm Flash Sale: {safe(selectedFlashSale.name)}
               </h1>
               <p className="text-sm text-gray-600 mt-1">
@@ -534,6 +543,9 @@ export default function FlashSaleItemManagement({ onBack }) {
                 options={productOptions}
                 value={productOptions.find((option) => option.value === form.productId) || null}
                 onChange={(selected) => {
+                  // Ngăn chặn hành vi mặc định để tránh tải lại trang
+                  event && event.preventDefault && event.preventDefault();
+                  
                   // X bấm clear -> selected = null
                   if (!selected) {
                     setForm({

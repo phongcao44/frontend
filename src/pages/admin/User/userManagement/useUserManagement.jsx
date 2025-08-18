@@ -7,6 +7,7 @@ import {
   updateUserStatus,
   updateUserRole,
   clearError,
+  fetchUserStatistics, // Added new import
 } from "../../../../redux/slices/userSlice";
 
 // Debounce utility with cancel
@@ -23,7 +24,7 @@ const debounce = (func, wait) => {
 export default function useUserManagement() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { users, loading, error } = useSelector((state) => state.users);
+  const { users, loading, error, userStatistics } = useSelector((state) => state.users);
   
   // Ref để theo dõi request đang pending
   const pendingRequestRef = useRef(null);
@@ -45,6 +46,13 @@ export default function useUserManagement() {
   }, [users]);
   const totalPages = users?.data?.totalPages || 1;
   const totalElements = users?.data?.totalElements || 0;
+  const statistics = useMemo(() => {
+    return userStatistics?.data || {
+      totalAccounts: 0,
+      totalUsers: 0,
+      totalKimCuongUsers: 0
+    };
+  }, [userStatistics]);
 
   // Filter options
   const statusOptions = [
@@ -67,22 +75,20 @@ export default function useUserManagement() {
       { name: "Tất cả khách hàng", count: totalElements },
       {
         name: "Khách hàng VIP",
-        count: customers.filter((c) => c.userRank === "KIMCUONG").length || 0,
+        count: statistics.totalKimCuongUsers || 0,
       },
     ],
-    [totalElements, customers]
+    [totalElements, statistics]
   );
 
-  // Fetch users function - không sử dụng useCallback ở đây
+  // Fetch users function
   const fetchUsers = (params = {}) => {
-    // Hủy request trước đó nếu có
     if (pendingRequestRef.current) {
       pendingRequestRef.current.abort();
     }
 
     setIsLoading(true);
     
-    // Lấy giá trị mới nhất từ params hoặc state hiện tại
     const {
       page = currentPage,
       size = itemsPerPage,
@@ -99,15 +105,15 @@ export default function useUserManagement() {
       size,
       sortBy: newSortBy,
       orderBy: newOrderBy,
-      ...(keyword && { keyword }), // Chỉ thêm nếu có giá trị
-      ...(status && { status }), // Chỉ thêm nếu có giá trị
+      ...(keyword && { keyword }),
+      ...(status && { status }),
       ...(tab === "Khách hàng VIP" 
         ? { rank: "KIMCUONG" } 
-        : rank && { rank } // Chỉ thêm nếu có giá trị
+        : rank && { rank }
       ),
     };
 
-    console.log('Fetching with filters:', filters); // Debug log
+    console.log('Fetching with filters:', filters);
 
     const requestPromise = dispatch(fetchUsersPaginateAndFilter(filters));
     pendingRequestRef.current = requestPromise;
@@ -119,7 +125,6 @@ export default function useUserManagement() {
         pendingRequestRef.current = null;
       })
       .catch((err) => {
-        // Chỉ set loading false nếu không phải lỗi do abort
         if (err.name !== 'AbortError') {
           setIsLoading(false);
         }
@@ -129,12 +134,32 @@ export default function useUserManagement() {
     return requestPromise;
   };
 
-  // Debounced search - tách riêng cho search
+  // Fetch statistics function
+  const fetchStatistics = () => {
+    const requestPromise = dispatch(fetchUserStatistics());
+    pendingRequestRef.current = requestPromise;
+
+    requestPromise
+      .unwrap()
+      .then(() => {
+        pendingRequestRef.current = null;
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Statistics fetch error:', err);
+        }
+        pendingRequestRef.current = null;
+      });
+
+    return requestPromise;
+  };
+
+  // Debounced search
   const debouncedFetchUsers = useMemo(
     () => debounce((searchValue) => {
       fetchUsers({ 
         keyword: searchValue, 
-        page: 0 // Reset về trang đầu khi search
+        page: 0
       });
     }, 500),
     [currentPage, itemsPerPage, sortBy, orderBy, statusFilter, rankFilter, activeTab]
@@ -146,7 +171,6 @@ export default function useUserManagement() {
     setSearchTerm(value);
     setCurrentPage(0);
     
-    // Hủy debounce trước đó và tạo mới
     debouncedFetchUsers.cancel();
     debouncedFetchUsers(value);
   };
@@ -160,7 +184,6 @@ export default function useUserManagement() {
       setRankFilter(null);
     }
     
-    // Gọi fetchUsers ngay lập tức với tab mới
     fetchUsers({ 
       tab: tabName, 
       page: 0,
@@ -172,6 +195,7 @@ export default function useUserManagement() {
     debouncedFetchUsers.cancel();
     setCurrentPage(0);
     fetchUsers({ page: 0 });
+    fetchStatistics(); // Refresh statistics as well
   };
 
   const handlePageChange = (page, newItemsPerPage) => {
@@ -192,7 +216,6 @@ export default function useUserManagement() {
     setStatusFilter(newStatus);
     setCurrentPage(0);
     
-    // Gọi fetchUsers ngay lập tức với filter mới
     fetchUsers({ 
       status: newStatus, 
       page: 0 
@@ -209,7 +232,6 @@ export default function useUserManagement() {
       setActiveTab("Tất cả khách hàng");
     }
     
-    // Gọi fetchUsers ngay lập tức với filter mới
     fetchUsers({ 
       rank: newRank, 
       page: 0,
@@ -224,7 +246,6 @@ export default function useUserManagement() {
     setOrderBy(newOrderBy);
     setCurrentPage(0);
     
-    // Gọi fetchUsers ngay lập tức với sort mới
     fetchUsers({ 
       sortBy: newSortBy, 
       orderBy: newOrderBy, 
@@ -240,18 +261,24 @@ export default function useUserManagement() {
       roles: ["ROLE_USER"],
       rank: "DONG",
     };
-    dispatch(createUser(userData));
+    dispatch(createUser(userData)).then(() => {
+      fetchStatistics(); // Update statistics after creating user
+    });
   };
 
   const handleUpdateStatus = (userId, currentStatus) => {
     const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-    dispatch(updateUserStatus({ userId, status: newStatus }));
+    dispatch(updateUserStatus({ userId, status: newStatus })).then(() => {
+      fetchStatistics(); // Update statistics after status change
+    });
   };
 
   const handleUpdateRole = (userId, currentRoles) => {
     const hasVipRole = currentRoles.includes("ROLE_VIP");
     const newRoleId = hasVipRole ? "ROLE_USER" : "ROLE_VIP";
-    dispatch(updateUserRole({ userId, roleId: newRoleId }));
+    dispatch(updateUserRole({ userId, roleId: newRoleId })).then(() => {
+      fetchStatistics(); // Update statistics after role change
+    });
   };
 
   const handleEdit = (customerId) => {
@@ -261,21 +288,22 @@ export default function useUserManagement() {
   const handleDelete = (userId) => {
     if (window.confirm("Bạn có chắc muốn xóa người dùng này?")) {
       console.log(`Delete user with ID: ${userId}`);
+      fetchStatistics(); // Update statistics after deletion
     }
   };
 
   // Effect để fetch dữ liệu lần đầu
   useEffect(() => {
     fetchUsers();
+    fetchStatistics();
     
-    // Cleanup function
     return () => {
       if (pendingRequestRef.current) {
         pendingRequestRef.current.abort();
       }
       debouncedFetchUsers.cancel();
     };
-  }, []); // Chỉ chạy một lần khi component mount
+  }, []);
 
   // Effect for clearing errors
   useEffect(() => {
@@ -300,6 +328,7 @@ export default function useUserManagement() {
     rankFilter,
     tabs,
     error,
+    statistics, // Added statistics to return value
     handlers: {
       handleSearchChange,
       handleTabChange,
@@ -309,6 +338,7 @@ export default function useUserManagement() {
       handleUpdateRole,
       handleEdit,
       handleDelete,
+      handleFetchStatistics: fetchStatistics, // Added statistics fetch handler
     },
     pagination: {
       currentPage,
