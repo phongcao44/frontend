@@ -191,7 +191,7 @@ export default function OrderFailedPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            to="/user/orders"
+            to={`/user/order/${orderId}`}
             className="bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-medium hover:bg-blue-200 transition-colors text-center whitespace-nowrap no-underline"
           >
             <i className="ri-file-list-line mr-2"></i>
