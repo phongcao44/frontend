@@ -35,14 +35,29 @@ export default function ProfilePage() {
     }
   }, [reduxError]);
 
+  // Safely resolve user points from different possible API shapes
+  const totalPoints =
+    userDetail?.address?.[0]?.user?.userPoint?.totalPoints ??
+    userDetail?.addresses?.[0]?.user?.userPoint?.totalPoints ??
+    userDetail?.userPoint?.totalPoints ??
+    userDetail?.user?.userPoint?.totalPoints ??
+    0;
+
+  const rankPoints =
+    userDetail?.address?.[0]?.user?.userPoint?.rankPoints ??
+    userDetail?.addresses?.[0]?.user?.userPoint?.rankPoints ??
+    userDetail?.userPoint?.rankPoints ??
+    userDetail?.user?.userPoint?.rankPoints ??
+    0;
+
   // Render loading state
-  // if (loading) {
-  //   return (
-  //     <div className="flex items-center justify-center min-h-screen bg-gray-50">
-  //       <SandyLoadingAnimation />
-  //     </div>
-  //   );
-  // }
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <SandyLoadingAnimation />
+      </div>
+    );
+  }
 
   // Render error state
   if (error) {
@@ -216,7 +231,7 @@ export default function ProfilePage() {
               </label>
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
                 <span className="text-2xl font-bold text-gray-900">
-                  {(userDetail?.address?.[0]?.user?.userPoint?.totalPoints ?? 0).toLocaleString('vi-VN')}
+                  {totalPoints.toLocaleString('vi-VN')}
                 </span>
                 <span className="text-gray-600 ml-2">điểm</span>
               </div>
@@ -229,7 +244,7 @@ export default function ProfilePage() {
               </label>
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
                 <span className="text-2xl font-bold text-gray-900">
-                  {(userDetail?.address?.[0]?.user?.userPoint?.rankPoints ?? 0).toLocaleString('vi-VN')}
+                  {rankPoints.toLocaleString('vi-VN')}
                 </span>
                 <span className="text-gray-600 ml-2">điểm</span>
               </div>
