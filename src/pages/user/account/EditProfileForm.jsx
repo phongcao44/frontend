@@ -227,7 +227,7 @@ export default function EditProfileForm({ onClose }) {
               }`}
             >
               <User className="w-4 h-4" />
-              Thông tin cá nhân x
+              Thông tin cá nhân
             </button>
             <button
               onClick={() => {
