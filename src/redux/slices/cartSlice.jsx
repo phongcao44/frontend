@@ -10,6 +10,7 @@ import {
   checkoutByCartItem,
   checkoutSelectedItems,
   checkoutSelectedItemsPreview,
+  buyNow, // Import the new buyNow function
 } from "../../services/cartService";
 
 // === Thunks ===
@@ -122,6 +123,19 @@ export const checkoutSelectedItemsPreviewThunk = createAsyncThunk(
   async (payload, thunkAPI) => {
     try {
       return await checkoutSelectedItemsPreview(payload);
+    } catch (err) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
+    }
+  }
+);
+
+export const buyNowThunk = createAsyncThunk(
+  "cart/buyNow",
+  async (payload, thunkAPI) => {
+    try {
+      return await buyNow(payload);
     } catch (err) {
       return thunkAPI.rejectWithValue(
         err.response?.data || { message: err.message }
@@ -396,6 +410,21 @@ const cartSlice = createSlice({
         state.loading = false;
       })
       .addCase(checkoutSelectedItemsPreviewThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // === buyNow ===
+      .addCase(buyNowThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(buyNowThunk.fulfilled, (state, action) => {
+        state.cart = { items: [], subtotal: 0, discount: 0, grandTotal: 0 };
+        state.selectedItems = [];
+        state.loading = false;
+      })
+      .addCase(buyNowThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

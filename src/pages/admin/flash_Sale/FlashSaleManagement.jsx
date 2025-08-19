@@ -45,6 +45,8 @@ export default function FlashSaleManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [productCounts, setProductCounts] = useState({});
 
+  console.log("đ d ", error);
+
   const debouncedSearch = useCallback(
     debounce((value) => {
       setDebouncedSearchTerm(value);
@@ -64,7 +66,6 @@ export default function FlashSaleManagement() {
       try {
         const result = await dispatch(fetchFlashSales()).unwrap();
         if (result && Array.isArray(result)) {
-          // Load product counts for each flash sale
           const counts = {};
           await Promise.all(
             result.map(async (flashSale) => {
@@ -87,20 +88,17 @@ export default function FlashSaleManagement() {
     loadFlashSalesWithCounts();
   }, [dispatch]);
 
-  // Auto-refresh status every minute to check for expired flash sales
   useEffect(() => {
     const interval = setInterval(() => {
-      // Force re-render to update status based on current time
       setCurrentPage(currentPage);
-    }, 60000); // Check every minute
-
+    }, 60000);
     return () => clearInterval(interval);
   }, [currentPage]);
 
   const filteredFlashSales = flashSales.filter(
     (sale) =>
-      (sale.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        sale.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
+      ((sale.name?.toLowerCase?.() || "").includes(debouncedSearchTerm.toLowerCase()) ||
+        (sale.description?.toLowerCase?.() || "").includes(debouncedSearchTerm.toLowerCase())) &&
       (statusFilter === "" || getActualStatus(sale) === statusFilter)
   );
 
@@ -124,8 +122,8 @@ export default function FlashSaleManagement() {
     setCurrentView("items");
   };
 
-  const handleDelete = (id) => {
-    Swal.fire({
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
       title: "Bạn có chắc chắn?",
       text: "Hành động này sẽ không thể hoàn tác!",
       icon: "warning",
@@ -133,15 +131,20 @@ export default function FlashSaleManagement() {
       confirmButtonText: "Xóa",
       cancelButtonText: "Hủy",
       reverseButtons: true,
-    }).then((result) => {
-      if (result.isConfirmed) {
-        dispatch(removeFlashSale(id)).then(() => {
-          Swal.fire("Đã xóa!", "Flash Sale đã được xóa.", "success");
-        });
-      } else if (result.dismiss === Swal.DismissReason.cancel) {
-        Swal.fire("Đã hủy", "Flash Sale vẫn còn nguyên.", "info");
-      }
     });
+
+    if (result.isConfirmed) {
+      try {
+        await dispatch(removeFlashSale(id)).unwrap();
+        Swal.fire("Đã xóa!", "Flash Sale đã được xóa thành công.", "success");
+        // Refresh the list after successful deletion
+        handleRefresh();
+      } catch (error) {
+        console.error("Error deleting flash sale:", error);
+        Swal.fire("Lỗi!", "Không xóa được Flash Sale.", "error");
+        // UI remains intact, list displays normally
+      }
+    }
   };
 
   const handleRefresh = () => {
@@ -150,7 +153,6 @@ export default function FlashSaleManagement() {
       try {
         const result = await dispatch(fetchFlashSales()).unwrap();
         if (result && Array.isArray(result)) {
-          // Load product counts for each flash sale
           const counts = {};
           await Promise.all(
             result.map(async (flashSale) => {
@@ -199,7 +201,6 @@ export default function FlashSaleManagement() {
       : `${base} bg-red-100 text-red-800`;
   };
 
-  // Function to check if flash sale is expired
   const isFlashSaleExpired = (endTime) => {
     if (!endTime) return false;
     const now = new Date();
@@ -207,19 +208,15 @@ export default function FlashSaleManagement() {
     return now > endDate;
   };
 
-  // Function to get actual status based on time
   const getActualStatus = (flashSale) => {
+    if (!flashSale) return "INACTIVE";
     if (flashSale.status === "INACTIVE") return "INACTIVE";
-    
-    // If status is ACTIVE but end time has passed, it should be considered expired
     if (isFlashSaleExpired(flashSale.endTime)) {
       return "EXPIRED";
     }
-    
     return flashSale.status;
   };
 
-  // Function to get status display text
   const getStatusDisplayText = (flashSale) => {
     const actualStatus = getActualStatus(flashSale);
     switch (actualStatus) {
@@ -234,7 +231,6 @@ export default function FlashSaleManagement() {
     }
   };
 
-  // Function to get status badge with dynamic status
   const getDynamicStatusBadge = (flashSale) => {
     const base = "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium shadow-sm";
     const actualStatus = getActualStatus(flashSale);
@@ -251,7 +247,6 @@ export default function FlashSaleManagement() {
     }
   };
 
-  // Function to get status dot color
   const getStatusDotColor = (flashSale) => {
     const actualStatus = getActualStatus(flashSale);
     switch (actualStatus) {
@@ -277,13 +272,12 @@ export default function FlashSaleManagement() {
     (sale) => getActualStatus(sale) === "EXPIRED"
   ).length;
   const todayFlashSales = filteredFlashSales.filter((sale) => {
-    if (!sale.startTime) return false;
+    if (!sale?.startTime) return false;
     const saleDate = new Date(sale.startTime);
     const today = new Date();
     return saleDate.toDateString() === today.toDateString();
   }).length;
   
-  // Calculate total products across all flash sales
   const totalProducts = Object.values(productCounts).reduce((sum, count) => sum + (count || 0), 0);
 
   if (currentView === "items") {
@@ -426,20 +420,20 @@ export default function FlashSaleManagement() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-3">
-                             <select
-                 value={statusFilter}
-                 onChange={(e) => {
-                   setStatusFilter(e.target.value);
-                   setCurrentPage(0);
-                 }}
-                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                 disabled={loading}
-               >
-                 <option value="">Tất cả trạng thái</option>
-                 <option value="ACTIVE">Kích hoạt</option>
-                 <option value="INACTIVE">Tạm dừng</option>
-                 <option value="EXPIRED">Đã hết hạn</option>
-               </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(0);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading}
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="ACTIVE">Kích hoạt</option>
+                <option value="INACTIVE">Tạm dừng</option>
+                <option value="EXPIRED">Đã hết hạn</option>
+              </select>
             </div>
             <div className="relative flex items-center">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -478,8 +472,6 @@ export default function FlashSaleManagement() {
             {error}
           </div>
         )}
-
-        {/* Đã loại bỏ thông báo Flash Sale hết hạn theo yêu cầu */}
 
         {!loading && !error && paginatedFlashSales.length === 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
@@ -552,13 +544,13 @@ export default function FlashSaleManagement() {
                             <div>
                               <div
                                 className="text-sm font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
-                                title={sale.name}
+                                title={sale.name || "Không có tên"}
                               >
-                                {sale.name}
+                                {sale.name || "Không có tên"}
                               </div>
                               <div
                                 className="text-sm text-gray-500 line-clamp-2"
-                                title={sale.description}
+                                title={sale.description || "Không có mô tả"}
                               >
                                 {sale.description || "Không có mô tả"}
                               </div>
@@ -689,13 +681,13 @@ export default function FlashSaleManagement() {
                       <div>
                         <h3
                           className="text-lg font-semibold text-gray-900 hover:text-blue-600 cursor-pointer"
-                          title={sale.name}
+                          title={sale.name || "Không có tên"}
                         >
-                          {sale.name}
+                          {sale.name || "Không có tên"}
                         </h3>
                         <p
                           className="text-sm text-gray-500 line-clamp-2"
-                          title={sale.description}
+                          title={sale.description || "Không có mô tả"}
                         >
                           {sale.description || "Không có mô tả"}
                         </p>
@@ -799,7 +791,10 @@ export default function FlashSaleManagement() {
 
         <FlashSaleForm
           isOpen={isFormModalOpen}
-          onClose={() => setIsFormModalOpen(false)}
+          onClose={() => {
+            setIsFormModalOpen(false);
+            handleRefresh();
+          }}
           flashSale={selectedFlashSale}
           existingFlashSales={flashSales}
         />

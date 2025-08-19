@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Gift, Tag, Calendar, Percent, DollarSign, Coins } from "lucide-react";
-import Swal from "sweetalert2"; // Correct import for Swal
+import Swal from "sweetalert2";
 import AddressSection from "./AddressSection";
 import {
   getCart,
@@ -15,7 +15,6 @@ import {
   createCodPayment,
   createVnpayPayment,
 } from "../../../services/paymentService";
-import api from "../../../services/api";
 import { setUser, fetchUserInfo } from "../../../redux/slices/authSlice";
 import {
   fetchUnusedVouchers,
@@ -39,9 +38,6 @@ const CheckoutPage = () => {
     loading,
     error: cartError,
   } = useSelector((state) => state.cart);
-
-  console.log("CheckoutPage rendered with user: preview:", preview);
-  console.log("CheckoutPage rendered with user:", user);
 
   const [formData, setFormData] = useState({
     addressId: user?.address?.[0]?.addressId || "",
@@ -68,10 +64,10 @@ const CheckoutPage = () => {
   const previewDebounceRef = useRef(null);
   const warnedNoSelectionRef = useRef(false);
 
-  // Lấy preview từ navigation state nếu có
+  // Get initial preview from navigation state (from Buy Now)
   const initialPreview = location.state?.preview;
 
-  // Lấy thông tin người dùng, giỏ hàng và voucher khi mount
+  // Fetch user info, cart, and vouchers on mount
   useEffect(() => {
     dispatch(fetchUserInfo());
     dispatch(getCart());
@@ -79,27 +75,29 @@ const CheckoutPage = () => {
     dispatch(fetchCollectibleVouchers());
   }, [dispatch]);
 
-  // Khôi phục selectedItems từ localStorage khi mount
+  // Restore selectedItems from localStorage on mount (only for Cart flow)
   useEffect(() => {
-    const savedSelectedItems = localStorage.getItem("selectedItems");
-    if (savedSelectedItems) {
-      const parsedItems = JSON.parse(savedSelectedItems);
-      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
-        dispatch(setSelectedItems(parsedItems));
+    if (!initialPreview?.variantId) {
+      const savedSelectedItems = localStorage.getItem("selectedItems");
+      if (savedSelectedItems) {
+        const parsedItems = JSON.parse(savedSelectedItems);
+        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+          dispatch(setSelectedItems(parsedItems));
+        }
       }
     }
-  }, [dispatch]);
+  }, [dispatch, initialPreview?.variantId]);
 
-  // Đồng bộ selectedItems với localStorage khi thay đổi
+  // Sync selectedItems with localStorage when changed (only for Cart flow)
   useEffect(() => {
-    if (selectedItems.length > 0) {
+    if (!initialPreview?.variantId && selectedItems.length > 0) {
       localStorage.setItem("selectedItems", JSON.stringify(selectedItems));
-    } else {
+    } else if (!initialPreview?.variantId) {
       localStorage.removeItem("selectedItems");
     }
-  }, [selectedItems]);
+  }, [selectedItems, initialPreview?.variantId]);
 
-  // Cập nhật formData khi user thay đổi
+  // Update formData when user changes
   useEffect(() => {
     setUsedPoints(0);
     setUsePoints(false);
@@ -112,24 +110,43 @@ const CheckoutPage = () => {
     }
   }, [user, formData.addressId]);
 
-  // Tạo danh sách id item trong cart để làm dependency ổn định
+  // Create stable list of cart item IDs
   const cartItemIdsInCart = useMemo(
     () => cart?.items?.map((i) => i.cartItemId) || [],
     [cart?.items]
   );
 
-  // Gọi preview khi địa chỉ, voucher, điểm thưởng, ghi chú, phương thức thanh toán hoặc selectedItems thay đổi
+  // Generate preview based on Buy Now or Cart flow
   useEffect(() => {
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current);
       previewDebounceRef.current = null;
     }
 
-    if (
-      cartItemIdsInCart.length > 0 &&
-      formData.addressId &&
-      selectedItems.length > 0
-    ) {
+    if (!formData.addressId) {
+      setError("Vui lòng chọn hoặc lưu địa chỉ trước khi thanh toán.");
+      return;
+    }
+
+    let payload;
+    // Buy Now flow: use variantId and quantity, exclude cartItemIds
+    if (initialPreview?.variantId && initialPreview.quantity) {
+      if (initialPreview.quantity <= 0) {
+        setError("Số lượng không hợp lệ cho biến thể này.");
+        return;
+      }
+      payload = {
+        addressId: formData.addressId,
+        paymentMethod,
+        variantId: initialPreview.variantId,
+        quantity: initialPreview.quantity,
+        voucherId: selectedVoucher?.id || 0,
+        usedPoints: usePoints ? usedPoints : 0,
+        note: note || "",
+      };
+    }
+    // Cart flow: use cartItemIds, exclude variantId and quantity
+    else if (cartItemIdsInCart.length > 0 && selectedItems.length > 0) {
       const validSelectedItems = selectedItems.filter((id) =>
         cartItemIdsInCart.includes(id)
       );
@@ -145,26 +162,16 @@ const CheckoutPage = () => {
         return;
       }
 
-      const sortedIds = [...validSelectedItems].sort((a, b) => a - b);
-      const payload = {
+      payload = {
         addressId: formData.addressId,
         paymentMethod,
-        cartItemIds: sortedIds,
+        cartItemIds: [...validSelectedItems].sort((a, b) => a - b),
         voucherId: selectedVoucher?.id || 0,
         usedPoints: usePoints ? usedPoints : 0,
         note: note || "",
       };
-
-      const previewKey = JSON.stringify(payload);
-      if (previewKey === lastPreviewKeyRef.current) {
-        return;
-      }
-
-      previewDebounceRef.current = setTimeout(() => {
-        lastPreviewKeyRef.current = previewKey;
-        dispatch(checkoutSelectedItemsPreviewThunk(payload));
-      }, 300);
-    } else if (cartItemIdsInCart.length > 0 && selectedItems.length === 0) {
+    } else {
+      // Cart flow: redirect to cart if no valid items
       setError("Vui lòng chọn ít nhất một sản phẩm để thanh toán.");
       if (!warnedNoSelectionRef.current) {
         warnedNoSelectionRef.current = true;
@@ -172,7 +179,18 @@ const CheckoutPage = () => {
           state: { error: "Vui lòng chọn sản phẩm để thanh toán." },
         });
       }
+      return;
     }
+
+    const previewKey = JSON.stringify(payload);
+    if (previewKey === lastPreviewKeyRef.current) {
+      return;
+    }
+
+    previewDebounceRef.current = setTimeout(() => {
+      lastPreviewKeyRef.current = previewKey;
+      dispatch(checkoutSelectedItemsPreviewThunk(payload));
+    }, 300);
 
     return () => {
       if (previewDebounceRef.current) {
@@ -189,11 +207,13 @@ const CheckoutPage = () => {
     paymentMethod,
     selectedItems,
     cartItemIdsInCart,
+    initialPreview?.variantId,
+    initialPreview?.quantity,
     dispatch,
     navigate,
   ]);
 
-  // Đặt preview ban đầu từ navigation state
+  // Set initial preview from navigation state
   useEffect(() => {
     if (initialPreview && !preview) {
       dispatch({
@@ -203,7 +223,7 @@ const CheckoutPage = () => {
     }
   }, [initialPreview, preview, dispatch]);
 
-  // Lọc các voucher hợp lệ từ unusedVouchers
+  // Filter valid vouchers
   useEffect(() => {
     if (unusedVouchers.length > 0 && preview?.subtotal > 0) {
       const validVouchers = unusedVouchers.filter(
@@ -223,7 +243,7 @@ const CheckoutPage = () => {
     }
   }, [unusedVouchers, preview]);
 
-  // Xử lý thu thập voucher
+  // Handle voucher collection
   const handleCollectVoucher = async (voucher) => {
     try {
       await dispatch(
@@ -253,7 +273,7 @@ const CheckoutPage = () => {
     }
   };
 
-  // Xử lý chọn voucher
+  // Handle voucher selection
   const handleSelectVoucher = (voucher) => {
     setSelectedVoucher(voucher);
     setShowVoucherModal(false);
@@ -268,7 +288,7 @@ const CheckoutPage = () => {
     });
   };
 
-  // Xử lý bỏ chọn voucher
+  // Handle voucher removal
   const handleRemoveVoucher = () => {
     setSelectedVoucher(null);
     Swal.fire({
@@ -282,7 +302,7 @@ const CheckoutPage = () => {
     });
   };
 
-  // Xử lý submit thanh toán
+  // Handle checkout submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -291,7 +311,44 @@ const CheckoutPage = () => {
       return;
     }
 
-    if (selectedItems.length === 0) {
+    let payload;
+    // Buy Now flow: use variantId and quantity, exclude cartItemIds
+    if (initialPreview?.variantId && initialPreview.quantity) {
+      if (initialPreview.quantity <= 0) {
+        setError("Số lượng không hợp lệ cho biến thể này.");
+        return;
+      }
+      payload = {
+        addressId: formData.addressId,
+        paymentMethod,
+        variantId: initialPreview.variantId,
+        quantity: initialPreview.quantity,
+        voucherId: selectedVoucher?.id || 0,
+        usedPoints: usePoints ? usedPoints : 0,
+        note: note || "",
+      };
+    }
+    // Cart flow: use cartItemIds, exclude variantId and quantity
+    else if (selectedItems.length > 0) {
+      const validSelectedItems = selectedItems.filter((id) =>
+        cartItemIdsInCart.includes(id)
+      );
+
+      if (validSelectedItems.length === 0) {
+        setError("Không có sản phẩm hợp lệ để thanh toán.");
+        return;
+      }
+
+      payload = {
+        addressId: formData.addressId,
+        paymentMethod,
+        cartItemIds: [...validSelectedItems].sort((a, b) => a - b),
+        voucherId: selectedVoucher?.id || 0,
+        usedPoints: usePoints ? usedPoints : 0,
+        note: note || "",
+      };
+    } else {
+      // Cart flow: no valid items selected
       setError("Vui lòng chọn ít nhất một sản phẩm để thanh toán.");
       return;
     }
@@ -300,17 +357,6 @@ const CheckoutPage = () => {
     setError(null);
 
     try {
-      const payload = {
-        addressId: formData.addressId,
-        paymentMethod,
-        cartItemIds: selectedItems,
-        voucherId: selectedVoucher?.id || 0,
-        usedPoints: usePoints ? usedPoints : 0,
-        note: note || "",
-      };
-
-      console.log("Checkout payload:", selectedItems);
-
       const result = await dispatch(
         checkoutSelectedItemsThunk(payload)
       ).unwrap();
@@ -320,14 +366,15 @@ const CheckoutPage = () => {
       if (fetchUserInfo.fulfilled.match(userInfoAction)) {
         const updatedUser = userInfoAction.payload;
         dispatch(setUser(updatedUser));
-        setUsedPoints(0); // Reset points after successful checkout
-        setUsePoints(false); // Reset toggle
+        setUsedPoints(0);
+        setUsePoints(false);
       }
 
-      localStorage.removeItem("selectedItems");
-      dispatch(setSelectedItems([]));
-
-      setIsSubmitting(false);
+      // Only clear selectedItems for Cart flow
+      if (payload.cartItemIds) {
+        localStorage.removeItem("selectedItems");
+        dispatch(setSelectedItems([]));
+      }
 
       const orderId = result.orderId || result.id;
       if (!orderId) throw new Error("Không thể lấy mã đơn hàng");
@@ -387,20 +434,20 @@ const CheckoutPage = () => {
     }
   };
 
-  // Tính tổng từ preview
+  // Calculate totals from preview
   const totalCartPrice = preview?.subtotal || 0;
   const voucherDiscount = preview?.discountAmount || 0;
   const pointsDiscount = preview?.usedPoints || 0;
   const totalWithShipping = preview?.totalAmount || 0;
   const shippingFee = preview?.shippingFee || 0;
 
-  // Tính điểm thưởng tối đa có thể sử dụng
+  // Calculate available points
   const availablePoints = Math.min(
     user?.userPoint || 0,
     Math.floor(totalCartPrice)
   );
 
-  // Xử lý toggle sử dụng điểm thưởng
+  // Handle points toggle
   const handleTogglePoints = () => {
     if (!usePoints) {
       setUsedPoints(availablePoints);
@@ -508,7 +555,7 @@ const CheckoutPage = () => {
                   ))
                 ) : (
                   <p>
-                    Giỏ hàng của bạn đang trống.{" "}
+                    Không có sản phẩm để hiển thị.{" "}
                     <a href="/cart" className="text-blue-600 hover:underline">
                       Quay lại giỏ hàng
                     </a>
@@ -720,7 +767,7 @@ const CheckoutPage = () => {
         </div>
       </div>
 
-      {/* Modal Voucher */}
+      {/* Voucher Modal */}
       {showVoucherModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">

@@ -5,14 +5,21 @@ import { changePasswordUser } from "../../../redux/slices/authSlice";
 import { User, Mail, Lock, Eye, EyeOff, Save, X, ArrowLeft, Shield, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
+import { useTranslation } from "react-i18next";
 
 export default function EditProfileForm({ onClose }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { userDetail, loading } = useSelector((state) => state.users);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [validationErrors, setValidationErrors] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -56,42 +63,50 @@ export default function EditProfileForm({ onClose }) {
     }));
     setError("");
     setSuccess("");
+    setValidationErrors((prev) => ({
+      ...prev,
+      [field]: "",
+    }));
   };
 
   const validateProfileForm = () => {
     if (!formData.name.trim()) {
-      setError("Vui lòng nhập tên người dùng");
-      return false;
-    }
-    if (!formData.email.trim()) {
-      setError("Vui lòng nhập email");
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError("Email không hợp lệ");
+      setError(t("editProfile.errors.nameRequired"));
       return false;
     }
     return true;
   };
 
   const validatePasswordForm = () => {
-    if (!passwordData.currentPassword) {
-      setError("Vui lòng nhập mật khẩu hiện tại");
-      return false;
+    const errors = {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    };
+
+    // Current Password validation
+    if (!passwordData.currentPassword.trim()) {
+      errors.currentPassword = t("editProfile.errors.currentPasswordRequired");
     }
-    if (!passwordData.newPassword) {
-      setError("Vui lòng nhập mật khẩu mới");
-      return false;
+
+    // New Password validation
+    if (!passwordData.newPassword.trim()) {
+      errors.newPassword = t("editProfile.errors.newPasswordRequired");
+    } else if (passwordData.newPassword.length < 6 || passwordData.newPassword.length > 20) {
+      errors.newPassword = t("editProfile.errors.passwordLength");
+    } else if (!/(?=.*[A-Z])(?=.*[a-z])(?=.*\d)/.test(passwordData.newPassword)) {
+      errors.newPassword = t("editProfile.errors.passwordFormat");
     }
-    if (passwordData.newPassword.length < 6) {
-      setError("Mật khẩu mới phải có ít nhất 6 ký tự");
-      return false;
+
+    // Confirm Password validation
+    if (!passwordData.confirmPassword.trim()) {
+      errors.confirmPassword = t("editProfile.errors.confirmPasswordRequired");
+    } else if (passwordData.confirmPassword !== passwordData.newPassword) {
+      errors.confirmPassword = t("editProfile.errors.confirmPasswordMismatch");
     }
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp");
-      return false;
-    }
-    return true;
+
+    setValidationErrors(errors);
+    return !Object.values(errors).some((error) => error !== "");
   };
 
   const handleSaveProfile = async () => {
@@ -108,8 +123,8 @@ export default function EditProfileForm({ onClose }) {
       
       // Hiển thị thông báo thành công
       Swal.fire({
-        title: 'Thành công!',
-        text: 'Thông tin cá nhân đã được cập nhật thành công',
+        title: t('editProfile.success.title'),
+        text: t('editProfile.success.profileUpdated'),
         icon: 'success',
         timer: 3000,
         showConfirmButton: false,
@@ -127,7 +142,7 @@ export default function EditProfileForm({ onClose }) {
       }, 1500);
     } catch (err) {
       console.error('Error updating profile:', err);
-      const errorMessage = err.response?.data?.message || err.message || "Có lỗi xảy ra khi cập nhật thông tin";
+      const errorMessage = err.response?.data?.message || err.message || t("editProfile.errors.serverError");
       setError(errorMessage);
     }
   };
@@ -145,8 +160,8 @@ export default function EditProfileForm({ onClose }) {
       
       // Hiển thị thông báo thành công
       Swal.fire({
-        title: 'Thành công!',
-        text: 'Mật khẩu đã được thay đổi thành công',
+        title: t('editProfile.success.title'),
+        text: t('editProfile.success.passwordChanged'),
         icon: 'success',
         timer: 3000,
         showConfirmButton: false,
@@ -168,7 +183,7 @@ export default function EditProfileForm({ onClose }) {
       }, 1500);
     } catch (err) {
       console.error('Error changing password:', err);
-      const errorMessage = err.response?.data?.message || err.message || "Có lỗi xảy ra khi đổi mật khẩu";
+      const errorMessage = err.response?.data?.message || err.message || t("editProfile.errors.serverError");
       setError(errorMessage);
     }
   };
@@ -201,12 +216,12 @@ export default function EditProfileForm({ onClose }) {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                {isEditingPassword ? "Đổi mật khẩu" : "Chỉnh sửa thông tin cá nhân"}
+                {isEditingPassword ? t("editProfile.passwordTab") : t("editProfile.profileTab")}
               </h2>
               <p className="text-gray-600 mt-1">
                 {isEditingPassword 
-                  ? "Cập nhật mật khẩu để bảo vệ tài khoản của bạn" 
-                  : "Cập nhật thông tin cá nhân của bạn"
+                  ? t("editProfile.passwordDescription") 
+                  : t("editProfile.profileDescription")
                 }
               </p>
             </div>
@@ -227,7 +242,7 @@ export default function EditProfileForm({ onClose }) {
               }`}
             >
               <User className="w-4 h-4" />
-              Thông tin cá nhân
+              {t("editProfile.profileTab")}
             </button>
             <button
               onClick={() => {
@@ -242,7 +257,7 @@ export default function EditProfileForm({ onClose }) {
               }`}
             >
               <Lock className="w-4 h-4" />
-              Đổi mật khẩu
+              {t("editProfile.passwordTab")}
             </button>
           </div>
         </div>
@@ -267,28 +282,28 @@ export default function EditProfileForm({ onClose }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                   <User className="w-4 h-4 text-blue-600" />
-                  Họ và tên
+                  {t("editProfile.nameLabel")}
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  placeholder="Nhập họ và tên của bạn"
+                  placeholder={t("editProfile.namePlaceholder")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                   <Mail className="w-4 h-4 text-blue-600" />
-                  Email
+                  {t("editProfile.emailLabel")}
                 </label>
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  placeholder="Nhập địa chỉ email của bạn"
+                  disabled
+                  className="w-full px-4 py-3 bg-gray-200 border border-gray-300 rounded-xl text-gray-500 cursor-not-allowed"
+                  placeholder={t("editProfile.emailPlaceholder")}
                 />
               </div>
 
@@ -303,7 +318,7 @@ export default function EditProfileForm({ onClose }) {
                   }}
                   className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
                 >
-                  Hủy
+                  {t("editProfile.cancelButton")}
                 </button>
                 <button
                   onClick={handleSaveProfile}
@@ -317,12 +332,12 @@ export default function EditProfileForm({ onClose }) {
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Đang lưu...
+                      {t("editProfile.saving")}
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      Lưu thay đổi
+                      {t("editProfile.saveButton")}
                     </>
                   )}
                 </button>
@@ -334,15 +349,17 @@ export default function EditProfileForm({ onClose }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-blue-600" />
-                  Mật khẩu hiện tại
+                  {t("editProfile.currentPasswordLabel")}
                 </label>
                 <div className="relative">
                   <input
                     type={showPasswords.current ? "text" : "password"}
                     value={passwordData.currentPassword}
                     onChange={(e) => handlePasswordChange("currentPassword", e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-12"
-                    placeholder="Nhập mật khẩu hiện tại"
+                    className={`w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-12 ${
+                      validationErrors.currentPassword ? "border-red-500" : "border-gray-200"
+                    }`}
+                    placeholder={t("editProfile.currentPasswordPlaceholder")}
                   />
                   <button
                     type="button"
@@ -352,20 +369,25 @@ export default function EditProfileForm({ onClose }) {
                     {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                {validationErrors.currentPassword && (
+                  <p className="text-red-500 text-sm mt-2">{validationErrors.currentPassword}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-blue-600" />
-                  Mật khẩu mới
+                  {t("editProfile.newPasswordLabel")}
                 </label>
                 <div className="relative">
                   <input
                     type={showPasswords.new ? "text" : "password"}
                     value={passwordData.newPassword}
                     onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-12"
-                    placeholder="Nhập mật khẩu mới"
+                    className={`w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-12 ${
+                      validationErrors.newPassword ? "border-red-500" : "border-gray-200"
+                    }`}
+                    placeholder={t("editProfile.newPasswordPlaceholder")}
                   />
                   <button
                     type="button"
@@ -375,25 +397,25 @@ export default function EditProfileForm({ onClose }) {
                     {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                {passwordData.newPassword.length > 0 && (
-                  <div className="mt-2 text-sm text-gray-500">
-                    Mật khẩu phải có ít nhất 6 ký tự
-                  </div>
+                {validationErrors.newPassword && (
+                  <p className="text-red-500 text-sm mt-2">{validationErrors.newPassword}</p>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-blue-600" />
-                  Xác nhận mật khẩu mới
+                  {t("editProfile.confirmPasswordLabel")}
                 </label>
                 <div className="relative">
                   <input
                     type={showPasswords.confirm ? "text" : "password"}
                     value={passwordData.confirmPassword}
                     onChange={(e) => handlePasswordChange("confirmPassword", e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-12"
-                    placeholder="Nhập lại mật khẩu mới"
+                    className={`w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-12 ${
+                      validationErrors.confirmPassword ? "border-red-500" : "border-gray-200"
+                    }`}
+                    placeholder={t("editProfile.confirmPasswordPlaceholder")}
                   />
                   <button
                     type="button"
@@ -403,15 +425,13 @@ export default function EditProfileForm({ onClose }) {
                     {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                {passwordData.confirmPassword.length > 0 && passwordData.newPassword !== passwordData.confirmPassword && (
-                  <div className="mt-2 text-sm text-red-500">
-                    Mật khẩu xác nhận không khớp
-                  </div>
+                {validationErrors.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-2">{validationErrors.confirmPassword}</p>
                 )}
-                {passwordData.confirmPassword.length > 0 && passwordData.newPassword === passwordData.confirmPassword && (
+                {passwordData.confirmPassword.length > 0 && passwordData.newPassword === passwordData.confirmPassword && !validationErrors.confirmPassword && (
                   <div className="mt-2 text-sm text-green-500 flex items-center gap-1">
                     <CheckCircle className="w-4 h-4" />
-                    Mật khẩu xác nhận khớp
+                    {t("editProfile.passwordMatch")}
                   </div>
                 )}
               </div>
@@ -427,7 +447,7 @@ export default function EditProfileForm({ onClose }) {
                   }}
                   className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
                 >
-                  Hủy
+                  {t("editProfile.cancelButton")}
                 </button>
                 <button
                   onClick={handleChangePassword}
@@ -441,12 +461,12 @@ export default function EditProfileForm({ onClose }) {
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Đang xử lý...
+                      {t("editProfile.saving")}
                     </>
                   ) : (
                     <>
                       <Shield className="w-4 h-4" />
-                      Đổi mật khẩu
+                      {t("editProfile.changePasswordButton")}
                     </>
                   )}
                 </button>

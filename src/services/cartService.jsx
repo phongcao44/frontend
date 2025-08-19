@@ -4,7 +4,6 @@ export const fetchCart = async () => {
   try {
     const res = await axiosInstance.get("/user/carts");
     return res.data;
-
   } catch (err) {
     // Nếu server trả 404 (chưa có giỏ hàng), coi như giỏ trống để không làm vỡ UX
     if (err?.response?.status === 404) {
@@ -103,6 +102,19 @@ export const checkoutSelectedItemsPreview = async (orderPayload) => {
     return res.data;
   } catch (err) {
     console.error("Checkout Selected Items Preview failed:", err);
+    throw err;
+  }
+};
+
+export const buyNow = async (payload) => {
+  try {
+    const res = await axiosInstance.post("/buy-now", payload);
+    return res.data;
+  } catch (err) {
+    if (err?.response?.status === 401) {
+      throw new Error("Please login to buy now");
+    }
+    console.error("Buy Now failed:", err);
     throw err;
   }
 };

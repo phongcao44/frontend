@@ -9,6 +9,7 @@ import {
 
 export default function FlashSaleForm({ flashSale, onClose, isOpen, existingFlashSales }) {
   const dispatch = useDispatch();
+  const { loading } = useSelector((state) => state.flashSale);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -93,31 +94,22 @@ export default function FlashSaleForm({ flashSale, onClose, isOpen, existingFlas
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
-    if (flashSale) {
-      dispatch(updateFlashSale({ id: flashSale.id, data: formData }))
-        .unwrap()
-        .then(() => {
-          onClose();
-        })
-        .catch((error) => {
-          setErrors({ submit: error.message || "Có lỗi xảy ra khi cập nhật" });
-        });
-    } else {
-      dispatch(createFlashSale(formData))
-        .unwrap()
-        .then(() => {
-          onClose();
-        })
-        .catch((error) => {
-          setErrors({ submit: error.message || "Có lỗi xảy ra khi tạo mới" });
-        });
+    try {
+      if (flashSale) {
+        await dispatch(updateFlashSale({ id: flashSale.id, data: formData })).unwrap();
+      } else {
+        await dispatch(createFlashSale(formData)).unwrap();
+      }
+      onClose();
+    } catch (error) {
+      setErrors({ submit: error.message || "Có lỗi xảy ra khi xử lý" });
     }
   };
 
@@ -247,9 +239,21 @@ export default function FlashSaleForm({ flashSale, onClose, isOpen, existingFlas
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={loading}
+              className={`px-6 py-2 rounded-md flex items-center space-x-2 ${
+                loading 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white`}
             >
-              {flashSale ? "Cập nhật" : "Tạo mới"}
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Đang xử lý...</span>
+                </>
+              ) : (
+                <span>{flashSale ? "Cập nhật" : "Tạo mới"}</span>
+              )}
             </button>
           </div>
         </form>

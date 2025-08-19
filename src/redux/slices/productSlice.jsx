@@ -267,6 +267,37 @@ const productSlice = createSlice({
     clearBrandsPaginated(state) {
       state.brandsPaginated = null;
     },
+    updateProductFavoriteStatus(state, action) {
+      const { productId, isFavorite } = action.payload;
+      
+      // Update productDetail if it matches
+      if (state.productDetail && state.productDetail.id === productId) {
+        state.productDetail.isFavorite = isFavorite;
+      }
+      
+      // Update products in various lists
+      const updateProductInList = (list) => {
+        if (Array.isArray(list)) {
+          list.forEach(product => {
+            if (product.id === productId) {
+              product.isFavorite = isFavorite;
+            }
+          });
+        }
+      };
+      
+      // Update in different product lists
+      updateProductInList(state.list);
+      updateProductInList(state.newArrivals?.data?.content);
+      updateProductInList(state.topBestSelling);
+      updateProductInList(state.topLeastSelling);
+      updateProductInList(state.topViewed);
+      updateProductInList(state.leastViewed);
+      updateProductInList(state.productsByCategory);
+      updateProductInList(state.relatedProducts);
+      updateProductInList(state.topSellingPaginated?.content);
+      updateProductInList(state.brandsPaginated?.data?.content);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -567,5 +598,5 @@ const productSlice = createSlice({
   },
 });
 
-export const { clearProductDetail, clearError, clearBrandsPaginated } = productSlice.actions;
+export const { clearProductDetail, clearError, clearBrandsPaginated, updateProductFavoriteStatus } = productSlice.actions;
 export default productSlice.reducer;
