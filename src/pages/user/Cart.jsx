@@ -52,6 +52,8 @@ const Cart = () => {
     return [];
   };
 
+  console.log("Cart component mounted, user:", cart);
+
   // Load cart và addresses
   useEffect(() => {
     dispatch(getCart());
@@ -89,16 +91,6 @@ const Cart = () => {
     }
   }, [cart?.items, loading, selectedItems, dispatch]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("Cart state:", {
-      cartItems: cart?.items,
-      selectedItems,
-      isAllSelected: cart?.items?.length > 0 && selectedItems.length === cart?.items?.length,
-      loading,
-      cartItemsLength: cart?.items?.length,
-    });
-  }, [cart?.items, selectedItems, loading]);
 
   const handleQuantityChange = async (cartItemId, delta) => {
     if (!selectedItems.includes(cartItemId) || itemLoading[cartItemId]) return;
@@ -162,13 +154,11 @@ const Cart = () => {
       ? selectedItems.filter((id) => id !== cartItemId)
       : [...selectedItems, cartItemId];
     
-    console.log("Selecting/Deselecting item:", { cartItemId, newSelectedItems });
     dispatch(setSelectedItems(newSelectedItems));
   };
 
   const handleSelectAll = () => {
     if (!cart?.items?.length) {
-      console.log("No items to select");
       return;
     }
 
@@ -182,10 +172,8 @@ const Cart = () => {
     });
 
     if (isAllSelected) {
-      console.log("Deselecting all items");
       dispatch(setSelectedItems([]));
     } else {
-      console.log("Selecting all items:", allItemIds);
       dispatch(setSelectedItems(allItemIds));
     }
   };
@@ -211,7 +199,6 @@ const Cart = () => {
         usedPoints: 0,
         note: "",
       };
-      console.log("Proceeding to checkout with selectedItems:", selectedItems);
       const result = await dispatch(checkoutSelectedItemsPreviewThunk(payload)).unwrap();
       navigate("/checkout", { state: { preview: result } });
     } catch (err) {
@@ -239,6 +226,48 @@ const Cart = () => {
   };
 
   const isAllSelected = cart?.items?.length > 0 && selectedItems.length === cart?.items?.length;
+
+  // Tính tổng theo các sản phẩm đã chọn
+  const selectedItemsSet = new Set(selectedItems);
+  const selectedCartItems = Array.isArray(cart?.items)
+    ? cart.items.filter((i) => selectedItemsSet.has(i.cartItemId))
+    : [];
+
+  const selectedSubtotal = selectedCartItems.reduce((sum, i) => {
+    const perItemTotal =
+      i.totalPrice != null
+        ? i.totalPrice
+        : (i.discountedPrice || i.originalPrice || 0) * (i.quantity || 0);
+    return sum + perItemTotal;
+  }, 0);
+
+  const selectedDiscount = selectedCartItems.reduce((sum, i) => {
+    return sum + ((i.discountAmount || 0) * (i.quantity || 1));
+  }, 0);
+
+  const selectedGrandTotal = selectedSubtotal - selectedDiscount;
+ const { isLoggedIn } = useSelector((state) => state.auth); // Use isLoggedIn to match authSlice.js  
+    // Handle unauthenticated state
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-white py-10 px-5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-20 px-5">
+            <h4 className="text-xl font-medium mb-4">
+              Bạn chưa đăng nhập. Vui lòng đăng nhập để xem danh sách yêu thích.
+            </h4>
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200"
+              onClick={() => navigate("/login")}
+              aria-label="Đăng nhập"
+            >
+              Đăng nhập
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white py-8">
@@ -409,15 +438,15 @@ const Cart = () => {
               <div className="space-y-4">
                 <div className="flex justify-between py-3 border-b">
                   <span>Tạm tính:</span>
-                  <span className="font-medium">{(cart.subtotal || 0).toLocaleString("vi-VN")} ₫</span>
+                  <span className="font-medium">{(selectedSubtotal || 0).toLocaleString("vi-VN")} ₫</span>
                 </div>
                 <div className="flex justify-between py-3 border-b">
                   <span>Giảm giá:</span>
-                  <span className="font-medium">{(cart.discount || 0).toLocaleString("vi-VN")} ₫</span>
+                  <span className="font-medium">{(selectedDiscount || 0).toLocaleString("vi-VN")} ₫</span>
                 </div>
                 <div className="flex justify-between py-3 text-lg font-medium">
                   <span>Tổng cộng:</span>
-                  <span className="text-red-500">{(cart.grandTotal || 0).toLocaleString("vi-VN")} ₫</span>
+                  <span className="text-red-500">{(selectedGrandTotal || 0).toLocaleString("vi-VN")} ₫</span>
                 </div>
               </div>
               <button
