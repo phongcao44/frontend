@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getCart,
@@ -20,11 +20,9 @@ const Cart = () => {
   );
   const { addresses } = useSelector((state) => state.address);
   const { user } = useSelector((state) => state.auth);
-
-  // Sử dụng Redux state thay vì local state
   const selectedItems = useSelector((state) => state.cart.selectedItems || []);
 
-  // Helper functions cho localStorage
+  // Helper functions for localStorage
   const saveSelectedItemsToStorage = (items) => {
     try {
       if (Array.isArray(items) && items.length > 0) {
@@ -52,53 +50,42 @@ const Cart = () => {
     return [];
   };
 
-  // Load cart và addresses
+  // Load cart and addresses
   useEffect(() => {
     dispatch(getCart());
     dispatch(getAddresses());
   }, [dispatch, user]);
 
-  // Initialize selectedItems from localStorage khi component mount
+  // Initialize selectedItems from localStorage when component mounts
   useEffect(() => {
-    // Chỉ load từ localStorage nếu selectedItems trong Redux chưa có giá trị
     if (!selectedItems.length) {
       const savedItems = loadSelectedItemsFromStorage();
       if (savedItems.length > 0) {
         dispatch(setSelectedItems(savedItems));
       }
     }
-  }, [dispatch]);
+  }, [dispatch, selectedItems.length]);
 
-  // Sync selectedItems với localStorage mỗi khi selectedItems thay đổi
+  // Sync selectedItems with localStorage
   useEffect(() => {
     saveSelectedItemsToStorage(selectedItems);
   }, [selectedItems]);
 
-  // Validate và clean up selectedItems khi cart items thay đổi
+  // Validate and clean up selectedItems when cart items change
   useEffect(() => {
-    if (loading || !cart?.items) return; // Không xử lý khi đang loading hoặc cart chưa sẵn sàng
+    if (loading || !cart?.items) return;
 
     const validItems = selectedItems.filter((id) =>
       cart.items.some((item) => item.cartItemId === id)
     );
 
-    // Chỉ dispatch nếu selectedItems có thay đổi
-    if (validItems.length !== selectedItems.length ||
-        validItems.some((id, index) => id !== selectedItems[index])) {
+    if (
+      validItems.length !== selectedItems.length ||
+      validItems.some((id, index) => id !== selectedItems[index])
+    ) {
       dispatch(setSelectedItems(validItems));
     }
   }, [cart?.items, loading, selectedItems, dispatch]);
-
-  // Debug logging
-  useEffect(() => {
-    console.log("Cart state:", {
-      cartItems: cart?.items,
-      selectedItems,
-      isAllSelected: cart?.items?.length > 0 && selectedItems.length === cart?.items?.length,
-      loading,
-      cartItemsLength: cart?.items?.length,
-    });
-  }, [cart?.items, selectedItems, loading]);
 
   const handleQuantityChange = async (cartItemId, delta) => {
     if (!selectedItems.includes(cartItemId) || itemLoading[cartItemId]) return;
@@ -152,7 +139,6 @@ const Cart = () => {
   };
 
   const handleSelectItem = (cartItemId) => {
-    // Ensure the cartItemId exists in cart.items
     if (!cart?.items?.some((item) => item.cartItemId === cartItemId)) {
       console.warn(`Invalid cartItemId ${cartItemId} selected`);
       return;
@@ -161,31 +147,21 @@ const Cart = () => {
     const newSelectedItems = selectedItems.includes(cartItemId)
       ? selectedItems.filter((id) => id !== cartItemId)
       : [...selectedItems, cartItemId];
-    
-    console.log("Selecting/Deselecting item:", { cartItemId, newSelectedItems });
+
     dispatch(setSelectedItems(newSelectedItems));
   };
 
   const handleSelectAll = () => {
-    if (!cart?.items?.length) {
-      console.log("No items to select");
-      return;
-    }
+    if (!cart?.items?.length) return;
 
     const allItemIds = cart.items.map((item) => item.cartItemId);
-    const isAllSelected = selectedItems.length === allItemIds.length;
+    const areAllSelected = selectedItems.length > 0 && allItemIds.every((id) => selectedItems.includes(id));
 
-    console.log("handleSelectAll triggered", {
-      selectedItemsLength: selectedItems.length,
-      cartItemsLength: cart?.items?.length,
-      cartItems: allItemIds,
-    });
-
-    if (isAllSelected) {
+    if (areAllSelected) {
       console.log("Deselecting all items");
       dispatch(setSelectedItems([]));
     } else {
-      console.log("Selecting all items:", allItemIds);
+      console.log("Selecting all items");
       dispatch(setSelectedItems(allItemIds));
     }
   };
@@ -207,11 +183,9 @@ const Cart = () => {
         addressId: addresses[0].addressId,
         paymentMethod: "COD",
         cartItemIds: selectedItems,
-        voucherId: 0,
         usedPoints: 0,
         note: "",
       };
-      console.log("Proceeding to checkout with selectedItems:", selectedItems);
       const result = await dispatch(checkoutSelectedItemsPreviewThunk(payload)).unwrap();
       navigate("/checkout", { state: { preview: result } });
     } catch (err) {
@@ -238,7 +212,94 @@ const Cart = () => {
     return variants.join(" | ") || "";
   };
 
-  const isAllSelected = cart?.items?.length > 0 && selectedItems.length === cart?.items?.length;
+  const isAllSelected = cart?.items?.length > 0 && selectedItems.length > 0 && cart.items.every((item) => selectedItems.includes(item.cartItemId));
+
+  // Calculate total for selected items
+  const selectedItemsSet = new Set(selectedItems);
+  const selectedCartItems = Array.isArray(cart?.items)
+    ? cart.items.filter((i) => selectedItemsSet.has(i.cartItemId))
+    : [];
+
+  const selectedTotal = selectedCartItems.reduce((sum, i) => {
+    const perItemTotal =
+      i.totalPrice != null
+        ? i.totalPrice
+        : (i.discountedPrice || i.originalPrice || 0) * (i.quantity || 0);
+    return sum + perItemTotal;
+  }, 0);
+
+  const { isLoggedIn } = useSelector((state) => state.auth);
+
+  // Floating checkout visibility logic
+  const summaryRef = useRef(null);
+  const footerSentinelRef = useRef(null);
+  const [showFloating, setShowFloating] = useState(false);
+  const [nearFooter, setNearFooter] = useState(false);
+
+  useEffect(() => {
+    if (!cart?.items?.length) {
+      setShowFloating(false);
+      return;
+    }
+
+    const summaryEl = summaryRef.current;
+    if (!summaryEl) return;
+
+    const handleSummaryIntersect = (entries) => {
+      const entry = entries[0];
+      // Show floating when summary is NOT visible
+      setShowFloating(!entry.isIntersecting);
+    };
+
+    const observer = new IntersectionObserver(handleSummaryIntersect, {
+      root: null,
+      threshold: 0.1,
+    });
+
+    observer.observe(summaryEl);
+
+    return () => observer.disconnect();
+  }, [cart?.items?.length]);
+
+  useEffect(() => {
+    const sentinelEl = footerSentinelRef.current;
+    if (!sentinelEl) return;
+
+    const handleFooterIntersect = (entries) => {
+      const entry = entries[0];
+      setNearFooter(entry.isIntersecting);
+    };
+
+    const observer = new IntersectionObserver(handleFooterIntersect, {
+      root: null,
+      threshold: 0,
+    });
+
+    observer.observe(sentinelEl);
+
+    return () => observer.disconnect();
+  }, []);
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-white py-10 px-5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-20 px-5">
+            <h4 className="text-xl font-medium mb-4">
+              Bạn chưa đăng nhập. Vui lòng đăng nhập để xem giỏ hàng.
+            </h4>
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-8 rounded transition-colors duration-200"
+              onClick={() => navigate("/login")}
+              aria-label="Đăng nhập"
+            >
+              Đăng nhập
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white py-8">
@@ -264,7 +325,7 @@ const Cart = () => {
                 checked={isAllSelected}
                 onChange={handleSelectAll}
                 className="h-5 w-5 text-red-500 mr-2"
-                disabled={loading || !cart?.items?.length}
+                disabled={!cart?.items?.length}
               />
               {isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
             </div>
@@ -377,7 +438,7 @@ const Cart = () => {
           <div className="flex justify-between my-8">
             <button
               className="px-8 py-3 border border-gray-300 text-black bg-white hover:bg-gray-50 transition-colors"
-              onClick={() => navigate("/home")}
+              onClick={() => navigate("/")}
             >
               Quay lại cửa hàng
             </button>
@@ -386,42 +447,41 @@ const Cart = () => {
 
         {cart?.items?.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mt-12">
-            <div className="flex space-x-4 items-start">
-              <input
-                type="text"
-                placeholder="Mã giảm giá"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-                disabled={loading}
-              />
-              <button
-                className="px-8 py-3 bg-red-500 text-white hover:bg-red-600 rounded transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                disabled={loading}
-              >
-                Áp dụng mã
-              </button>
-            </div>
-
+            <div></div> {/* Empty div to maintain grid layout */}
             <div
+              ref={summaryRef}
               className="bg-white border border-gray-300 p-8 ml-auto rounded"
               style={{ width: "400px" }}
             >
               <h3 className="text-xl font-medium mb-6">Tổng giỏ hàng</h3>
               <div className="space-y-4">
-                <div className="flex justify-between py-3 border-b">
-                  <span>Tạm tính:</span>
-                  <span className="font-medium">{(cart.subtotal || 0).toLocaleString("vi-VN")} ₫</span>
-                </div>
-                <div className="flex justify-between py-3 border-b">
-                  <span>Giảm giá:</span>
-                  <span className="font-medium">{(cart.discount || 0).toLocaleString("vi-VN")} ₫</span>
-                </div>
                 <div className="flex justify-between py-3 text-lg font-medium">
                   <span>Tổng cộng:</span>
-                  <span className="text-red-500">{(cart.grandTotal || 0).toLocaleString("vi-VN")} ₫</span>
+                  <span className="text-red-500">{(selectedTotal || 0).toLocaleString("vi-VN")} ₫</span>
                 </div>
               </div>
               <button
                 className="w-full mt-8 px-6 py-3 bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors"
+                onClick={handleProceedToCheckout}
+                disabled={loading || selectedItems.length === 0}
+              >
+                Tiến hành thanh toán ({selectedItems.length} sản phẩm)
+              </button>
+            </div>
+          </div>
+        )}
+        {/* Sentinel để phát hiện gần footer (đặt ở cuối nội dung trang giỏ) */}
+        <div ref={footerSentinelRef} className="h-1 w-full"></div>
+        {/* Floating bottom checkout bar - chỉ hiện khi summary không trong viewport và không gần footer */}
+        {cart?.items?.length > 0 && showFloating && !nearFooter && (
+          <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+              <div className="text-sm">
+                <span className="mr-2">Tổng cộng:</span>
+                <span className="text-red-500 font-medium">{(selectedTotal || 0).toLocaleString("vi-VN")} ₫</span>
+              </div>
+              <button
+                className="px-5 py-2 bg-red-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed"
                 onClick={handleProceedToCheckout}
                 disabled={loading || selectedItems.length === 0}
               >

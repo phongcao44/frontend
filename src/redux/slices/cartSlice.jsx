@@ -17,7 +17,9 @@ export const getCart = createAsyncThunk("cart/getCart", async (_, thunkAPI) => {
   try {
     return await fetchCart();
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+    return thunkAPI.rejectWithValue(
+      err.response?.data || { message: err.message }
+    );
   }
 });
 
@@ -28,7 +30,9 @@ export const addItemToCart = createAsyncThunk(
       const response = await addToCart(payload);
       return { cartItem: response, payload };
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -40,7 +44,9 @@ export const updateCartItemQuantity = createAsyncThunk(
       const response = await updateCartItem(cartItemId, quantity);
       return { cartItemId, quantity, updatedItem: response };
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -52,7 +58,9 @@ export const removeItemFromCart = createAsyncThunk(
       await removeCartItem(cartItemId);
       return cartItemId;
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -63,7 +71,9 @@ export const clearUserCart = createAsyncThunk(
     try {
       return await clearCart();
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -74,7 +84,9 @@ export const checkoutUserCart = createAsyncThunk(
     try {
       return await checkoutCart(payload);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -85,7 +97,9 @@ export const checkoutSingleCartItem = createAsyncThunk(
     try {
       return await checkoutByCartItem(cartItemId, payload);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -96,7 +110,9 @@ export const checkoutSelectedItemsThunk = createAsyncThunk(
     try {
       return await checkoutSelectedItems(payload);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -107,7 +123,9 @@ export const checkoutSelectedItemsPreviewThunk = createAsyncThunk(
     try {
       return await checkoutSelectedItemsPreview(payload);
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response?.data || { message: err.message });
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { message: err.message }
+      );
     }
   }
 );
@@ -171,7 +189,8 @@ const cartSlice = createSlice({
         if (cartItem) {
           state.cart.items.push(cartItem);
           state.cart.subtotal += cartItem.totalPrice || 0;
-          state.cart.discount += (cartItem.discountAmount || 0) * (cartItem.quantity || 1);
+          state.cart.discount +=
+            (cartItem.discountAmount || 0) * (cartItem.quantity || 1);
           state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
         }
         state.loading = false;
@@ -185,70 +204,75 @@ const cartSlice = createSlice({
       .addCase(updateCartItemQuantity.pending, (state, action) => {
         const { cartItemId, quantity } = action.meta.arg;
         state.itemLoading[cartItemId] = true;
+        state.error = null;
+
+        // Optimistic update: Update quantity and recalculate item totals
         const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
         if (item) {
-          state.optimisticUpdates[cartItemId] = {
-            quantity: item.quantity,
-            discountedPrice: item.discountedPrice,
-            totalPrice: item.totalPrice,
-            discountAmount: item.discountAmount,
-            flags: item.flags,
-          };
+          // Store previous state for rollback
+          state.optimisticUpdates[cartItemId] = { ...item };
+          
+          // Update quantity only; keep pricing until server responds to avoid incorrect math
           item.quantity = quantity;
-          // Tạm tính giá dựa trên logic flash sale
-          const unitPrice = quantity <= 15 ? 253000 : (item.originalPrice || 460000);
-          item.discountedPrice = unitPrice;
-          item.totalPrice = unitPrice * quantity;
-          item.flags = quantity <= 15 ? ["FLASH_APPLIED"] : [];
-          item.discountAmount = quantity <= 15 ? 207000 : 0;
-          // Cập nhật tổng giỏ hàng
-          state.cart.subtotal = state.cart.items.reduce(
-            (sum, i) => sum + (i.totalPrice || 0),
-            0
-          );
-          state.cart.discount = state.cart.items.reduce(
-            (sum, i) => sum + (i.discountAmount || 0) * (i.quantity || 1),
-            0
-          );
-          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
         }
-        state.error = null;
       })
       .addCase(updateCartItemQuantity.fulfilled, (state, action) => {
         const { cartItemId, updatedItem } = action.payload;
-        const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
-        if (item && updatedItem) {
-          // Cập nhật từ API
-          item.quantity = updatedItem.quantity || item.quantity;
-          item.discountedPrice = updatedItem.discountedPrice || item.discountedPrice;
-          item.totalPrice = updatedItem.totalPrice || item.totalPrice;
-          item.discountAmount = updatedItem.discountAmount || item.discountAmount;
-          item.flags = updatedItem.flags || item.flags;
-          // Cập nhật tổng giỏ hàng
-          state.cart.subtotal = state.cart.items.reduce(
-            (sum, i) => sum + (i.totalPrice || 0),
-            0
-          );
-          state.cart.discount = state.cart.items.reduce(
-            (sum, i) => sum + (i.discountAmount || 0) * (i.quantity || 1),
-            0
-          );
-          state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
+        // Some backends return the full cart on update; others return the updated item
+        const isFullCartResponse = updatedItem && Array.isArray(updatedItem.items);
+
+        if (isFullCartResponse) {
+          const payloadCart = updatedItem || {};
+          state.cart = {
+            ...payloadCart,
+            items: Array.isArray(payloadCart.items) ? payloadCart.items : [],
+            subtotal: payloadCart.subtotal || 0,
+            discount: payloadCart.discount || 0,
+            grandTotal: payloadCart.grandTotal || 0,
+          };
+        } else {
+          const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
+          if (item && updatedItem) {
+            // Update fields with API response, with fallbacks
+            item.quantity = updatedItem.quantity ?? item.quantity;
+            item.discountedPrice = updatedItem.discountedPrice ?? item.discountedPrice;
+            item.originalPrice = updatedItem.originalPrice ?? item.originalPrice;
+            item.totalPrice =
+              updatedItem.totalPrice ?? (item.discountedPrice || item.originalPrice || 0) * (item.quantity || 0);
+            // Keep discountAmount as per-unit if backend provides per-unit; otherwise accept backend value
+            item.discountAmount =
+              updatedItem.discountAmount ?? item.discountAmount;
+            item.flags = updatedItem.flags ?? item.flags;
+            item.discountType = updatedItem.discountType ?? item.discountType;
+            item.discountOverrideByFlashSale =
+              updatedItem.discountOverrideByFlashSale ?? item.discountOverrideByFlashSale;
+
+            // Recalculate cart totals from items
+            state.cart.subtotal = state.cart.items.reduce(
+              (sum, i) => sum + (i.totalPrice || 0),
+              0
+            );
+            state.cart.discount = state.cart.items.reduce(
+              (sum, i) => sum + ((i.discountAmount || 0) * (i.quantity || 1)),
+              0
+            );
+            state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
+          }
         }
+
         delete state.itemLoading[cartItemId];
         delete state.optimisticUpdates[cartItemId];
       })
       .addCase(updateCartItemQuantity.rejected, (state, action) => {
         const { cartItemId } = action.meta.arg;
-        const prevState = state.optimisticUpdates[cartItemId];
-        const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
-        if (item && prevState) {
-          item.quantity = prevState.quantity;
-          item.discountedPrice = prevState.discountedPrice;
-          item.totalPrice = prevState.totalPrice;
-          item.discountAmount = prevState.discountAmount;
-          item.flags = prevState.flags;
-          // Khôi phục tổng giỏ hàng
+        const prevItem = state.optimisticUpdates[cartItemId];
+        if (prevItem) {
+          // Rollback to previous state
+          const item = state.cart.items.find((i) => i.cartItemId === cartItemId);
+          if (item) {
+            Object.assign(item, prevItem);
+          }
+          // Recalculate cart totals
           state.cart.subtotal = state.cart.items.reduce(
             (sum, i) => sum + (i.totalPrice || 0),
             0
@@ -278,6 +302,7 @@ const cartSlice = createSlice({
         state.cart.items = state.cart.items.filter(
           (item) => item.cartItemId !== cartItemId
         );
+        // Fix: remove from selectedItems by id instead of corrupting it with item objects
         state.selectedItems = state.selectedItems.filter((id) => id !== cartItemId);
         state.error = null;
       })
@@ -292,7 +317,8 @@ const cartSlice = createSlice({
         if (prevItem) {
           state.cart.items.push(prevItem);
           state.cart.subtotal += prevItem.totalPrice || 0;
-          state.cart.discount += (prevItem.discountAmount || 0) * (prevItem.quantity || 1);
+          state.cart.discount +=
+            (prevItem.discountAmount || 0) * (prevItem.quantity || 1);
           state.cart.grandTotal = state.cart.subtotal - state.cart.discount;
         }
         delete state.itemLoading[cartItemId];

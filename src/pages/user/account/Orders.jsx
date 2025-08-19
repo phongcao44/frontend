@@ -181,34 +181,6 @@ export default function Orders() {
           </div>
         </div>
 
-        {/* Search and Filter Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8 transition-all duration-300 hover:shadow-md">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative group">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 transition-colors group-focus-within:text-blue-500" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo mã đơn hàng..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-gray-50 hover:bg-white transition-all duration-200 focus:scale-[1.02]"
-              />
-            </div>
-            <div className="flex gap-3">
-              <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-gray-50 hover:bg-white transition-all duration-200 focus:scale-[1.02]"
-              />
-              <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 hover:scale-105 active:scale-95">
-                <Filter className="w-4 h-4 transition-transform group-hover:rotate-180" />
-                Lọc
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Orders Content */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md relative">
           <div className={`transition-all duration-300 ${
