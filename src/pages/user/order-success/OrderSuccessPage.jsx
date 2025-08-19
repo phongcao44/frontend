@@ -95,7 +95,7 @@ export default function OrderSuccessPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-             to={`/order/${orderId}`}
+             to={`/user/order/${orderId}`}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center whitespace-nowrap no-underline"
           >
             Xem Đơn Hàng
