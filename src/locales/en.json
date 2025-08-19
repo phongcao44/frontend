@@ -65,7 +65,7 @@
     }
   },
 
-   "signup": {
+  "signup": {
     "title": "Create an Account",
     "subtitle": "Please enter your information",
     "usernamePlaceholder": "Full Name",
@@ -89,6 +89,42 @@
       "confirmPasswordRequired": "Please enter your confirm password",
       "confirmPasswordMismatch": "Confirm password does not match",
       "serverError": "Registration or auto-login failed. Please try again."
+    }
+  },
+  "editProfile": {
+    "profileTab": "Edit Profile",
+    "passwordTab": "Change Password",
+    "nameLabel": "Full Name",
+    "emailLabel": "Email",
+    "currentPasswordLabel": "Current Password",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "namePlaceholder": "Enter your full name",
+    "emailPlaceholder": "Enter your email",
+    "currentPasswordPlaceholder": "Enter current password",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmPasswordPlaceholder": "Confirm new password",
+    "profileDescription": "Update your profile information",
+    "passwordDescription": "Change your password to secure your account",
+    "saveButton": "Save Changes",
+    "changePasswordButton": "Change Password",
+    "cancelButton": "Cancel",
+    "saving": "Saving...",
+    "passwordMatch": "Passwords match",
+    "success": {
+      "title": "Success",
+      "profileUpdated": "Profile updated successfully",
+      "passwordChanged": "Password changed successfully"
+    },
+    "errors": {
+      "nameRequired": "Please enter your full name",
+      "currentPasswordRequired": "Please enter your current password",
+      "newPasswordRequired": "Please enter a new password",
+      "confirmPasswordRequired": "Please confirm your new password",
+      "passwordLength": "Password must be between 6 and 20 characters",
+      "passwordFormat": "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+      "confirmPasswordMismatch": "Passwords do not match",
+      "serverError": "An error occurred on the server. Please try again."
     }
   }
 }

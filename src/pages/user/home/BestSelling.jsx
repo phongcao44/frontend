@@ -7,6 +7,16 @@ import "swiper/css/navigation";
 import ProductCard from "./ProductCard";
 import { loadTopSellingProductsPaginate } from "../../../redux/slices/productSlice";
 
+// Helper function to sync products with wishlist
+const syncProductsWithWishlist = (products, wishlistItems) => {
+  if (!products || !wishlistItems) return products;
+  
+  return products.map(product => ({
+    ...product,
+    isFavorite: wishlistItems.some(item => item.product?.id === product.id)
+  }));
+};
+
 // Custom icons component to replace Ant Design icons
 const LeftOutlined = () => (
   <svg
@@ -52,6 +62,7 @@ const Spinner = () => (
 const BestSelling = () => {
   const dispatch = useDispatch();
   const { topSellingPaginated, loading } = useSelector((state) => state.products);
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
   const prevRef = useRef(null);
   const nextRef = useRef(null);
 
@@ -59,8 +70,9 @@ const BestSelling = () => {
     dispatch(loadTopSellingProductsPaginate({ page: 0, limit: 10 }));
   }, [dispatch]);
 
-  // Extract products from paginated response
-  const products = topSellingPaginated?.content || [];
+  // Extract products from paginated response and sync with wishlist
+  const rawProducts = topSellingPaginated?.content || [];
+  const products = syncProductsWithWishlist(rawProducts, wishlistItems);
 
   return (
     <div className="py-10 px-5 bg-white">

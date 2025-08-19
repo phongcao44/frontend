@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { shallowEqual } from "react-redux";
+import { isEqual, debounce } from "lodash";
 import {
   getCart,
   updateCartItemQuantity,
@@ -16,11 +18,15 @@ const Cart = () => {
   const navigate = useNavigate();
 
   const { cart, loading, itemLoading, error } = useSelector(
-    (state) => state.cart
+    (state) => state.cart,
+    shallowEqual
   );
-  const { addresses } = useSelector((state) => state.address);
-  const { user } = useSelector((state) => state.auth);
-  const selectedItems = useSelector((state) => state.cart.selectedItems || []);
+  const { addresses } = useSelector((state) => state.address, shallowEqual);
+  const { user, isLoggedIn } = useSelector((state) => state.auth, shallowEqual);
+  const selectedItems = useSelector(
+    (state) => state.cart.selectedItems || [],
+    shallowEqual
+  );
 
   // Helper functions for localStorage
   const saveSelectedItemsToStorage = (items) => {
@@ -34,6 +40,8 @@ const Cart = () => {
       console.error("Error saving selectedItems to localStorage:", err);
     }
   };
+
+  const debouncedSaveSelectedItems = debounce(saveSelectedItemsToStorage, 500);
 
   const loadSelectedItemsFromStorage = () => {
     try {
@@ -56,19 +64,18 @@ const Cart = () => {
     dispatch(getAddresses());
   }, [dispatch, user]);
 
-  // Initialize selectedItems from localStorage when component mounts
+  // Initialize selectedItems from localStorage on mount
   useEffect(() => {
-    if (!selectedItems.length) {
-      const savedItems = loadSelectedItemsFromStorage();
-      if (savedItems.length > 0) {
-        dispatch(setSelectedItems(savedItems));
-      }
+    const savedItems = loadSelectedItemsFromStorage();
+    if (savedItems.length > 0) {
+      dispatch(setSelectedItems(savedItems));
     }
-  }, [dispatch, selectedItems.length]);
+  }, [dispatch]);
 
   // Sync selectedItems with localStorage
   useEffect(() => {
-    saveSelectedItemsToStorage(selectedItems);
+    debouncedSaveSelectedItems(selectedItems);
+    return () => debouncedSaveSelectedItems.cancel();
   }, [selectedItems]);
 
   // Validate and clean up selectedItems when cart items change
@@ -79,13 +86,10 @@ const Cart = () => {
       cart.items.some((item) => item.cartItemId === id)
     );
 
-    if (
-      validItems.length !== selectedItems.length ||
-      validItems.some((id, index) => id !== selectedItems[index])
-    ) {
+    if (!isEqual(validItems, selectedItems)) {
       dispatch(setSelectedItems(validItems));
     }
-  }, [cart?.items, loading, selectedItems, dispatch]);
+  }, [cart?.items, loading, dispatch]);
 
   const handleQuantityChange = async (cartItemId, delta) => {
     if (!selectedItems.includes(cartItemId) || itemLoading[cartItemId]) return;
@@ -155,25 +159,33 @@ const Cart = () => {
     if (!cart?.items?.length) return;
 
     const allItemIds = cart.items.map((item) => item.cartItemId);
-    const areAllSelected = selectedItems.length > 0 && allItemIds.every((id) => selectedItems.includes(id));
+    const areAllSelected =
+      selectedItems.length > 0 &&
+      allItemIds.every((id) => selectedItems.includes(id));
 
     if (areAllSelected) {
-      console.log("Deselecting all items");
       dispatch(setSelectedItems([]));
     } else {
-      console.log("Selecting all items");
       dispatch(setSelectedItems(allItemIds));
     }
   };
 
   const handleProceedToCheckout = async () => {
     if (selectedItems.length === 0) {
-      Swal.fire("Thông báo", "Vui lòng chọn ít nhất một sản phẩm để thanh toán.", "warning");
+      Swal.fire(
+        "Thông báo",
+        "Vui lòng chọn ít nhất một sản phẩm để thanh toán.",
+        "warning"
+      );
       return;
     }
 
     if (!addresses?.length) {
-      Swal.fire("Thông báo", "Vui lòng thêm địa chỉ trước khi thanh toán.", "warning");
+      Swal.fire(
+        "Thông báo",
+        "Vui lòng thêm địa chỉ trước khi thanh toán.",
+        "warning"
+      );
       navigate("/account/addresses");
       return;
     }
@@ -186,11 +198,17 @@ const Cart = () => {
         usedPoints: 0,
         note: "",
       };
-      const result = await dispatch(checkoutSelectedItemsPreviewThunk(payload)).unwrap();
+      const result = await dispatch(
+        checkoutSelectedItemsPreviewThunk(payload)
+      ).unwrap();
       navigate("/checkout", { state: { preview: result } });
     } catch (err) {
       console.error("Checkout preview failed:", err);
-      Swal.fire("Lỗi", err.message || "Không thể tải thông tin xem trước đơn hàng.", "error");
+      Swal.fire(
+        "Lỗi",
+        err.message || "Không thể tải thông tin xem trước đơn hàng.",
+        "error"
+      );
     }
   };
 
@@ -212,7 +230,10 @@ const Cart = () => {
     return variants.join(" | ") || "";
   };
 
-  const isAllSelected = cart?.items?.length > 0 && selectedItems.length > 0 && cart.items.every((item) => selectedItems.includes(item.cartItemId));
+  const isAllSelected =
+    cart?.items?.length > 0 &&
+    selectedItems.length > 0 &&
+    cart.items.every((item) => selectedItems.includes(item.cartItemId));
 
   // Calculate total for selected items
   const selectedItemsSet = new Set(selectedItems);
@@ -227,8 +248,6 @@ const Cart = () => {
         : (i.discountedPrice || i.originalPrice || 0) * (i.quantity || 0);
     return sum + perItemTotal;
   }, 0);
-
-  const { isLoggedIn } = useSelector((state) => state.auth);
 
   // Floating checkout visibility logic
   const summaryRef = useRef(null);
@@ -247,7 +266,6 @@ const Cart = () => {
 
     const handleSummaryIntersect = (entries) => {
       const entry = entries[0];
-      // Show floating when summary is NOT visible
       setShowFloating(!entry.isIntersecting);
     };
 
@@ -373,7 +391,10 @@ const Cart = () => {
                 <div className="text-black">
                   <div className="flex flex-col">
                     <span className="text-red-500 font-medium">
-                      {(item.discountedPrice || item.originalPrice || 0).toLocaleString("vi-VN")} ₫
+                      {(item.discountedPrice || item.originalPrice || 0).toLocaleString(
+                        "vi-VN"
+                      )}{" "}
+                      ₫
                     </span>
                     {item.discountedPrice !== item.originalPrice && (
                       <span className="text-gray-500 line-through text-sm">
@@ -394,7 +415,9 @@ const Cart = () => {
                   >
                     -
                   </button>
-                  <span className="px-4 min-w-[50px] text-center">{item.quantity || 0}</span>
+                  <span className="px-4 min-w-[50px] text-center">
+                    {item.quantity || 0}
+                  </span>
                   <button
                     onClick={() => handleQuantityChange(item.cartItemId, 1)}
                     className="px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -408,7 +431,9 @@ const Cart = () => {
                   </button>
                 </div>
                 <div className="text-black font-medium">
-                  {(item.totalPrice || 0).toLocaleString("vi-VN")} ₫
+                  {(
+
+item.totalPrice || 0).toLocaleString("vi-VN")} ₫
                 </div>
                 <div>
                   <button
@@ -447,7 +472,7 @@ const Cart = () => {
 
         {cart?.items?.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mt-12">
-            <div></div> {/* Empty div to maintain grid layout */}
+            <div></div>
             <div
               ref={summaryRef}
               className="bg-white border border-gray-300 p-8 ml-auto rounded"
@@ -457,7 +482,9 @@ const Cart = () => {
               <div className="space-y-4">
                 <div className="flex justify-between py-3 text-lg font-medium">
                   <span>Tổng cộng:</span>
-                  <span className="text-red-500">{(selectedTotal || 0).toLocaleString("vi-VN")} ₫</span>
+                  <span className="text-red-500">
+                    {(selectedTotal || 0).toLocaleString("vi-VN")} ₫
+                  </span>
                 </div>
               </div>
               <button
@@ -470,15 +497,15 @@ const Cart = () => {
             </div>
           </div>
         )}
-        {/* Sentinel để phát hiện gần footer (đặt ở cuối nội dung trang giỏ) */}
         <div ref={footerSentinelRef} className="h-1 w-full"></div>
-        {/* Floating bottom checkout bar - chỉ hiện khi summary không trong viewport và không gần footer */}
         {cart?.items?.length > 0 && showFloating && !nearFooter && (
           <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur">
             <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
               <div className="text-sm">
                 <span className="mr-2">Tổng cộng:</span>
-                <span className="text-red-500 font-medium">{(selectedTotal || 0).toLocaleString("vi-VN")} ₫</span>
+                <span className="text-red-500 font-medium">
+                  {(selectedTotal || 0).toLocaleString("vi-VN")} ₫
+                </span>
               </div>
               <button
                 className="px-5 py-2 bg-red-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed"

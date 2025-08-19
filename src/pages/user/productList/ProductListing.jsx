@@ -10,6 +10,16 @@ import ProductCard from "../home/ProductCard";
 import SandyLoadingAnimation from "../../../components/SandyLoadingAnimation";
 import "./ProductListing.css";
 
+// Helper function to sync products with wishlist
+const syncProductsWithWishlist = (products, wishlistItems) => {
+  if (!products || !wishlistItems) return products;
+  
+  return products.map(product => ({
+    ...product,
+    isFavorite: wishlistItems.some(item => item.product?.id === product.id)
+  }));
+};
+
 // Hàm để parse query parameters từ URL
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -340,7 +350,9 @@ function ProductListing() {
   };
 
   const breadcrumbItems = buildBreadcrumb();
-  const productsContent = Array.isArray(paginatedProducts?.data?.content) ? paginatedProducts?.data?.content : [];
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
+  const rawProductsContent = Array.isArray(paginatedProducts?.data?.content) ? paginatedProducts?.data?.content : [];
+  const productsContent = syncProductsWithWishlist(rawProductsContent, wishlistItems);
   const totalProducts = paginatedProducts?.data?.totalElements || 0;
   const totalPages = paginatedProducts?.data?.totalPages || 1;
   const currentPage = paginatedProducts?.data?.number || 0;

@@ -84,7 +84,7 @@ const DeliveredProductSection = () => {
                           },
                         })
                       }
-                      className="text-red-600 hover:text-red-800 transition text-sm underline"
+                      className="px-3 py-1.5 text-sm text-white rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm"
                     >
                       Trả hàng
                     </button>

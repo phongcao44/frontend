@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Heart, Eye, Star, Trash2 } from "lucide-react";
@@ -7,6 +7,7 @@ import {
   addProductToWishlist,
   removeProductFromWishlist,
 } from "../../../redux/slices/wishlistSlice";
+import { updateProductFavoriteStatus } from "../../../redux/slices/productSlice";
 
 const StarRating = ({ value, className }) => {
   return (
@@ -31,11 +32,15 @@ StarRating.propTypes = {
 };
 
 const ProductCard = ({ product, onRemove }) => {
-  const [hovered, setHovered] = useState(false);
   const [notification, setNotification] = useState(null);
   const [isFavorite, setIsFavorite] = useState(product.isFavorite || false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  // Sync isFavorite state with product.isFavorite when it changes
+  useEffect(() => {
+    setIsFavorite(product.isFavorite || false);
+  }, [product.isFavorite]);
   const { items: wishlistItems, loading: wishlistLoading } = useSelector(
     (state) => state.wishlist
   );
@@ -119,6 +124,7 @@ const ProductCard = ({ product, onRemove }) => {
     try {
       if (!isFavorite) {
         await dispatch(addProductToWishlist(productId)).unwrap();
+        dispatch(updateProductFavoriteStatus({ productId, isFavorite: true }));
         setNotification({
           type: "success",
           message: "Đã thêm vào danh sách yêu thích!",
@@ -131,6 +137,7 @@ const ProductCard = ({ product, onRemove }) => {
           await dispatch(
             removeProductFromWishlist(wishlistItem.wishlistId)
           ).unwrap();
+          dispatch(updateProductFavoriteStatus({ productId, isFavorite: false }));
           setNotification({
             type: "success",
             message: "Đã xóa khỏi danh sách yêu thích!",
@@ -151,11 +158,7 @@ const ProductCard = ({ product, onRemove }) => {
   };
 
   return (
-    <div
-      className="p-2 relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div className="p-2 relative">
       <div
         className="bg-white rounded-md shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer transform hover:scale-105 duration-200"
         onClick={handleNavigate}
