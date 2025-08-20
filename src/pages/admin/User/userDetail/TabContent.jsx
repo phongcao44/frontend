@@ -9,16 +9,84 @@ import {
   Shield,
 } from "lucide-react";
 import { Formik, Form, Field } from "formik";
-import Pagination from "../../../../components/Pagination";
+
+// Component Pagination tích hợp trực tiếp, hỗ trợ 0-based indexing
+const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }) => {
+  // currentPage từ BE là 0-based, chuyển sang 1-based cho UI
+  const displayPage = currentPage + 1;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  // Tạo danh sách các trang hiển thị
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxPagesToShow = 5; // Số trang tối đa hiển thị
+    let startPage = Math.max(1, displayPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    // Điều chỉnh startPage nếu endPage gần cuối
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-4 w-full">
+      {/* Nút Previous */}
+      <button
+        onClick={() => onPageChange(currentPage - 1, itemsPerPage)} // Gửi currentPage - 1 (0-based)
+        disabled={currentPage === 0}
+        className={`px-3 py-1 rounded-lg text-sm font-medium ${
+          currentPage === 0
+            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+            : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+        }`}
+      >
+        Trước
+      </button>
+
+      {/* Các nút số trang */}
+      {getPageNumbers().map((page) => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page - 1, itemsPerPage)} // Chuyển page (1-based) sang 0-based
+          className={`px-3 py-1 rounded-lg text-sm font-medium ${
+            page === displayPage
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {page} {/* Hiển thị số trang 1-based */}
+        </button>
+      ))}
+
+      {/* Nút Next */}
+      <button
+        onClick={() => onPageChange(currentPage + 1, itemsPerPage)} // Gửi currentPage + 1 (0-based)
+        disabled={currentPage === totalPages - 1}
+        className={`px-3 py-1 rounded-lg text-sm font-medium ${
+          currentPage === totalPages - 1
+            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+            : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+        }`}
+      >
+        Sau
+      </button>
+    </div>
+  );
+};
 
 export default function TabContent({
   selectedTab,
   userInfo,
   userRoles,
   orders,
-  totalPages,
-  totalItems, // Added
-  itemsPerPage, // Added
+  totalItems,
+  itemsPerPage,
   pagination,
   vouchers,
   isLoading,
@@ -65,7 +133,6 @@ export default function TabContent({
         {renderSkeleton()}
       </div>
     );
-
 
   return (
     <div className="bg-white rounded-lg border border-gray-200">
@@ -192,47 +259,70 @@ export default function TabContent({
               <p className="text-sm text-gray-500">Không có đơn hàng nào.</p>
             ) : (
               <div className="space-y-3">
-                {(orders || []).map((order) => (
-                  <div
-                    key={order?.orderCode || order?.orderId}
-                    className="p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          #{order?.orderId || "N/A"}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {order?.createdAt ? formatDate(order.createdAt) : "N/A"}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">
-                          {formatCurrency(order?.total)}
-                        </p>
-                        <span
-                          className={`inline-block px-2 py-1 text-xs rounded-full ${
-                            order?.status === "Delivered"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {order?.status || "N/A"}
-                        </span>
+                {(orders || []).map((order) => {
+                  // Hàm ánh xạ trạng thái đơn hàng sang tiếng Việt và màu sắc
+                  const getStatusDisplay = (status) => {
+                    switch (status) {
+                      case "RETURNED":
+                        return { text: "Đã trả hàng", class: "bg-red-100 text-red-800" };
+                      case "PENDING":
+                        return { text: "Đang chờ xử lý", class: "bg-yellow-100 text-yellow-800" };
+                      case "CONFIRMED":
+                        return { text: "Đã xác nhận", class: "bg-blue-100 text-blue-800" };
+                      case "SHIPPED":
+                        return { text: "Đã giao hàng", class: "bg-orange-100 text-orange-800" };
+                      case "DELIVERED":
+                        return { text: "Đã giao thành công", class: "bg-green-100 text-green-800" };
+                      case "CANCELLED":
+                        return { text: "Đã hủy", class: "bg-gray-100 text-gray-800" };
+                      default:
+                        return { text: "N/A", class: "bg-gray-100 text-gray-800" };
+                    }
+                  };
+
+                  const statusDisplay = getStatusDisplay(order?.status);
+
+                  return (
+                    <div
+                      key={order?.orderCode}
+                      className="p-4 border border-gray-200 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            #{order?.orderCode || "N/A"}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {order?.createdAt ? formatDate(order.createdAt) : "N/A"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900">
+                            {formatCurrency(order?.totalAmount || 0)}
+                          </p>
+                          <span
+                            className={`inline-block px-2 py-1 text-xs rounded-full ${statusDisplay.class}`}
+                          >
+                            {statusDisplay.text}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-            <Pagination
-              currentPage={pagination.page}
-              totalItems={totalItems}
-              itemsPerPage={itemsPerPage}
-              onPageChange={(page, limit) =>
-                handlers.handlePaginationChange({ page, limit })
-              }
-            />
+            {/* Container cho Pagination để đảm bảo nằm gọn trong tab */}
+            <div className="mt-4 w-full overflow-auto">
+              <Pagination
+                currentPage={pagination.page}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={(page, limit) =>
+                  handlers.handlePaginationChange({ page, limit })
+                }
+              />
+            </div>
           </div>
         )}
         {selectedTab === "loyalty" && (
@@ -286,15 +376,13 @@ export default function TabContent({
                           {voucher?.code || "N/A"}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Sử dụng: {voucher?.usedAt ? formatDate(voucher.usedAt) : "N/A"}
+                          Giảm: {voucher?.discountPercent ? `${voucher.discountPercent}%` : "N/A"}
+                          {voucher?.maxDiscount ? ` (tối đa ${formatCurrency(voucher.maxDiscount)})` : ""}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-green-600">
-                          {voucher?.discount || "N/A"}
-                        </p>
-                        <span className="text-xs text-gray-500">
-                          {voucher?.status || "N/A"}
+                        <span className={`px-2 py-1 text-xs rounded-full ${voucher?.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {voucher?.active ? "Đang hoạt động" : "Không hoạt động"}
                         </span>
                       </div>
                     </div>

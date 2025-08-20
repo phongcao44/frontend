@@ -5,9 +5,12 @@ import GeminiChatButton from "../pages/user/home/GeminiChatButton";
 import ChatWidget from "../components/ChatWidget";
 
 function UserLayout() {
-  const location = useLocation();
-const hideChat = location.pathname.startsWith("/login") || location.pathname.startsWith("/signup");
+  const { pathname } = useLocation();
 
+  // Hide chat widgets on login/signup pages
+  const hideChat = ["/login", "/signup"].some((path) =>
+    pathname.startsWith(path)
+  );
 
   return (
     <>
@@ -15,12 +18,14 @@ const hideChat = location.pathname.startsWith("/login") || location.pathname.sta
       <main style={{ minHeight: "80vh" }}>
         <Outlet />
       </main>
+
       {!hideChat && (
         <>
           <GeminiChatButton />
-          <ChatWidget key={location.pathname} />
+          <ChatWidget />
         </>
       )}
+
       <Footer />
     </>
   );

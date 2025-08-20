@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Heart, Eye, Star, Trash2 } from "lucide-react";
@@ -7,6 +7,7 @@ import {
   addProductToWishlist,
   removeProductFromWishlist,
 } from "../../../redux/slices/wishlistSlice";
+import { updateProductFavoriteStatus } from "../../../redux/slices/productSlice";
 
 const StarRating = ({ value, className }) => {
   return (
@@ -31,11 +32,15 @@ StarRating.propTypes = {
 };
 
 const ProductCard = ({ product, onRemove }) => {
-  const [hovered, setHovered] = useState(false);
   const [notification, setNotification] = useState(null);
   const [isFavorite, setIsFavorite] = useState(product.isFavorite || false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  // Sync isFavorite state with product.isFavorite when it changes
+  useEffect(() => {
+    setIsFavorite(product.isFavorite || false);
+  }, [product.isFavorite]);
   const { items: wishlistItems, loading: wishlistLoading } = useSelector(
     (state) => state.wishlist
   );
@@ -61,7 +66,6 @@ const ProductCard = ({ product, onRemove }) => {
 
   // Map fields
   const productId = id;
-  // Ensure finalPrice is at least 1 VND
   const finalPrice = Math.max(
     1,
     flashSale
@@ -77,18 +81,32 @@ const ProductCard = ({ product, onRemove }) => {
     flashSale && discountType === "AMOUNT" && discountOverrideByFlashSale
       ? displayOriginalPrice - discountOverrideByFlashSale
       : null;
-  const image = imageUrl || "/public/assets/images/error.jpg";
-  const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
+  
+  // Optimize image URL for Cloudinary
+  const baseImageUrl = imageUrl || "/assets/images/error.jpg";
+  const optimizedImageUrl = baseImageUrl.includes("cloudinary.com")
+    ? `${baseImageUrl.replace(
+        "/upload/",
+        "/upload/w_400,h_400,c_fill,f_auto,q_auto/"
+      )}`
+    : baseImageUrl;
+  const lqipImageUrl = baseImageUrl.includes("cloudinary.com")
+    ? `${baseImageUrl.replace(
+        "/upload/",
+        "/upload/w_20,e_blur:2000,q_auto/"
+      )}`
+    : baseImageUrl;
 
+  const showDiscountLabel = flashSale && (discountPercentage || discountAmount);
   const discountLabel = discountPercentage
     ? `-${discountPercentage}%`
     : discountAmount
     ? `- ${(discountAmount || 0).toLocaleString("vi-VN")}đ`
     : null;
 
-  // Xử lý lỗi ảnh
+  // Handle image error
   const handleImageError = (e) => {
-    e.target.src = "/public/assets/images/error.jpg";
+    e.target.src = "/assets/images/error.jpg";
   };
 
   const handleNavigate = (e) => {
@@ -106,6 +124,7 @@ const ProductCard = ({ product, onRemove }) => {
     try {
       if (!isFavorite) {
         await dispatch(addProductToWishlist(productId)).unwrap();
+        dispatch(updateProductFavoriteStatus({ productId, isFavorite: true }));
         setNotification({
           type: "success",
           message: "Đã thêm vào danh sách yêu thích!",
@@ -118,6 +137,7 @@ const ProductCard = ({ product, onRemove }) => {
           await dispatch(
             removeProductFromWishlist(wishlistItem.wishlistId)
           ).unwrap();
+          dispatch(updateProductFavoriteStatus({ productId, isFavorite: false }));
           setNotification({
             type: "success",
             message: "Đã xóa khỏi danh sách yêu thích!",
@@ -138,20 +158,24 @@ const ProductCard = ({ product, onRemove }) => {
   };
 
   return (
-    <div
-      className="p-2 relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div className="p-2 relative">
       <div
         className="bg-white rounded-md shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer transform hover:scale-105 duration-200"
         onClick={handleNavigate}
       >
         <div className="relative w-full pt-[100%]">
           <img
-            src={image}
+            src={lqipImageUrl}
             alt={name || "Product"}
             className="absolute top-0 left-0 w-full h-full object-cover"
+            loading="lazy"
+            onError={handleImageError}
+          />
+          <img
+            src={optimizedImageUrl}
+            alt={name || "Product"}
+            className="absolute top-0 left-0 w-full h-full object-cover"
+            loading="lazy"
             onError={handleImageError}
           />
           {showDiscountLabel && discountLabel && (

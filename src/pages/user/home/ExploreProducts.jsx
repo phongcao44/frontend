@@ -6,10 +6,21 @@ import { useDispatch, useSelector } from "react-redux";
 
 const { Title, Text } = Typography;
 
+// Helper function to sync products with wishlist
+const syncProductsWithWishlist = (products, wishlistItems) => {
+  if (!products || !wishlistItems) return products;
+  
+  return products.map(product => ({
+    ...product,
+    isFavorite: wishlistItems.some(item => item.product?.id === product.id)
+  }));
+};
+
 const ExploreProducts = () => {
   const dispatch = useDispatch();
   const scrollContainerRef = useRef(null);
   const paginatedProducts = useSelector((state) => state.products.paginated);
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
   const [page, setPage] = useState(0);
   const [allProductsLoaded, setAllProductsLoaded] = useState(false);
   const [displayedProducts, setDisplayedProducts] = useState([]);
@@ -21,13 +32,13 @@ const ExploreProducts = () => {
 
   useEffect(() => {
     if (paginatedProducts?.data?.content) {
-      const newProducts = paginatedProducts.data.content;
+      const syncedProducts = syncProductsWithWishlist(paginatedProducts.data.content, wishlistItems);
 
       setDisplayedProducts((prev) => {
-        if (page === 0) return newProducts;
+        if (page === 0) return syncedProducts;
 
         const existingIds = new Set(prev.map((p) => p.id));
-        const uniqueNew = newProducts.filter((p) => !existingIds.has(p.id));
+        const uniqueNew = syncedProducts.filter((p) => !existingIds.has(p.id));
         return [...prev, ...uniqueNew];
       });
 
@@ -35,7 +46,7 @@ const ExploreProducts = () => {
         setAllProductsLoaded(true);
       }
     }
-  }, [paginatedProducts]);
+  }, [paginatedProducts, wishlistItems]);
 
   const handleLoadMore = () => {
     if (!paginatedProducts?.data?.last) {

@@ -1,9 +1,7 @@
 /* eslint-disable react/prop-types */
 import { ChevronDown, User, Shield, Eye, Edit, Trash2 } from "lucide-react";
 
-
 export default function UserTable({ customers, handlers, isLoading }) {
-  
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -15,27 +13,62 @@ export default function UserTable({ customers, handlers, isLoading }) {
     }
   };
 
-  // Get role color based on roles
+  // Define role priority and color mapping
+  const roleConfig = {
+    ROLE_ADMIN: { label: "Quản trị viên", color: "bg-red-100 text-red-800" },
+    ROLE_MODERATOR: { label: "Điều phối", color: "bg-blue-100 text-blue-800" },
+    ROLE_SHIPPER: { label: "Giao hàng", color: "bg-green-100 text-green-800" },
+    ROLE_USER: { label: "Người dùng", color: "bg-gray-100 text-gray-800" },
+  };
+
+  // Get role color based on highest priority role
   const getRoleColor = (roles) => {
-    if (roles.includes("ROLE_VIP")) return "bg-purple-100 text-purple-800";
-    if (roles.includes("ROLE_PREMIUM")) return "bg-orange-100 text-orange-800";
-    return "bg-blue-100 text-blue-800";
+    if (!roles || roles.length === 0) return "bg-gray-100 text-gray-600";
+    // Priority: ADMIN > MODERATOR > SHIPPER > USER
+    if (roles.includes("ROLE_ADMIN")) return roleConfig.ROLE_ADMIN.color;
+    if (roles.includes("ROLE_MODERATOR")) return roleConfig.ROLE_MODERATOR.color;
+    if (roles.includes("ROLE_SHIPPER")) return roleConfig.ROLE_SHIPPER.color;
+    if (roles.includes("ROLE_USER")) return roleConfig.ROLE_USER.color;
+    return "bg-gray-100 text-gray-600";
   };
 
   // Get rank color based on rank
   const getRankColor = (rank) => {
     switch (rank) {
-      case "SILVER":
-        return "bg-gray-100 text-gray-800";
-      case "BRONZE":
+      case "DONG":
         return "bg-amber-100 text-amber-800";
-      case "PLATINUM":
-        return "bg-blue-100 text-blue-800";
-      case "DIAMOND":
+      case "BAC":
+        return "bg-gray-100 text-gray-800";
+      case "VANG":
+        return "bg-yellow-100 text-yellow-800";
+      case "KIMCUONG":
         return "bg-purple-100 text-purple-800";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-600";
     }
+  };
+
+  // Render roles as separate badges
+  const renderRoles = (roles) => {
+    if (!roles || roles.length === 0) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+          <Shield className="h-3 w-3 mr-1" />
+          N/A
+        </span>
+      );
+    }
+    return roles.map((role) => (
+      <span
+        key={role}
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-1 ${
+          roleConfig[role]?.color || "bg-gray-100 text-gray-600"
+        }`}
+      >
+        <Shield className="h-3 w-3 mr-1" />
+        {roleConfig[role]?.label || role}
+      </span>
+    ));
   };
 
   // Skeleton loader for table rows
@@ -127,15 +160,8 @@ export default function UserTable({ customers, handlers, isLoading }) {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {customer.email || "N/A"}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(
-                      customer.roles || []
-                    )}`}
-                  >
-                    <Shield className="h-3 w-3 mr-1" />
-                    {(customer.roles || []).join(", ") || "N/A"}
-                  </span>
+                <td className="px-6 py-4 whitespace-nowrap flex flex-wrap gap-1">
+                  {renderRoles(customer.roles || [])}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
@@ -144,10 +170,10 @@ export default function UserTable({ customers, handlers, isLoading }) {
                     )}`}
                   >
                     <Shield className="h-3 w-3 mr-1" />
-                    {customer.userRank === "BAC"
-                      ? "Bạc"
-                      : customer.userRank === "DONG"
+                    {customer.userRank === "DONG"
                       ? "Đồng"
+                      : customer.userRank === "BAC"
+                      ? "Bạc"
                       : customer.userRank === "VANG"
                       ? "Vàng"
                       : customer.userRank === "KIMCUONG"

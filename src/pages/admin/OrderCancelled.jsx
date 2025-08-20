@@ -17,7 +17,7 @@ import {
     User,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { loadPaginatedOrders } from "../../redux/slices/orderSlice";
+import { loadPaginatedOrders, loadOrderStatistics } from "../../redux/slices/orderSlice";
 import { useNavigate } from "react-router-dom";
 import Pagination from "../../components/Pagination";
 import { getStatusColor, translateStatus } from "../../utils/orderUtils";
@@ -74,6 +74,7 @@ export default function OrderCancelled() {
     const error = useSelector((state) => state.order.error || null);
     const totalPages = useSelector((state) => state.order.list?.totalPages || 1);
     const totalElements = useSelector((state) => state.order.list?.totalElements || 0);
+    const statistics = useSelector((state) => state.order.statistics || {});
 
     // Debounced function to handle search
     const debouncedSearch = useCallback(
@@ -148,6 +149,10 @@ export default function OrderCancelled() {
         console.log("Error:", error);
     }, [orders, totalElements, totalPages, error]);
 
+    useEffect(() => {
+        dispatch(loadOrderStatistics());
+    }, [dispatch]);
+
     const handlePageChange = (page, newItemsPerPage) => {
         setCurrentPage(page);
         if (newItemsPerPage !== itemsPerPage) {
@@ -161,9 +166,10 @@ export default function OrderCancelled() {
         setCurrentPage(0);
     };
 
+    // Sử dụng thống kê từ API cho cả hai tab để đảm bảo số liệu không thay đổi khi lọc
     const tabs = [
-        { name: "Đơn hàng đã hủy", count: totalElements },
-        { name: "Hủy theo trạng thái", count: orders.filter((order) => order.status === "CANCELLED" && (!cancellationReasonFilter || order.cancellationReason === cancellationReasonFilter)).length },
+        { name: "Đơn hàng đã hủy", count: statistics?.totalOrdersCancelled ?? totalElements },
+        { name: "Hủy theo trạng thái", count: statistics?.totalOrdersCancelled ?? totalElements },
     ];
 
     const handleRefresh = () => {
@@ -179,6 +185,7 @@ export default function OrderCancelled() {
                 cancellationReason: cancellationReasonFilter,
             })
         ).finally(() => setTimeout(() => setIsLoading(false), 500));
+        dispatch(loadOrderStatistics());
     };
 
     const formatDate = (dateString) => {
@@ -319,7 +326,7 @@ export default function OrderCancelled() {
                                     Tổng đơn hàng đã hủy
                                 </p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {totalElements}
+                                    {statistics?.totalOrdersCancelled ?? totalElements}
                                 </p>
                             </div>
                         </div>
@@ -334,7 +341,7 @@ export default function OrderCancelled() {
                                     Tổng số tiền đã hủy
                                 </p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {formatCurrency(totalRevenue)}
+                                    {formatCurrency(statistics?.totalCancelledAmount ?? totalRevenue)}
                                 </p>
                             </div>
                         </div>
@@ -347,7 +354,7 @@ export default function OrderCancelled() {
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">Tất cả đơn hàng hủy</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {cancelledOrders}
+                                    {statistics?.totalOrdersCancelled ?? totalElements}
                                 </p>
                             </div>
                         </div>
@@ -360,7 +367,7 @@ export default function OrderCancelled() {
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">Hôm nay</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {todayOrders}
+                                    {statistics?.totalOrdersCancelledToday ?? 0}
                                 </p>
                             </div>
                         </div>

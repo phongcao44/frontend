@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { Search, Plus, Edit2, Trash2, RefreshCw, Download, Image, Calendar } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, RefreshCw, Image, Calendar } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { getBanners, removeBanner } from "../../../redux/slices/bannerSlice";
 import BannerFormModal from "./BannerForm";
 import Swal from "sweetalert2";
 import Pagination from "../../../components/Pagination";
-import { handleDownloadExcel } from "../../../services/handleDownloadExcel";
+// import { handleDownloadExcel } from "../../../services/handleDownloadExcel";
 
 // Debounce utility function
 const debounce = (func, wait) => {
@@ -26,6 +26,7 @@ const BannerManagement = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const [sortBy, setSortBy] = useState("startAt-desc"); // Default sort by startAt descending
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,12 +53,33 @@ const BannerManagement = () => {
     dispatch(getBanners()).finally(() => setTimeout(() => setIsLoading(false), 500));
   }, [dispatch]);
 
-  const filteredBanners = banners.filter(
-    (banner) =>
-      (banner.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        (banner.publicId || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
-      (statusFilter === "" || banner.status === (statusFilter === "true"))
-  );
+  // Handle sorting and filtering
+  const filteredBanners = banners
+    .filter(
+      (banner) =>
+        (banner.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          (banner.publicId || "").toLowerCase().includes(debouncedSearchTerm.toLowerCase())) &&
+        (statusFilter === "" || banner.status === (statusFilter === "true"))
+    )
+    .sort((a, b) => {
+      const [sortField, sortDirection] = sortBy.split("-");
+      const isDesc = sortDirection === "desc";
+
+      if (sortField === "startAt") {
+        const dateA = new Date(a.startAt || "0");
+        const dateB = new Date(b.startAt || "0");
+        return isDesc ? dateB - dateA : dateA - dateB;
+      } else if (sortField === "title") {
+        return isDesc
+          ? b.title.localeCompare(a.title)
+          : a.title.localeCompare(b.title);
+      } else if (sortField === "status") {
+        return isDesc
+          ? Number(b.status) - Number(a.status)
+          : Number(a.status) - Number(b.status);
+      }
+      return 0;
+    });
 
   const paginatedBanners = filteredBanners.slice(
     currentPage * itemsPerPage,
@@ -135,10 +157,11 @@ const BannerManagement = () => {
     }
   };
 
-  const totalBanners = filteredBanners.length;
-  const activeBanners = filteredBanners.filter((banner) => banner.status).length;
-  const inactiveBanners = filteredBanners.filter((banner) => !banner.status).length;
-  const todayBanners = filteredBanners.filter((banner) => {
+  // Global stats (fixed, independent of filters)
+  const globalTotalBanners = banners.length;
+  const globalActiveBanners = banners.filter((banner) => banner.status).length;
+  const globalInactiveBanners = banners.filter((banner) => !banner.status).length;
+  const globalTodayBanners = banners.filter((banner) => {
     if (!banner.startAt) return false;
     const bannerDate = new Date(banner.startAt);
     const today = new Date();
@@ -176,12 +199,6 @@ const BannerManagement = () => {
                 />
               </button>
               <button
-                onClick={handleDownloadExcel}
-                className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
-              >
-                <Download className="h-5 w-5" />
-              </button>
-              <button
                 onClick={handleAdd}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2.5 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center space-x-2 shadow-md transition-all duration-200 transform hover:scale-105"
                 disabled={loading}
@@ -203,7 +220,7 @@ const BannerManagement = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Tổng banner</p>
-                <p className="text-2xl font-bold text-gray-900">{totalBanners}</p>
+                <p className="text-2xl font-bold text-gray-900">{globalTotalBanners}</p>
               </div>
             </div>
           </div>
@@ -214,7 +231,7 @@ const BannerManagement = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Banner hiển thị</p>
-                <p className="text-2xl font-bold text-gray-900">{activeBanners}</p>
+                <p className="text-2xl font-bold text-gray-900">{globalActiveBanners}</p>
               </div>
             </div>
           </div>
@@ -225,7 +242,7 @@ const BannerManagement = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Banner ẩn</p>
-                <p className="text-2xl font-bold text-gray-900">{inactiveBanners}</p>
+                <p className="text-2xl font-bold text-gray-900">{globalInactiveBanners}</p>
               </div>
             </div>
           </div>
@@ -236,7 +253,7 @@ const BannerManagement = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Banner hôm nay</p>
-                <p className="text-2xl font-bold text-gray-900">{todayBanners}</p>
+                <p className="text-2xl font-bold text-gray-900">{globalTodayBanners}</p>
               </div>
             </div>
           </div>
@@ -257,6 +274,22 @@ const BannerManagement = () => {
                 <option value="">Tất cả trạng thái</option>
                 <option value="true">Hiển thị</option>
                 <option value="false">Ẩn</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  setCurrentPage(0);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loading || isLoading}
+              >
+                <option value="startAt-desc">Mới nhất (Thời gian bắt đầu)</option>
+                <option value="startAt-asc">Cũ nhất (Thời gian bắt đầu)</option>
+                <option value="title-asc">Tiêu đề (A-Z)</option>
+                <option value="title-desc">Tiêu đề (Z-A)</option>
+                <option value="status-asc">Trạng thái (Ẩn trước)</option>
+                <option value="status-desc">Trạng thái (Hiển thị trước)</option>
               </select>
             </div>
             <div className="relative flex items-center">
@@ -487,7 +520,7 @@ const BannerManagement = () => {
 
             <Pagination
               currentPage={currentPage}
-              totalItems={totalBanners}
+              totalItems={filteredBanners.length}
               itemsPerPage={itemsPerPage}
               onPageChange={(page, newItemsPerPage) => {
                 handlePageChange(page, newItemsPerPage || itemsPerPage);
@@ -501,6 +534,7 @@ const BannerManagement = () => {
           onClose={() => {
             setOpen(false);
             setEditingId(null);
+            dispatch(getBanners()); // Refresh banners after closing modal to include new banners
           }}
           id={editingId}
         />

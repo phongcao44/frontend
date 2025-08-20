@@ -10,6 +10,7 @@ import {
   updateUserDetailThunk,
 } from "../../../../redux/slices/userSlice";
 import { loadPaginatedOrders } from "../../../../redux/slices/orderSlice";
+import { fetchVouchersByUserId } from "../../../../redux/slices/voucherSlice";
 import { useParams } from "react-router-dom";
 
 // Static list of all roles (replace with API fetch if needed)
@@ -117,25 +118,29 @@ export default function useUserDetail() {
         status: normalizedData.status || "INACTIVE",
         createdAt: normalizedData.createTime || "",
         updatedAt: normalizedData.updateTime || "",
+        // Prefer loyalty point from first address's userPoint if available
         loyaltyPoints:
-          normalizedData.address?.[0]?.user?.userPoint?.totalPoints || 0,
+          normalizedData.addresses?.[0]?.user?.userPoint?.totalPoints || 0,
         memberTier: normalizedData.rank || "",
-        totalOrders: totalElements || 0,
-        totalSpent: orders.reduce((sum, order) => sum + (order.total || 0), 0),
+        // Prefer API-provided totals; fallback to list metadata/calculation
+        totalOrders:
+          normalizedData.totalOrders ?? totalElements ?? 0,
+        totalSpent:
+          normalizedData.totalSpent ?? orders.reduce((sum, order) => sum + (order.total || 0), 0),
       });
 
       setAddress({
-        name: normalizedData.address?.[0]?.recipientName || undefined,
-        country: normalizedData.address?.[0]?.province || undefined,
-        street: normalizedData.address?.[0]?.fullAddress || undefined,
-        city: normalizedData.address?.[0]?.district || undefined,
-        zipCode: normalizedData.address?.[0]?.wardCode || undefined,
+        name: normalizedData.addresses?.[0]?.recipientName || undefined,
+        country: normalizedData.addresses?.[0]?.province || undefined,
+        street: normalizedData.addresses?.[0]?.fullAddress || undefined,
+        city: normalizedData.addresses?.[0]?.district || undefined,
+        zipCode: normalizedData.addresses?.[0]?.wardCode || undefined,
       });
 
       // Process roles properly - Create array with ALL roles and their granted status
       const processedRoles = allRoles.map((allRole) => {
-        const userHasRole = Array.isArray(normalizedData.role)
-          ? normalizedData.role.some(
+        const userHasRole = Array.isArray(normalizedData.roles)
+          ? normalizedData.roles.some(
               (userRole) =>
                 String(userRole.id) === String(allRole.id) ||
                 String(userRole.name) === String(allRole.name)
@@ -154,25 +159,20 @@ export default function useUserDetail() {
     }
   }, [userDetail, orders, totalElements]);
 
+  // Lấy vouchers từ Redux store
+  const { userSpecificVouchers = [], loading: voucherLoading, error: voucherError } = useSelector((state) => state.voucher);
+  
+  // Fetch vouchers khi userId thay đổi
+  useEffect(() => {
+    if (userId) {
+      dispatch(fetchVouchersByUserId(userId));
+    }
+  }, [dispatch, userId]);
+  
+  // Chuẩn hóa dữ liệu voucher
   const vouchers = useMemo(
-    () =>
-      normalizeNull([
-        {
-          id: "VOU001",
-          code: "WELCOME20",
-          discount: "20%",
-          usedAt: "2024-12-10",
-          status: "Used",
-        },
-        {
-          id: "VOU002",
-          code: "FREESHIP",
-          discount: "Free Ship",
-          usedAt: "2024-11-28",
-          status: "Used",
-        },
-      ]),
-    []
+    () => normalizeNull(userSpecificVouchers),
+    [userSpecificVouchers]
   );
 
   // Handle pagination change
@@ -449,9 +449,9 @@ export default function useUserDetail() {
     itemsPerPage: pagination.limit,
     pagination,
     vouchers,
-    error: error || reduxError || orderError,
+    error: error || reduxError || orderError || voucherError,
     success,
-    isLoading: isLoading || userLoading || orderLoading,
+    isLoading: isLoading || userLoading || orderLoading || voucherLoading,
     handlers,
     formatDate,
     formatCurrency,

@@ -9,8 +9,10 @@ import {
   getUserDetail,
   updateUserDetail,
   getUserView,
+  getUserStatistics, // Added new import
 } from "../../services/userService";
 
+// Existing thunks remain unchanged
 export const getUsers = createAsyncThunk(
   "users/getUsers",
   async (_, { rejectWithValue }) => {
@@ -22,6 +24,8 @@ export const getUsers = createAsyncThunk(
     }
   }
 );
+
+// ... (other existing thunks remain unchanged)
 
 export const createUser = createAsyncThunk(
   "users/createUser",
@@ -126,6 +130,20 @@ export const fetchUserView = createAsyncThunk(
   }
 );
 
+// New thunk for getting user statistics
+export const fetchUserStatistics = createAsyncThunk(
+  "users/fetchUserStatistics",
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await getUserStatistics();
+      return data;
+    } catch (error) {
+      console.error("getUserStatistics error:", error.response?.data || error.message);
+      return rejectWithValue(error.message || "Failed to fetch user statistics");
+    }
+  }
+);
+
 const userSlice = createSlice({
   name: "users",
   initialState: {
@@ -137,6 +155,7 @@ const userSlice = createSlice({
       totalElements: 0,
     },
     userDetail: null,
+    userStatistics: null, // Added new state for statistics
     loading: false,
     error: null,
   },
@@ -146,6 +165,9 @@ const userSlice = createSlice({
     },
     clearUserDetail: (state) => {
       state.userDetail = null;
+    },
+    clearUserStatistics: (state) => { // Added new reducer to clear statistics
+      state.userStatistics = null;
     },
   },
   extraReducers: (builder) => {
@@ -319,9 +341,23 @@ const userSlice = createSlice({
       .addCase(updateUserDetailThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // Get user statistics
+      .addCase(fetchUserStatistics.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserStatistics.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userStatistics = action.payload;
+      })
+      .addCase(fetchUserStatistics.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { clearError, clearUserDetail } = userSlice.actions;
+export const { clearError, clearUserDetail, clearUserStatistics } = userSlice.actions;
 export default userSlice.reducer;

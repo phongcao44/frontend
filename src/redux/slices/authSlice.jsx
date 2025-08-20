@@ -43,7 +43,6 @@ export const loginUser = createAsyncThunk(
         path: "/",
       });
 
-      // Save to localStorage with expiration
       saveAuthToStorage(userInfo, data?.data?.accessToken);
 
       return data;
@@ -67,19 +66,19 @@ export const registerUser = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk(
   "auth/logout",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
       const data = await logout();
-      // Clear localStorage and cookies
       clearAuthFromStorage();
       Cookies.remove("access_token");
       Cookies.remove("user");
+      dispatch(clearAuthState()); // Dispatch clearAuthState to reset Redux state
       return data;
     } catch (error) {
-      // Even if logout API fails, clear local storage and cookies
       clearAuthFromStorage();
       Cookies.remove("access_token");
       Cookies.remove("user");
+      dispatch(clearAuthState()); // Dispatch clearAuthState even if API fails
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -121,12 +120,10 @@ export const changePasswordUser = createAsyncThunk(
   }
 );
 
-// Google OAuth Actions
 export const googleLoginUser = createAsyncThunk(
   "auth/googleLogin",
   async (googleData, { rejectWithValue }) => {
     try {
-      // Lưu token và thông tin user từ Google response
       const userInfo = {
         id: googleData?.user?.id || "",
         username: googleData?.user?.username || "",
@@ -150,7 +147,6 @@ export const googleLoginUser = createAsyncThunk(
         path: "/",
       });
 
-      // Save to localStorage with expiration
       saveAuthToStorage(userInfo, googleData?.accessToken);
 
       return {
@@ -188,6 +184,7 @@ export const handleGoogleCallback = createAsyncThunk(
     }
   }
 );
+
 export const fetchUserInfo = createAsyncThunk(
   "auth/fetchUserInfo",
   async (_, { rejectWithValue }) => {
@@ -196,12 +193,13 @@ export const fetchUserInfo = createAsyncThunk(
       const response = await api.get("/users/view", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return response.data; // user data mới
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
+
 const authSlice = createSlice({
   name: "auth",
   initialState: {
@@ -217,7 +215,6 @@ const authSlice = createSlice({
     setUser: (state, action) => {
       state.user = action.payload;
     },
-    // New action to restore auth state from localStorage
     restoreAuthState: (state) => {
       const authData = getAuthFromStorage();
       if (authData) {
@@ -225,17 +222,15 @@ const authSlice = createSlice({
         state.isLoggedIn = true;
       }
     },
-    // New action to clear auth state
     clearAuthState: (state) => {
       state.user = null;
       state.isLoggedIn = false;
+      state.error = null;
       clearAuthFromStorage();
     },
   },
   extraReducers: (builder) => {
     builder
-
-      // Login
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -249,8 +244,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
-      // Register
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -262,61 +255,49 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
-      // Logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
         state.isLoggedIn = false;
+        state.error = null;
       })
       .addCase(logoutUser.rejected, (state) => {
-        // Even if logout API fails, clear the state
         state.user = null;
         state.isLoggedIn = false;
+        state.error = null;
       })
-
-      // Forgot Password
       .addCase(forgotPasswordUser.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(forgotPasswordUser.fulfilled, (state, action) => {
+      .addCase(forgotPasswordUser.fulfilled, (state) => {
         state.loading = false;
-        state.error = action.payload || action.error.message;
       })
       .addCase(forgotPasswordUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
-      // Reset Password
       .addCase(resetPasswordUser.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(resetPasswordUser.fulfilled, (state, action) => {
+      .addCase(resetPasswordUser.fulfilled, (state) => {
         state.loading = false;
-        state.error = action.payload || action.error.message;
       })
       .addCase(resetPasswordUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
-      // Change Password
       .addCase(changePasswordUser.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(changePasswordUser.fulfilled, (state, action) => {
+      .addCase(changePasswordUser.fulfilled, (state) => {
         state.loading = false;
-        state.error = action.payload || action.error.message;
       })
       .addCase(changePasswordUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
-      // Google OAuth
       .addCase(googleLoginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -330,7 +311,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
       .addCase(initiateGoogleLogin.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -342,32 +322,30 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
       .addCase(handleGoogleCallback.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(handleGoogleCallback.fulfilled, (state, action) => {
+      .addCase(handleGoogleCallback.fulfilled, (state) => {
         state.loading = false;
       })
       .addCase(handleGoogleCallback.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
       .addCase(fetchUserInfo.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-  .addCase(fetchUserInfo.fulfilled, (state, action) => {
+      .addCase(fetchUserInfo.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload;
       })
-  .addCase(fetchUserInfo.rejected, (state, action) => {
+      .addCase(fetchUserInfo.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
       });
-      },
+  },
 });
 
 export const { clearAuthError, setUser, restoreAuthState, clearAuthState } = authSlice.actions;

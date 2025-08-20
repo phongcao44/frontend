@@ -7,14 +7,64 @@ import {
   loadSubCategories,
 } from "../../../redux/slices/categorySlice";
 import ProductCard from "../home/ProductCard";
+import SandyLoadingAnimation from "../../../components/SandyLoadingAnimation";
+import "./ProductListing.css";
+
+// Helper function to sync products with wishlist
+const syncProductsWithWishlist = (products, wishlistItems) => {
+  if (!products || !wishlistItems) return products;
+  
+  return products.map(product => ({
+    ...product,
+    isFavorite: wishlistItems.some(item => item.product?.id === product.id)
+  }));
+};
 
 // Hàm để parse query parameters từ URL
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
 
-function SubcategoryNav({ subcategories, onSubcategoryClick, selectedSubcategorySlug }) {
+// Skeleton loading component cho products
+function ProductSkeleton() {
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden skeleton-pulse">
+      <div className="aspect-square bg-gray-200"></div>
+      <div className="p-4 space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+        <div className="flex justify-between items-center">
+          <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Skeleton loading cho subcategories
+function SubcategorySkeleton() {
+  return (
+    <div className="mb-8 overflow-x-auto scrollbar-hidden">
+      <div className="flex space-x-3 whitespace-nowrap">
+        {[...Array(6)].map((_, index) => (
+          <div
+            key={index}
+            className="h-10 w-24 bg-gray-200 rounded-full animate-pulse"
+          ></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SubcategoryNav({ subcategories, onSubcategoryClick, selectedSubcategorySlug, loading }) {
   const validSubcategories = Array.isArray(subcategories) ? subcategories : [];
+
+  if (loading) {
+    return <SubcategorySkeleton />;
+  }
 
   return (
     <div className="mb-8 overflow-x-auto scrollbar-hidden">
@@ -24,10 +74,10 @@ function SubcategoryNav({ subcategories, onSubcategoryClick, selectedSubcategory
             <button
               key={subcategory.id}
               onClick={() => onSubcategoryClick(subcategory.slug)}
-              className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 cursor-pointer ${
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 cursor-pointer transform hover:scale-105 ${
                 selectedSubcategorySlug === subcategory.slug
-                  ? "bg-orange-600 text-white shadow-md"
-                  : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600"
+                  ? "bg-orange-600 text-white shadow-lg scale-105"
+                  : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600 hover:shadow-md"
               }`}
             >
               {subcategory.name}
@@ -73,6 +123,7 @@ function ProductListing() {
   const [tempBrand, setTempBrand] = useState(query.get("brand") || "all");
   const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState(query.get("subcategorySlug") || null);
   const [isProductListLoading, setIsProductListLoading] = useState(false);
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
 
   // Brand filter options
   const brands = [
@@ -160,6 +211,11 @@ function ProductListing() {
     const loadProducts = async () => {
       try {
         setIsProductListLoading(true);
+        setIsPageTransitioning(true);
+        
+        // Add a small delay for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const { sortBy: apiSortBy, orderBy } = mapSortBy(sortBy);
         const selectedPrice = priceRanges.find((r) => r.id === selectedPriceRange) || priceRanges[0];
         const minRating = ratingOptions.find((r) => r.id === selectedRating)?.value || 0;
@@ -192,6 +248,8 @@ function ProductListing() {
         console.error("Failed to load products:", err);
       } finally {
         setIsProductListLoading(false);
+        // Add a small delay before hiding transition effect
+        setTimeout(() => setIsPageTransitioning(false), 200);
       }
     };
 
@@ -250,18 +308,26 @@ function ProductListing() {
 
   const handlePreviousPage = () => {
     if (page > 0) {
-      setIsProductListLoading(true);
       setPage(page - 1);
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleNextPage = () => {
     if (!paginatedProducts.last) {
-      setIsProductListLoading(true);
       setPage(page + 1);
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       alert("Bạn đang ở trang cuối cùng!");
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Build breadcrumb
@@ -284,7 +350,9 @@ function ProductListing() {
   };
 
   const breadcrumbItems = buildBreadcrumb();
-  const productsContent = Array.isArray(paginatedProducts?.data?.content) ? paginatedProducts?.data?.content : [];
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
+  const rawProductsContent = Array.isArray(paginatedProducts?.data?.content) ? paginatedProducts?.data?.content : [];
+  const productsContent = syncProductsWithWishlist(rawProductsContent, wishlistItems);
   const totalProducts = paginatedProducts?.data?.totalElements || 0;
   const totalPages = paginatedProducts?.data?.totalPages || 1;
   const currentPage = paginatedProducts?.data?.number || 0;
@@ -301,7 +369,7 @@ function ProductListing() {
                 className={
                   index === breadcrumbItems.length - 1
                     ? "text-gray-900"
-                    : "hover:text-orange-600 cursor-pointer"
+                    : "hover:text-orange-600 cursor-pointer transition-colors"
                 }
                 onClick={() =>
                   navigate(
@@ -324,30 +392,24 @@ function ProductListing() {
         </div>
 
         {/* Subcategories */}
-        {categoryLoading ? (
-          <div className="text-center text-gray-500">Đang tải danh mục con...</div>
-        ) : (
-          validSubcategories.length > 0 &&
-          currentCategory.level < 3 && (
-            <SubcategoryNav
-              subcategories={validSubcategories}
-              onSubcategoryClick={handleSubcategoryClick}
-              selectedSubcategorySlug={selectedSubcategorySlug}
-            />
-          )
-        )}
+        <SubcategoryNav
+          subcategories={validSubcategories}
+          onSubcategoryClick={handleSubcategoryClick}
+          selectedSubcategorySlug={selectedSubcategorySlug}
+          loading={categoryLoading}
+        />
 
         {/* Filter and Sort Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500 gap-4">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 hover:text-orange-600 transition-colors cursor-pointer whitespace-nowrap"
+              className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 hover:text-orange-600 transition-all duration-200 cursor-pointer whitespace-nowrap transform hover:scale-105"
             >
               <i className="fas fa-filter text-sm"></i>
               <span>Bộ lọc</span>
               {(tempPriceRange !== "all" || tempRating !== "all" || tempBrand !== "all") && (
-                <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">
+                <span className="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full animate-pulse">
                   Đã lọc
                 </span>
               )}
@@ -369,7 +431,7 @@ function ProductListing() {
                 setSortBy(e.target.value);
                 setPage(0);
               }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer transition-all duration-200 hover:border-orange-300"
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -382,7 +444,7 @@ function ProductListing() {
 
         {/* Filters Panel */}
         {showFilters && (
-          <div className="mb-8">
+          <div className="mb-8 animate-in slide-in-from-top-2 duration-300">
             <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -391,7 +453,7 @@ function ProductListing() {
                 </h2>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="text-gray-600 hover:text-orange-600 transition-colors"
+                  className="text-gray-600 hover:text-orange-600 transition-colors duration-200 transform hover:scale-110"
                 >
                   <i className="fas fa-times text-xl"></i>
                 </button>
@@ -405,26 +467,7 @@ function ProductListing() {
                   </h3>
                   {brandsLoading ? (
                     <div className="flex justify-center items-center py-4">
-                      <svg
-                        className="animate-spin h-6 w-6 text-orange-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
                     </div>
                   ) : brandsError ? (
                     <div className="text-orange-500 text-sm py-2">
@@ -440,9 +483,9 @@ function ProductListing() {
                         <button
                           key={brand.id}
                           onClick={() => setTempBrand(brand.id)}
-                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                          className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                             tempBrand === brand.id
-                              ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                              ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                               : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                           }`}
                         >
@@ -464,9 +507,9 @@ function ProductListing() {
                       <button
                         key={range.id}
                         onClick={() => setTempPriceRange(range.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempPriceRange === range.id
-                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                             : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                         }`}
                       >
@@ -487,9 +530,9 @@ function ProductListing() {
                       <button
                         key={option.id}
                         onClick={() => setTempRating(option.id)}
-                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all ${
+                        className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 ${
                           tempRating === option.id
-                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200"
+                            ? "bg-orange-50 text-orange-600 font-medium border border-orange-200 shadow-sm"
                             : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
                         }`}
                       >
@@ -504,13 +547,13 @@ function ProductListing() {
               <div className="mt-6 flex justify-end space-x-4">
                 <button
                   onClick={handleResetFilters}
-                  className="px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 transition-colors cursor-pointer"
+                  className="px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:border-orange-300 transition-all duration-200 cursor-pointer transform hover:scale-105"
                 >
                   Xóa bộ lọc
                 </button>
                 <button
                   onClick={handleApplyFilters}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 cursor-pointer transform hover:scale-105 shadow-md hover:shadow-lg"
                 >
                   Áp dụng
                 </button>
@@ -519,55 +562,39 @@ function ProductListing() {
           </div>
         )}
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
+        {/* Products Grid with Loading States */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12 product-grid ${
+          isPageTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+        } transition-all duration-300`}>
           {isProductListLoading ? (
-            <div className="col-span-full text-center py-12">
-              <svg
-                className="animate-spin h-8 w-8 text-orange-500 mx-auto"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <p className="text-gray-600 mt-4">Đang tải...</p>
-            </div>
+            // Show skeleton loading for products
+            [...Array(8)].map((_, index) => (
+              <ProductSkeleton key={index} />
+            ))
           ) : productsError ? (
             <div className="col-span-full text-center py-12 text-orange-500">
               <i className="fas fa-exclamation-circle text-4xl mb-4"></i>
               <p>Lỗi: {productsError}</p>
               <button
                 onClick={handleResetFilters}
-                className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 transform hover:scale-105"
               >
                 Làm mới
               </button>
             </div>
           ) : productsContent.length > 0 ? (
             productsContent.map((productData) => (
-              <ProductCard
-                key={productData.id}
-                product={{
-                  ...productData,
-                  discountType:
-                    productData.discountType === "AMOUNT"
-                      ? "FIXED_AMOUNT"
-                      : productData.discountType || "PERCENTAGE",
-                }}
-              />
+              <div key={productData.id} className="product-card product-fade-in">
+                <ProductCard
+                  product={{
+                    ...productData,
+                    discountType:
+                      productData.discountType === "AMOUNT"
+                        ? "FIXED_AMOUNT"
+                        : productData.discountType || "PERCENTAGE",
+                  }}
+                />
+              </div>
             ))
           ) : (
             <div className="col-span-full text-center py-12">
@@ -580,7 +607,7 @@ function ProductListing() {
               <p className="text-gray-500 mb-4">Hãy thử thay đổi bộ lọc</p>
               <button
                 onClick={handleResetFilters}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 transform hover:scale-105"
               >
                 Xóa bộ lọc
               </button>
@@ -588,17 +615,19 @@ function ProductListing() {
           )}
         </div>
 
+
+
         {/* Pagination Controls */}
         {totalPages > 1 && !isProductListLoading && (
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-12">
             {/* Previous Button */}
             <button
               onClick={handlePreviousPage}
-              disabled={paginatedProducts.first}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                paginatedProducts.first
+              disabled={currentPage === 0}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                currentPage === 0
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-orange-600 text-white hover:bg-orange-700"
+                  : "bg-orange-600 text-white hover:bg-orange-700 shadow-md hover:shadow-lg"
               }`}
               aria-label="Go to previous page"
             >
@@ -620,14 +649,11 @@ function ProductListing() {
                   pages.push(
                     <button
                       key={0}
-                      onClick={() => {
-                        setIsProductListLoading(true);
-                        setPage(0);
-                      }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handlePageChange(0)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                         currentPage === 0
-                          ? "bg-orange-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                          ? "bg-orange-600 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md"
                       }`}
                       aria-label="Go to page 1"
                     >
@@ -648,14 +674,11 @@ function ProductListing() {
                   pages.push(
                     <button
                       key={i}
-                      onClick={() => {
-                        setIsProductListLoading(true);
-                        setPage(i);
-                      }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handlePageChange(i)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                         currentPage === i
-                          ? "bg-orange-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                          ? "bg-orange-600 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md"
                       }`}
                       aria-label={`Go to page ${i + 1}`}
                     >
@@ -676,14 +699,11 @@ function ProductListing() {
                   pages.push(
                     <button
                       key={totalPages - 1}
-                      onClick={() => {
-                        setIsProductListLoading(true);
-                        setPage(totalPages - 1);
-                      }}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      onClick={() => handlePageChange(totalPages - 1)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                         currentPage === totalPages - 1
-                          ? "bg-orange-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600"
+                          ? "bg-orange-600 text-white shadow-md"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-md"
                       }`}
                       aria-label={`Go to page ${totalPages}`}
                     >
@@ -699,11 +719,11 @@ function ProductListing() {
             {/* Next Button */}
             <button
               onClick={handleNextPage}
-              disabled={paginatedProducts.last}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                paginatedProducts.last
+              disabled={currentPage >= totalPages - 1}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                currentPage >= totalPages - 1
                   ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-orange-600 text-white hover:bg-orange-700"
+                  : "bg-orange-600 text-white hover:bg-orange-700 shadow-md hover:shadow-lg"
               }`}
               aria-label="Go to next page"
             >
@@ -722,11 +742,10 @@ function ProductListing() {
                 onChange={(e) => {
                   const inputPage = parseInt(e.target.value) - 1;
                   if (!isNaN(inputPage) && inputPage >= 0 && inputPage < totalPages) {
-                    setIsProductListLoading(true);
-                    setPage(inputPage);
+                    handlePageChange(inputPage);
                   }
                 }}
-                className="w-16 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-center"
+                className="w-16 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-center transition-all duration-200"
                 aria-label="Enter page number"
               />
               <span className="text-sm text-gray-600">/ {totalPages}</span>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Heart } from 'lucide-react';
 import { addProductToWishlist, removeProductFromWishlist, getUserWishlist } from '../redux/slices/wishlistSlice';
+import { updateProductFavoriteStatus } from '../redux/slices/productSlice';
 import Swal from 'sweetalert2';
 
 export default function WishlistButton({ productId, className = '' }) {
@@ -25,10 +26,7 @@ export default function WishlistButton({ productId, className = '' }) {
         // Thêm vào danh sách yêu thích
         await dispatch(addProductToWishlist(productId)).unwrap();
         // Cập nhật product.isFavorite trong Redux store
-        dispatch({
-          type: 'products/updateProductFavoriteStatus',
-          payload: { productId, isFavorite: true },
-        });
+        dispatch(updateProductFavoriteStatus({ productId, isFavorite: true }));
         Swal.fire({
           title: 'Thành công!',
           text: 'Đã thêm sản phẩm vào danh sách yêu thích',
@@ -59,10 +57,7 @@ export default function WishlistButton({ productId, className = '' }) {
         console.log('Calling removeProductFromWishlist with wishlistId:', currentWishlistId);
         await dispatch(removeProductFromWishlist(currentWishlistId)).unwrap();
         // Cập nhật product.isFavorite trong Redux store
-        dispatch({
-          type: 'products/updateProductFavoriteStatus',
-          payload: { productId, isFavorite: false },
-        });
+        dispatch(updateProductFavoriteStatus({ productId, isFavorite: false }));
         Swal.fire({
           title: 'Thành công!',
           text: 'Đã xóa sản phẩm khỏi danh sách yêu thích',

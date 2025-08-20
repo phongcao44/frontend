@@ -95,7 +95,7 @@ export default function OrderSuccessPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-             to={`/order/${orderId}`}
+             to={`/user/order/${orderId}`}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center whitespace-nowrap no-underline"
           >
             Xem Đơn Hàng
@@ -107,7 +107,7 @@ export default function OrderSuccessPage() {
             Tiếp Tục Mua Sắm
           </Link>
           <Link
-            to="/support"
+            to="https://www.facebook.com/ecommerce122"
             className="bg-green-100 text-green-700 px-6 py-3 rounded-lg font-medium hover:bg-green-200 transition-colors text-center whitespace-nowrap no-underline"
           >
             Liên Hệ Hỗ Trợ

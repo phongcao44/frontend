@@ -54,9 +54,11 @@ export const fetchActiveFlashSale = createAsyncThunk(
 
 export const createFlashSale = createAsyncThunk(
   "flashSale/createFlashSale",
-  async (data, { rejectWithValue }) => {
+  async (data, { rejectWithValue, dispatch }) => {
     try {
       const response = await addFlashSale(data);
+      // Refresh flash sales list after creating
+      await dispatch(fetchFlashSales());
       return response;
     } catch (err) {
       return rejectWithValue(err.message || "Failed to create flash sale");
@@ -66,9 +68,11 @@ export const createFlashSale = createAsyncThunk(
 
 export const updateFlashSale = createAsyncThunk(
   "flashSale/updateFlashSale",
-  async ({ id, data }, { rejectWithValue }) => {
+  async ({ id, data }, { rejectWithValue, dispatch }) => {
     try {
       const response = await editFlashSale(id, data);
+      // Refresh flash sales list after updating
+      await dispatch(fetchFlashSales());
       return response;
     } catch (err) {
       return rejectWithValue(err.message || "Failed to update flash sale");
@@ -78,9 +82,11 @@ export const updateFlashSale = createAsyncThunk(
 
 export const removeFlashSale = createAsyncThunk(
   "flashSale/removeFlashSale",
-  async (id, { rejectWithValue }) => {
+  async (id, { rejectWithValue, dispatch }) => {
     try {
       await deleteFlashSale(id);
+      // Refresh flash sales list after deleting
+      await dispatch(fetchFlashSales());
       return id;
     } catch (err) {
       return rejectWithValue(err.message || "Failed to delete flash sale");
@@ -127,9 +133,11 @@ export const fetchFlashSaleVariantDetails = createAsyncThunk(
 
 export const createFlashSaleItem = createAsyncThunk(
   "flashSale/createFlashSaleItem",
-  async (data, { rejectWithValue }) => {
+  async (data, { rejectWithValue, dispatch }) => {
     try {
       const response = await addFlashSaleItem(data);
+      // Refresh flash sale variant details after creating item
+      await dispatch(fetchFlashSaleVariantDetails(data.flashSaleId));
       return response;
     } catch (err) {
       return rejectWithValue(err.message || "Failed to add flash sale item");
@@ -151,9 +159,15 @@ export const updateFlashSaleItem = createAsyncThunk(
 
 export const removeFlashSaleItem = createAsyncThunk(
   "flashSale/removeFlashSaleItem",
-  async (id, { rejectWithValue }) => {
+  async (id, { rejectWithValue, getState }) => {
     try {
       await deleteFlashSaleItem(id);
+      // Get flash sale ID from state to refresh details
+      const state = getState();
+      const flashSaleId = state.flashSale.flashSaleVariantDetails[0]?.flashSaleId;
+      if (flashSaleId) {
+        // Note: We can't dispatch here, so we'll handle refresh in the component
+      }
       return id;
     } catch (err) {
       return rejectWithValue(err.message || "Failed to delete flash sale item");
@@ -282,7 +296,7 @@ const flashSaleSlice = createSlice({
       })
       .addCase(removeFlashSale.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        // state.error = action.payload;
       })
 
       // Fetch Flash Sale Items

@@ -5,8 +5,10 @@ import NavMenu from "./NavMenu";
 import TopBanner from "./TopBanner";
 import AccountDropdown from "./AccountDropdown";
 import Cookies from "js-cookie";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { checkAuthFromStorage } from "../../utils/authUtils";
+import { getCart } from "../../redux/slices/cartSlice"; // Import cart thunk
+import { getUserWishlist } from "../../redux/slices/wishlistSlice"; // Import wishlist thunk
 
 const MainHeader = () => {
   const { t } = useTranslation();
@@ -15,8 +17,13 @@ const MainHeader = () => {
   const [searchVisible, setSearchVisible] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // Get cart and wishlist from Redux store
   const cart = useSelector((state) => state.cart.cart);
+  const wishlist = useSelector((state) => state.wishlist.items);
   const itemCount = cart?.items?.length || 0;
+  const wishlistCount = wishlist?.length || 0; // Wishlist item count
 
   const activePath = location.pathname;
   const authState = useSelector((state) => state.auth.isLoggedIn);
@@ -40,15 +47,21 @@ const MainHeader = () => {
 
   // Handle logo click
   const handleLogoClick = (e) => {
-    e.preventDefault(); // Ngăn điều hướng mặc định của Link
+    e.preventDefault();
     if (location.pathname === '/') {
-      // Nếu đang ở trang chủ, cuộn lên đầu
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      // Nếu không ở trang chủ, điều hướng về trang chủ
       navigate('/');
     }
   };
+
+  // Fetch cart and wishlist data on component mount
+  useEffect(() => {
+    if (finalIsLoggedIn) {
+      dispatch(getCart()); // Fetch cart data
+      dispatch(getUserWishlist()); // Fetch wishlist data
+    }
+  }, [dispatch, finalIsLoggedIn]);
 
   // Close drawer when clicking outside or on larger screens
   useEffect(() => {
@@ -67,7 +80,7 @@ const MainHeader = () => {
     <>
       <TopBanner />
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        {/* Mobile Search Bar - Appears when search icon is clicked */}
+        {/* Mobile Search Bar */}
         {searchVisible && (
           <div className="sm:hidden bg-gray-50 p-3 border-b border-gray-200">
             <div className="flex items-center gap-2">
@@ -169,21 +182,26 @@ const MainHeader = () => {
               </svg>
             </button>
 
-            {/* Wishlist Icon */}
-            <Link 
-              to="/wishlist" 
-              className="text-gray-700 hover:text-red-500 p-1.5 hover:bg-gray-100 rounded-md transition-all duration-200"
+            {/* Wishlist Icon with Counter */}
+            <Link
+              to="/wishlist"
+              className="relative text-gray-700 hover:text-red-500 p-1.5 hover:bg-gray-100 rounded-md transition-all duration-200"
               aria-label={t("header.wishlist")}
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-xs font-medium animate-pulse">
+                  {wishlistCount > 99 ? '99+' : wishlistCount}
+                </span>
+              )}
             </Link>
 
             {/* Cart Icon with Counter */}
-            <Link 
-              to="/cart" 
-              className="relative text-gray-700 hover:text-blue-600 p-1.5 hover:bg-gray-100 rounded-md transition-all duration-200" 
+            <Link
+              to="/cart"
+              className="relative text-gray-700 hover:text-blue-600 p-1.5 hover:bg-gray-100 rounded-md transition-all duration-200"
               aria-label={t("header.cart")}
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,8 +218,8 @@ const MainHeader = () => {
             {finalIsLoggedIn ? (
               <AccountDropdown />
             ) : (
-              <Link 
-                to="/signup" 
+              <Link
+                to="/signup"
                 className="text-gray-700 hover:text-green-600 p-1.5 hover:bg-gray-100 rounded-md transition-all duration-200"
                 aria-label={t("header.signUp")}
               >
@@ -220,7 +238,6 @@ const MainHeader = () => {
           drawerVisible ? "translate-x-0" : "-translate-x-full"
         } transition-transform duration-300 ease-in-out z-50 shadow-xl`}
       >
-        {/* Drawer Header */}
         <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -228,8 +245,8 @@ const MainHeader = () => {
             </div>
             <span className="text-lg sm:text-xl font-semibold text-gray-800">{t("header.menu")}</span>
           </div>
-          <button 
-            onClick={closeDrawer} 
+          <button
+            onClick={closeDrawer}
             className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-200 rounded-md transition-colors"
             aria-label={t("header.closeMenu")}
           >
@@ -239,13 +256,11 @@ const MainHeader = () => {
           </button>
         </div>
 
-        {/* Navigation Menu */}
         <div className="p-3 sm:p-4 bg-white h-full overflow-y-auto">
           <NavMenu activePath={activePath} vertical />
         </div>
       </div>
 
-      {/* Backdrop Overlay */}
       {drawerVisible && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300"

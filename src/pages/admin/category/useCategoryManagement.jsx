@@ -268,6 +268,13 @@ export const useCategoryManagement = () => {
     dataHandlers.filterCategories();
   }, [flatCategoryList, searchValue, typeFilter]);
 
+  // Global (unfiltered) stats for the persistent stats bar
+  const flattenedAll = dataHandlers.flattenCategories(flatCategoryList);
+  const statsTotalCategories = flattenedAll.length;
+  const statsLevel1Count = flattenedAll.filter((cat) => (cat.level || 1) === 1).length;
+  const statsLevel2Count = flattenedAll.filter((cat) => (cat.level || 1) === 2).length;
+  const statsLevel3Count = flattenedAll.filter((cat) => (cat.level || 1) === 3).length;
+
   return {
     flatCategoryList,
     loadingFlatList,
@@ -277,13 +284,16 @@ export const useCategoryManagement = () => {
     paginatedCategories: paginationHandler.paginatedCategories,
     currentPage,
     itemsPerPage,
+    // Filtered totals for pagination and list context
     totalCategories: filteredCategories.length,
-    level1Count: filteredCategories.filter((cat) => (cat.level || 1) === 1)
-      .length,
-    level2Count: filteredCategories.filter((cat) => (cat.level || 1) === 2)
-      .length,
-    level3Count: filteredCategories.filter((cat) => (cat.level || 1) === 3)
-      .length,
+    level1Count: filteredCategories.filter((cat) => (cat.level || 1) === 1).length,
+    level2Count: filteredCategories.filter((cat) => (cat.level || 1) === 2).length,
+    level3Count: filteredCategories.filter((cat) => (cat.level || 1) === 3).length,
+    // Global totals for fixed stats bar
+    statsTotalCategories,
+    statsLevel1Count,
+    statsLevel2Count,
+    statsLevel3Count,
     isModalVisible,
     modalMode,
     formData,

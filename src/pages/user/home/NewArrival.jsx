@@ -4,7 +4,17 @@ import ServicesSection from "./ServicesSection";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loadNewArrivals } from "../../../redux/slices/productSlice";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
+
+// Helper function to sync products with wishlist
+const syncProductsWithWishlist = (products, wishlistItems) => {
+  if (!products || !wishlistItems) return products;
+  
+  return products.map(product => ({
+    ...product,
+    isFavorite: wishlistItems.some(item => item.product?.id === product.id)
+  }));
+}; 
 
 const { Title, Text } = Typography;
 
@@ -12,6 +22,7 @@ const NewArrival = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate(); 
   const newArrivals = useSelector((state) => state.products.newArrivals);
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
   const [productCards, setProductCards] = useState([]);
 
   useEffect(() => {
@@ -21,16 +32,18 @@ const NewArrival = () => {
 
   useEffect(() => {
     if (newArrivals?.data?.content?.length) {
-      const formattedProducts = newArrivals.data.content.map((product) => ({
+      const syncedProducts = syncProductsWithWishlist(newArrivals.data.content, wishlistItems);
+      const formattedProducts = syncedProducts.map((product) => ({
         id: product.id,
         slug: product.slug,
         title: product.name || "Untitled Product",
         subtitle: product.description || "New Arrival",
         image: product.imageUrl || "default-image-url.jpg",
+        isFavorite: product.isFavorite || false,
       }));
       setProductCards(formattedProducts);
     }
-  }, [newArrivals]);
+  }, [newArrivals, wishlistItems]);
 
 
 

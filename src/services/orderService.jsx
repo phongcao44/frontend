@@ -38,6 +38,15 @@ export const fetchOrders = async () => {
   }
 };
 
+export const fetchOrderStatistics = async () => {
+  try {
+    const response = await axiosInstance.get("/admin/order/statistics");
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 export const updateOrderStatus = async (id, status) => {
   try {
     const response = await axiosInstance.put(`admin/order/edit/${id}`, {

@@ -267,6 +267,37 @@ const productSlice = createSlice({
     clearBrandsPaginated(state) {
       state.brandsPaginated = null;
     },
+    updateProductFavoriteStatus(state, action) {
+      const { productId, isFavorite } = action.payload;
+      
+      // Update productDetail if it matches
+      if (state.productDetail && state.productDetail.id === productId) {
+        state.productDetail.isFavorite = isFavorite;
+      }
+      
+      // Update products in various lists
+      const updateProductInList = (list) => {
+        if (Array.isArray(list)) {
+          list.forEach(product => {
+            if (product.id === productId) {
+              product.isFavorite = isFavorite;
+            }
+          });
+        }
+      };
+      
+      // Update in different product lists
+      updateProductInList(state.list);
+      updateProductInList(state.newArrivals?.data?.content);
+      updateProductInList(state.topBestSelling);
+      updateProductInList(state.topLeastSelling);
+      updateProductInList(state.topViewed);
+      updateProductInList(state.leastViewed);
+      updateProductInList(state.productsByCategory);
+      updateProductInList(state.relatedProducts);
+      updateProductInList(state.topSellingPaginated?.content);
+      updateProductInList(state.brandsPaginated?.data?.content);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -378,17 +409,29 @@ const productSlice = createSlice({
 
       // Remove Product
       .addCase(removeProduct.pending, (state) => {
-        state.loading = true;
+        // Do not toggle global loading to avoid hiding the list UI
         state.error = null;
       })
       .addCase(removeProduct.fulfilled, (state, action) => {
-        state.list = state.list.filter((p) => p.id !== action.payload);
-        state.loading = false;
+        const removedId = action.payload;
+        // Update flat list if present
+        state.list = state.list.filter((p) => p.id !== removedId);
+        // Optimistically update paginated content if loaded
+        if (state.paginated?.data?.content) {
+          state.paginated.data.content = state.paginated.data.content.filter(
+            (p) => p.id !== removedId
+          );
+          if (typeof state.paginated.data.totalElements === "number") {
+            state.paginated.data.totalElements = Math.max(
+              0,
+              state.paginated.data.totalElements - 1
+            );
+          }
+        }
         state.error = null;
       })
       .addCase(removeProduct.rejected, (state, action) => {
         state.error = action.payload || action.error.message;
-        state.loading = false;
       })
 
       // Toggle Product Status
@@ -555,5 +598,5 @@ const productSlice = createSlice({
   },
 });
 
-export const { clearProductDetail, clearError, clearBrandsPaginated } = productSlice.actions;
+export const { clearProductDetail, clearError, clearBrandsPaginated, updateProductFavoriteStatus } = productSlice.actions;
 export default productSlice.reducer;

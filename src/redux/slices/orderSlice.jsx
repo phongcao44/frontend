@@ -7,7 +7,8 @@ import {
   fetchPaginatedOrders,
   getMyOrders,
   getOrderDetail,
-  cancelOrder, 
+  cancelOrder,
+  fetchOrderStatistics, // Added import for the new API
 } from "../../services/orderService";
 
 export const loadOrders = createAsyncThunk(
@@ -130,6 +131,17 @@ export const cancelUserOrder = createAsyncThunk(
   }
 );
 
+export const loadOrderStatistics = createAsyncThunk(
+  "order/loadOrderStatistics",
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await fetchOrderStatistics();
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to fetch order statistics");
+    }
+  }
+);
 
 const orderSlice = createSlice({
   name: "order",
@@ -141,6 +153,7 @@ const orderSlice = createSlice({
     },
     myOrders: [],
     currentOrder: null,
+    statistics: null, // Added to store statistics data
     loading: false,
     error: null,
   },
@@ -167,7 +180,6 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(loadOrderDetail.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -181,7 +193,6 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(editOrderStatus.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -200,7 +211,6 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(removeOrder.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -215,7 +225,6 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(loadPaginatedOrders.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -232,20 +241,22 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(fetchMyOrders.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchMyOrders.fulfilled, (state, action) => {
         state.loading = false;
-        state.myOrders = action.payload;
+        state.list = {
+          content: action.payload,
+          totalElements: action.payload.length,
+          totalPages: 1,
+        };
       })
       .addCase(fetchMyOrders.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(fetchMyOrderDetail.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -258,7 +269,6 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(cancelUserOrder.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -276,6 +286,43 @@ const orderSlice = createSlice({
       .addCase(cancelUserOrder.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(loadOrderStatistics.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadOrderStatistics.fulfilled, (state, action) => {
+        state.loading = false;
+        state.statistics = action.payload;
+      })
+      .addCase(loadOrderStatistics.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Clear user orders and statistics on logout
+      .addCase('auth/logout/fulfilled', (state) => {
+        state.list = {
+          content: [],
+          totalElements: 0,
+          totalPages: 1,
+        };
+        state.myOrders = [];
+        state.currentOrder = null;
+        state.statistics = null; // Clear statistics on logout
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase('auth/logout/rejected', (state) => {
+        state.list = {
+          content: [],
+          totalElements: 0,
+          totalPages: 1,
+        };
+        state.myOrders = [];
+        state.currentOrder = null;
+        state.statistics = null; // Clear statistics on logout
+        state.loading = false;
+        state.error = null;
       });
   },
 });
